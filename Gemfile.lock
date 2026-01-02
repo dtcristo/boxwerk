@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     boxwerk (0.1.0)
-      irb (= 1.16)
+      irb (~> 1.16)
 
 GEM
   remote: https://rubygems.org/
