@@ -5,6 +5,6 @@ exports:
   - TaxCalculator
 
 imports:
-  # Import Calculator from math and rename it to MathCalculator
-  - packages/math:
-      Calculator: MathCalculator
+  # Import Calculator from util and rename it to UtilCalculator
+  - packages/util:
+      Calculator: UtilCalculator

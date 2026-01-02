@@ -44,12 +44,12 @@ rescue NameError => e
   puts "  ✗ Finance::TaxCalculator not accessible: #{e.message}"
 end
 
-# MathCalculator should NOT be available (transitive dependency)
+# UtilCalculator should NOT be available (transitive dependency)
 begin
-  MathCalculator.add(1, 2)
-  puts '  ✗ ERROR: MathCalculator leaked from transitive dependency!'
+  UtilCalculator.add(1, 2)
+  puts '  ✗ ERROR: UtilCalculator leaked from transitive dependency!'
 rescue NameError
-  puts '  ✓ MathCalculator not accessible (correct isolation)'
+  puts '  ✓ UtilCalculator not accessible (correct isolation)'
 end
 
 # Invoice should NOT be at top level (only in Finance namespace)
@@ -60,7 +60,7 @@ rescue NameError
   puts '  ✓ Invoice only accessible via Finance namespace'
 end
 
-# Calculator should NOT be available (transitive dependency from math package)
+# Calculator should NOT be available (transitive dependency from util package)
 begin
   Calculator.add(1, 2)
   puts '  ✗ ERROR: Calculator leaked from transitive dependency!'
@@ -68,7 +68,7 @@ rescue NameError
   puts '  ✓ Calculator not accessible (correct isolation)'
 end
 
-# Geometry should NOT be available (transitive dependency from math package)
+# Geometry should NOT be available (transitive dependency from util package)
 begin
   Geometry.circle_area(5)
   puts '  ✗ ERROR: Geometry leaked from transitive dependency!'
@@ -91,7 +91,7 @@ puts '=' * 70
 puts ''
 puts 'Boxwerk CLI setup process:'
 puts '  1. `boxwerk run app.rb` found root package.yml'
-puts '  2. Built dependency graph (math → finance → root)'
+puts '  2. Built dependency graph (util → finance → root)'
 puts '  3. Validated no circular dependencies'
 puts '  4. Booted packages in topological order (all in isolated boxes)'
 puts '  5. Executed app.rb in root package box with Finance imported'

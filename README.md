@@ -194,9 +194,9 @@ Result: `Finance::Invoice`, `Finance::PaymentProcessor`
 **Single Export Optimization**: If a package exports only one constant, it's imported directly (not wrapped in a module):
 
 ```yaml
-# math exports only Calculator
+# util exports only Calculator
 imports:
-  - packages/math: Calc
+  - packages/util: Calc
 ```
 
 Result: `Calc` (not `Calc::Calculator`)

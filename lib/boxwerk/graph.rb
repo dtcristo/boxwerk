@@ -9,7 +9,7 @@ module Boxwerk
       @root_path = root_path
       @packages = {}
       @root = load_package('root', root_path)
-      resolve_dependencies(@root)
+      resolve_dependencies(@root, [])
       validate!
     end
 
@@ -47,13 +47,22 @@ module Boxwerk
       package
     end
 
-    def resolve_dependencies(package)
+    def resolve_dependencies(package, path)
+      if path.include?(package.name)
+        cycle = (path + [package.name]).join(' -> ')
+        raise "Circular dependency detected: #{cycle}"
+      end
+
       package.dependencies.each do |dep_path|
         dep_name = File.basename(dep_path)
         full_path = File.join(@root_path, dep_path)
 
+        unless File.directory?(full_path)
+          raise "Package not found: #{dep_path} (expected at #{full_path})"
+        end
+
         dep_package = load_package(dep_name, full_path)
-        resolve_dependencies(dep_package)
+        resolve_dependencies(dep_package, path + [package.name])
       end
     end
 
