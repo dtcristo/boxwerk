@@ -1,0 +1,6 @@
+# Main Application Package
+
+imports:
+  # Finance has multiple exports (Invoice, TaxCalculator)
+  # so this creates a Finance module containing both
+  - packages/finance

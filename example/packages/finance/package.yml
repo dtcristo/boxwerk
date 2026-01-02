@@ -1,0 +1,10 @@
+# Finance Package
+
+exports:
+  - Invoice
+  - TaxCalculator
+
+imports:
+  # Import Calculator from math and rename it to MathCalculator
+  - packages/math:
+      Calculator: MathCalculator
