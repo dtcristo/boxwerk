@@ -342,7 +342,7 @@ The package registry that:
 See the [example/](example/) directory for a complete working example with:
 
 - Multi-package application
-- Money gem usage for currency handling
+- Gem usage
 - Transitive dependency demonstration
 - Isolation verification
 - Console usage examples
