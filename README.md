@@ -1,41 +1,23 @@
 # Boxwerk
 
-Boxwerk is a strict modularity runtime for Ruby that organizes code into isolated packages defined by a pure dependency tree. It leverages Ruby 4.0's [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html) feature to provide true isolation between packages while maintaining ergonomic imports.
+Boxwerk is a runtime package system for Ruby with strict isolation of constants using Ruby 4.0's [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html). It is used to organize code into packages with explicit dependency graphs and strict access to constants between packages. It is inspired by [packwerk](https://github.com/Shopify/packwerk), a static package system.
 
 ## Features
 
-- **Strict Isolation**: Each package runs in its own `Ruby::Box`, preventing access to code outside explicit imports
-- **Explicit Dependencies**: Dependencies are declared in `package.yml` files, forming a validated DAG
-- **Ergonomic Imports**: Flexible import strategies (namespaced, aliased, selective, renamed)
-- **Automatic Bundler Setup**: Bundler is automatically setup when running `boxwerk`
-- **Gem Auto-Require**: Gems in your Gemfile are automatically required in the root box, making them accessible in all package boxes
-- **Zero Memory Overhead**: Boxes inherit gems via Copy-on-Write
-- **Interactive Console**: REPL access to your package environment
+- **Strict Isolation**: Each package runs in its own `Ruby::Box`, preventing constants from leaking without explicit imports or exports.
+- **Explicit Dependencies**: Dependencies are declared in `package.yml` files, forming a validated DAG.
+- **Ergonomic Imports**: Flexible import strategies (namespaced, aliased, selective, renamed).
+
+## Limtations
+
+- There is no isolation of gems.
+- Gems are required to be eager loaded in the root box to be accessible in packages.
+- No support for reloading of constants.
 
 ## Requirements
 
 - Ruby 4.0+ with [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html) support
 - `RUBY_BOX=1` environment variable must be set at process startup
-
-## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'boxwerk'
-```
-
-And then execute:
-
-```bash
-bundle install
-```
-
-Or install it yourself as:
-
-```bash
-gem install boxwerk
-```
 
 ## Quick Start
 
@@ -68,26 +50,34 @@ gem 'money' # Example: gems are auto-required and globally accessible
 **Root `package.yml`:**
 ```yaml
 imports:
-  - packages/billing
+  - packages/finance # Will define a `Finance` module to hold finance package exports
 ```
 
-**`packages/billing/package.yml`:**
+**`packages/finance/package.yml`:**
 ```yaml
 exports:
   - Invoice
+  - TaxCalculator
 ```
 
-**`packages/billing/lib/invoice.rb`:**
+**`packages/finance/lib/invoice.rb`:**
 ```ruby
 class Invoice
   def initialize(amount_cents)
     # Money gem is accessible because it's in the Gemfile
     @amount = Money.new(amount_cents, 'USD')
   end
-  
+
   def total
     @amount
   end
+end
+```
+
+**`packages/finance/lib/tax_calculator.rb`:**
+```ruby
+class TaxCalculator
+  # ...
 end
 ```
 
@@ -96,8 +86,7 @@ end
 **`app.rb`:**
 ```ruby
 # No requires needed - imports are wired by Boxwerk
-# Gems from Gemfile are already loaded
-invoice = Billing::Invoice.new(10_000)
+invoice = Finance::Invoice.new(10_000)
 puts invoice.total  # => #<Money fractional:10000 currency:USD>
 ```
 
@@ -129,13 +118,15 @@ The script has access to:
 
 ### Interactive Console
 
+TODO: This feature is currenly broken and will run IRB from the root box, not the root package as desired.
+
 Start an IRB session in the root package context:
 
 ```bash
 boxwerk console [irb-args...]
 ```
 
-All imports and gems are available for interactive exploration. Autocomplete is automatically disabled to prevent VM crashes.
+All imports and gems are available for interactive exploration.
 
 ### Help
 
@@ -175,10 +166,10 @@ Import all exports under a module named after the package:
 
 ```yaml
 imports:
-  - packages/billing
+  - packages/finance
 ```
 
-Result: `Billing::Invoice`, `Billing::PaymentProcessor`
+Result: `Finance::Invoice`, `Finance::TaxCalculator`
 
 ### 2. Aliased Namespace
 
@@ -186,10 +177,10 @@ Import under a custom module name:
 
 ```yaml
 imports:
-  - packages/billing: Finance
+  - packages/finance: Billing
 ```
 
-Result: `Finance::Invoice`, `Finance::PaymentProcessor`
+Result: `Billing::Invoice`, `Billing::TaxCalculator`
 
 **Single Export Optimization**: If a package exports only one constant, it's imported directly (not wrapped in a module):
 
@@ -207,12 +198,12 @@ Import specific constants directly:
 
 ```yaml
 imports:
-  - packages/billing:
+  - packages/finance:
     - Invoice
-    - PaymentProcessor
+    - TaxCalculator
 ```
 
-Result: `Invoice`, `PaymentProcessor` (no namespace)
+Result: `Invoice`, `TaxCalculator` (no namespace)
 
 ### 4. Selective Rename
 
@@ -220,12 +211,12 @@ Import specific constants with custom names:
 
 ```yaml
 imports:
-  - packages/billing:
+  - packages/finance:
       Invoice: Bill
-      PaymentProcessor: Processor
+      TaxCalculator: Calculator
 ```
 
-Result: `Bill`, `Processor`
+Result: `Bill`, `Calculator`
 
 ## Gems and Packages
 
@@ -236,19 +227,19 @@ When you run `boxwerk`, all gems in your `Gemfile` are:
 2. Accessible globally in all package boxes (gems are not isolated)
 
 This means:
-- ✅ You can use any gem from your Gemfile in any package
-- ✅ Gems don't need to be declared in `package.yml`
-- ✅ No need to `require` gems manually
+- You can use any gem from your Gemfile in any package.
+- Gems don't need to be declared in `package.yml`.
+- You do not `require` gems manually.
 
 ### Isolation Model
 
-- **Root Box**: The box where Ruby bootstraps and all builtin classes/modules are defined. In Boxwerk, the root box runs the CLI (`Boxwerk::CLI`) and performs all setup operations (Bundler setup, gem loading, dependency graph building, package box creation, and import wiring).
-- **Main Box**: The first user box created automatically by Ruby (copied from root box). In Boxwerk, it only runs the `exe/boxwerk` executable file, which then calls into the root box to execute the CLI. The main box has no other purpose.
-- **Package Boxes**: Each package (including root package) runs in its own isolated `Ruby::Box` (created by copying from root box after gems are loaded)
-- **Box Inheritance**: All boxes are created via Copy-on-Write from the root box, inheriting builtin classes and loaded gems
-- **Gems are Global**: All gems from Gemfile are accessible in all boxes (loaded in root box before package boxes are created)
-- **Package Exports are Isolated**: Only explicit imports from packages are accessible
-- **No Transitive Access**: Packages can only see their explicit imports
+- **Root Box**: The box where Ruby bootstraps and all builtin classes/modules are defined. In Boxwerk, the root box performs all setup operations (Bundler setup, gem loading, dependency graph building, package box creation, and import wiring).
+- **Main Box**: The first user box created automatically by Ruby (copied from root box). In Boxwerk, it only runs the `exe/boxwerk` executable file, which then calls into the root box to execute the setup. The main box has no other purpose.
+- **Package Boxes**: Each package (including root package) runs in its own isolated `Ruby::Box` (created by copying from root box after gems are loaded).
+- **Box Inheritance**: All boxes are created via copy-on-write from the root box, inheriting builtin classes and loaded gems.
+- **Gems are Global**: All gems from Gemfile are accessible in all boxes (loaded in root box before package boxes are created).
+- **Package Exports are Isolated**: Only explicit imports from packages are accessible.
+- **No Transitive Access**: Packages can only see their explicit imports.
 
 For more details on how Ruby::Box works, see the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/master/Ruby/Box.html).
 

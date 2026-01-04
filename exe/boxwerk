@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Boxwerk CLI Executable
+# Boxwerk CLI
 # Usage: boxwerk <command> [args...]
 
 # Check if Ruby::Box is available and enabled
@@ -21,7 +21,7 @@ end
 # Setup Bundler and run Boxwerk in root box
 Ruby::Box.root.eval(<<~RUBY)
   require 'bundler/setup'
-  # Gems need to be required in the root box to be accessible in package boxes
+  # Application gems need to be required in the root box to be accessible in package boxes
   Bundler.require
   Boxwerk::CLI.run(ARGV)
 RUBY

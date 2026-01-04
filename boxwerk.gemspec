@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.authors = ['David Cristofaro']
   spec.email = ['david@dtcristo.com']
 
-  spec.summary = 'Package system for Ruby using Ruby::Box isolation'
+  spec.summary = 'Ruby package system with Box-powered constant isolation'
   spec.description =
-    'Boxwerk provides strict package isolation for Ruby applications using Ruby 4.0+ Boxes. It organizes code into packages with explicit dependency graphs, preventing access to code outside declared imports.'
+    'Boxwerk provides strict package isolation for Ruby applications using Ruby 4.0+ Box. It is used to organize code into packages with explicit dependency graphs and strict access to constants between packages. It is inspired by Packwerk, a static package system.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.0'

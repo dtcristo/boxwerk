@@ -33,7 +33,7 @@ module Boxwerk
       private
 
       def print_usage
-        puts 'Boxwerk - Strict modularity runtime for Ruby'
+        puts 'Boxwerk - Ruby package system with Box-powered constant isolation'
         puts ''
         puts 'Usage: boxwerk <command> [args...]'
         puts ''
