@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = 'Ruby package system with Box-powered constant isolation'
   spec.description =
-    'Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with an explicit dependency graph and strict access to constants between packages using Ruby 4.0 Box. It is inspired by Packwerk, a static package system.'
+    'Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with explicit dependencies and strict constant access using Ruby 4.0 Box. Inspired by Packwerk.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.0'
@@ -22,8 +22,6 @@ Gem::Specification.new do |spec|
     'changelog_uri'
   ] = 'https://github.com/dtcristo/boxwerk/blob/main/CHANGELOG.md'
 
-  # Specify which files should be added to the gem when it is released.
-  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
   gemspec = File.basename(__FILE__)
   spec.files =
     IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
@@ -38,6 +36,5 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  # Runtime dependencies
   spec.add_dependency 'irb', '~> 1.16'
 end
