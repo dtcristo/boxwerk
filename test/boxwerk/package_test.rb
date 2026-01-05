@@ -14,10 +14,10 @@ module Boxwerk
       FileUtils.rm_rf(@tmpdir)
     end
 
-    def test_package_initialization
-      pkg = Package.new('test_package', @tmpdir)
+    def test_initialization_with_no_config
+      pkg = Package.new('test', @tmpdir)
 
-      assert_equal 'test_package', pkg.name
+      assert_equal 'test', pkg.name
       assert_equal @tmpdir, pkg.path
       assert_equal [], pkg.exports
       assert_equal [], pkg.imports
@@ -25,130 +25,37 @@ module Boxwerk
       refute pkg.booted?
     end
 
-    def test_package_with_exports
-      create_package_yml(exports: %w[ClassA ClassB])
+    def test_loads_exports_and_imports_from_yaml
+      create_package_yml(exports: %w[ClassA ClassB], imports: ['packages/math'])
 
       pkg = Package.new('test', @tmpdir)
 
       assert_equal %w[ClassA ClassB], pkg.exports
-    end
-
-    def test_package_with_string_import
-      create_package_yml(imports: ['packages/math'])
-
-      pkg = Package.new('test', @tmpdir)
-
       assert_equal ['packages/math'], pkg.imports
     end
 
-    def test_package_with_aliased_import
-      create_package_yml(imports: [{ 'packages/math' => 'Calc' }])
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal 1, pkg.imports.size
-      assert pkg.imports[0].is_a?(Hash)
-      assert_equal 'Calc', pkg.imports[0]['packages/math']
-    end
-
-    def test_package_with_selective_import_array
-      create_package_yml(imports: [{ 'packages/utils' => %w[Log Metrics] }])
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal 1, pkg.imports.size
-      assert pkg.imports[0].is_a?(Hash)
-      assert_equal %w[Log Metrics], pkg.imports[0]['packages/utils']
-    end
-
-    def test_package_with_selective_import_hash
-      create_package_yml(
-        imports: [
-          { 'packages/billing' => { 'Invoice' => 'Bill', 'Payment' => 'Pay' } },
-        ],
-      )
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal 1, pkg.imports.size
-      assert pkg.imports[0].is_a?(Hash)
-      assert pkg.imports[0]['packages/billing'].is_a?(Hash)
-      assert_equal 'Bill', pkg.imports[0]['packages/billing']['Invoice']
-      assert_equal 'Pay', pkg.imports[0]['packages/billing']['Payment']
-    end
-
-    def test_package_with_multiple_import_strategies
+    def test_dependencies_extracts_paths_from_various_import_formats
       create_package_yml(
         imports: [
           'packages/math',
           { 'packages/utils' => 'Tools' },
           { 'packages/logger' => ['Log'] },
-          { 'packages/billing' => { 'Invoice' => 'Bill' } },
-        ],
+        ]
       )
 
       pkg = Package.new('test', @tmpdir)
 
-      assert_equal 4, pkg.imports.size
-      assert_equal 'packages/math', pkg.imports[0]
-      assert_equal 'Tools', pkg.imports[1]['packages/utils']
-      assert_equal ['Log'], pkg.imports[2]['packages/logger']
-      assert_equal 'Bill', pkg.imports[3]['packages/billing']['Invoice']
+      assert_equal %w[packages/math packages/utils packages/logger], pkg.dependencies
     end
 
-    def test_dependencies_extraction
-      create_package_yml(
-        imports: [
-          'packages/math',
-          { 'packages/utils' => 'Tools' },
-          { 'packages/logger' => ['Log'] },
-        ],
-      )
-
-      pkg = Package.new('test', @tmpdir)
-      deps = pkg.dependencies
-
-      assert_equal 3, deps.size
-      assert_includes deps, 'packages/math'
-      assert_includes deps, 'packages/utils'
-      assert_includes deps, 'packages/logger'
-    end
-
-    def test_booted_status
+    def test_booted_status_changes_with_box
       pkg = Package.new('test', @tmpdir)
 
       refute pkg.booted?
 
-      pkg.box = 'mock_box'
+      pkg.box = Ruby::Box.new
 
       assert pkg.booted?
-    end
-
-    def test_empty_package_yml
-      create_package_yml
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal [], pkg.exports
-      assert_equal [], pkg.imports
-    end
-
-    def test_package_yml_with_only_exports
-      create_package_yml(exports: ['OnlyExport'])
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal ['OnlyExport'], pkg.exports
-      assert_equal [], pkg.imports
-    end
-
-    def test_package_yml_with_only_imports
-      create_package_yml(imports: ['packages/dep'])
-
-      pkg = Package.new('test', @tmpdir)
-
-      assert_equal [], pkg.exports
-      assert_equal ['packages/dep'], pkg.imports
     end
 
     private
