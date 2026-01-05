@@ -14,7 +14,6 @@ Boxwerk is a runtime package system for Ruby with strict isolation of constants 
 - Gems are required to be eager loaded in the root box to be accessible in packages.
 - No support for reloading of constants.
 - Exported constants must follow Zeitwerk naming conventions for their source location.
-- Exports are loaded lazily when imported, not eagerly at boot time.
 
 ## Requirements
 
