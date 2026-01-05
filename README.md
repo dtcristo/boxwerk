@@ -359,7 +359,11 @@ RUBY_BOX=1 boxwerk console
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests.
+After checking out the repo, run `bin/setup` to install dependencies. Then, run the tests:
+
+```bash
+RUBY_BOX=1 bundle exec rake test
+```
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
