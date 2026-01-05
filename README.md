@@ -4,20 +4,23 @@ Boxwerk is an **experimental** Ruby package system with Box-powered constant iso
 
 ## Features
 
-- **Strict Isolation**: Each package runs in its own `Ruby::Box`, preventing constants from leaking without explicit imports or exports.
-- **Explicit Dependencies**: Dependencies are declared in `package.yml` files, forming a DAG.
-- **Ergonomic Imports**: Flexible import strategies (namespaced, aliased, selective, renamed).
+- **Strict Isolation**: Each package runs in its own `Ruby::Box`, preventing constant leakage
+- **Explicit Dependencies**: Dependencies declared in `package.yml`, validated as a DAG
+- **Controlled Exports**: Only declared constants are accessible to importers
+- **Flexible Imports**: Multiple strategies (namespaced, aliased, selective, renamed)
+- **Lazy Loading**: Exports loaded on-demand when imported
 
-## Limtations
+## Current Limitations
 
-- There is no isolation of gems.
-- Gems are required to be eager loaded in the root box to be accessible in packages.
-- No support for reloading of constants.
-- Exported constants must follow Zeitwerk naming conventions for their source location.
+- No gem isolation—all gems are global across packages
+- No constant reloading support
+- Exported constants must follow [Zeitwerk naming conventions](https://github.com/fxn/zeitwerk#file-structure)
+- Console runs in root box, not root package box (due to IRB loading issues)
+- `Ruby::Box` itself is experimental in Ruby 4.0
 
 ## Requirements
 
-- Ruby 4.0+ with `RUBY_BOX=1` environment variable must be set.
+- Ruby 4.0+ with `RUBY_BOX=1` environment variable set.
 
 ## Quick Start
 
@@ -76,7 +79,7 @@ puts invoice.total  # => #<Money fractional:10000 currency:USD>
 RUBY_BOX=1 boxwerk run app.rb
 ```
 
-Boxwerk handles setup, gem loading, package wiring, and script execution automatically.
+Boxwerk handles Bundler setup, gem loading, package wiring, and script execution automatically.
 
 ## Example
 
@@ -120,11 +123,11 @@ imports:
 
 ### Exports
 
-Constants that should be visible to packages that import this one.
+Constants that should be visible to packages that import this one. Exports are lazily loaded during boot; only those actually imported by dependent packages are loaded.
 
 ### Imports
 
-Package dependencies. **Not transitive**: if A imports B and B imports C, A cannot access C without explicitly importing it.
+Package dependencies that are wired as new constants in the importing package's box. Default and aliased namespace imports create a module to hold the exports. **Not transitive**: if A imports B and B imports C, A cannot access C without explicitly importing it.
 
 ## Import Strategies
 
