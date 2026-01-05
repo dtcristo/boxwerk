@@ -24,6 +24,12 @@ example/
 
 **Dependency chain:** root → finance → util
 
+## Configuration
+
+- **Root:** imports `packages/finance` as `Finance::` (default namespace)
+- **Finance:** exports `Invoice`, `TaxCalculator`; imports `Calculator` as `UtilCalculator`
+- **Util:** exports `Calculator`, `Geometry`
+
 ## Running
 
 ```bash
@@ -54,9 +60,3 @@ RUBY_BOX=1 boxwerk console
 **Clean boundaries:**
 - Packages export only public API
 - Implementation details stay hidden
-
-## Configuration
-
-**Root:** imports `packages/finance` (default namespace)
-**Finance:** exports Invoice, TaxCalculator; imports Calculator as UtilCalculator
-**Util:** exports Calculator, Geometry
