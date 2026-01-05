@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = 'Ruby package system with Box-powered constant isolation'
   spec.description =
-    'Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with explicit dependencies and strict constant access using Ruby 4.0 Box. Inspired by Packwerk.'
+    'Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with explicit dependencies and strict constant access using Ruby::Box. Inspired by Packwerk.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.0'
