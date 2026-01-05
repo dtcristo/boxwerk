@@ -1,14 +1,14 @@
-# Boxwerk Example Application
+# Boxwerk Example
 
-This directory contains a complete example of a Boxwerk application demonstrating strict package isolation and dependency management.
+Complete example demonstrating strict package isolation and dependency management.
 
-## Architecture
+## Structure
 
 ```
 example/
 ├── Gemfile                  # Gem dependencies (money gem)
 ├── package.yml              # Root package (imports finance)
-├── app.rb                   # Application entry point
+├── app.rb                   # Entry point
 └── packages/
     ├── finance/
     │   ├── package.yml      # Exports Invoice, TaxCalculator; imports util
@@ -22,109 +22,40 @@ example/
             └── geometry.rb
 ```
 
-## Dependency Graph
+**Dependency chain:** root → finance → util
 
-```
-util (isolated box)
-  └── Calculator, Geometry
-
-finance (isolated box) 
-  ├── imports: util (Calculator renamed to UtilCalculator)
-  └── Invoice, TaxCalculator
-
-root (isolated box)
-  ├── imports: finance
-  └── Finance::Invoice, Finance::TaxCalculator available
-```
-
-## Running the Example
+## Running
 
 ```bash
 cd example
 RUBY_BOX=1 boxwerk run app.rb
 ```
 
-**Architecture:**
-- Root box: Contains gems (including money gem) and Boxwerk runtime
-- Util box: Contains Calculator and Geometry classes
-- Finance box: Contains Invoice and TaxCalculator (imports Calculator from Util box as UtilCalculator)
-- Root package box: Runs app.rb (imports from Finance box)
-
-**Important:** ALL packages (including root) run in isolated boxes. The main Ruby process only contains gems and the Boxwerk runtime.
-
-### Interactive Console
-
-You can also start an IRB console in the root package context:
-
+Or use the console (note: currently runs in root box):
 ```bash
-cd example
 RUBY_BOX=1 boxwerk console
 ```
 
-This gives you an interactive session with all imports available (e.g., `Finance::Invoice`).
+## Demonstrates
 
-## What This Demonstrates
+**Strict isolation:**
+- Root accesses `Finance::Invoice` and `Finance::TaxCalculator` (explicit import)
+- Root cannot access `Calculator` or `Geometry` (transitive dependency)
+- `Invoice` not accessible without `Finance::` namespace
 
-### ✓ Strict Isolation
-- `Finance::Invoice` and `Finance::TaxCalculator` are accessible (explicit import)
-- `Calculator` and `Geometry` are NOT accessible (transitive dependency - not imported)
-- `UtilCalculator` is NOT accessible (only available in Finance package's box)
-- `Invoice` at top level is NOT accessible (must use `Finance::` namespace)
+**Import strategies:**
+- Root uses default namespace: `packages/finance` → `Finance::`
+- Finance uses selective rename: `Calculator` → `UtilCalculator`
 
-### ✓ Namespace Control
-- Finance package exports are grouped under `Finance::` module
-- Import strategies control how dependencies are wired
+**Gem handling:**
+- Money gem globally accessible in all packages
 
-### ✓ Selective Rename Strategy
-- Finance imports `Calculator` from util and renames it to `UtilCalculator`
-- This demonstrates the selective rename import strategy
+**Clean boundaries:**
+- Packages export only public API
+- Implementation details stay hidden
 
-### ✓ Transitive Dependency Blocking
-- Root imports Finance
-- Finance imports Util
-- Root cannot access Util classes (no transitive access)
+## Configuration
 
-### ✓ Gem Access
-- Money gem is globally accessible in all packages
-- Gems from Gemfile are auto-required and available everywhere
-
-### ✓ Clean API Surface
-- Each package explicitly declares exports
-- Consumers only see what's exported
-- Internal implementation details remain hidden
-
-## Package Configuration
-
-### Root Package (`package.yml`)
-
-```yaml
-imports:
-  - packages/finance  # Default namespace strategy
-```
-
-### Finance Package (`packages/finance/package.yml`)
-
-```yaml
-exports:
-  - Invoice
-  - TaxCalculator
-
-imports:
-  # Import Calculator from util and rename it to UtilCalculator
-  - packages/util:
-      Calculator: UtilCalculator
-```
-
-### Util Package (`packages/util/package.yml`)
-
-```yaml
-exports:
-  - Calculator
-  - Geometry
-```
-
-## Requirements
-
-- Ruby 4.0+ with `Ruby::Box` support
-- `RUBY_BOX=1` environment variable must be set
-- Boxwerk gem installed or loaded from `../lib`
+**Root:** imports `packages/finance` (default namespace)
+**Finance:** exports Invoice, TaxCalculator; imports Calculator as UtilCalculator
+**Util:** exports Calculator, Geometry
