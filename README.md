@@ -1,6 +1,6 @@
 # Boxwerk
 
-Boxwerk is a runtime package system for Ruby with strict isolation of constants using Ruby 4.0's [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html). It is used to organize code into packages with explicit dependency graphs and strict access to constants between packages. It is inspired by [packwerk](https://github.com/Shopify/packwerk), a static package system.
+Boxwerk is a runtime package system for Ruby with strict isolation of constants using Ruby 4.0's [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html). It is used to organize code into packages with explicit dependency graphs and strict access to constants between packages. It is inspired by [Packwerk](https://github.com/Shopify/packwerk), a static package system.
 
 ## Features
 
@@ -13,6 +13,8 @@ Boxwerk is a runtime package system for Ruby with strict isolation of constants 
 - There is no isolation of gems.
 - Gems are required to be eager loaded in the root box to be accessible in packages.
 - No support for reloading of constants.
+- Exported constants must follow Zeitwerk naming conventions for their source location.
+- Exports are loaded lazily when imported, not eagerly at boot time.
 
 ## Requirements
 
@@ -308,17 +310,21 @@ The package manifest parser that:
 - Parses `package.yml` files to extract exports and imports
 - Normalizes the polymorphic import syntax (String, Array, Hash)
 - Stores the package path, name, exports, imports, and box reference
+- Tracks which exports have been loaded via `loaded_exports` hash (export name → file path)
 - Tracks whether the package has been booted
 
 #### `Boxwerk::Loader`
 
 The package loader that:
 - Creates a new `Ruby::Box` for each package (including the root package)
-- Loads all Ruby files from each package's `lib/` directory into its box
+- Loads exported constants lazily on-demand when they are imported by other packages
+- Uses Zeitwerk naming conventions to discover file locations for exported constants
+- Caches loaded exports in `package.loaded_exports` to avoid redundant file loading
 - Wires imports by injecting constants from dependency boxes into consumer boxes
 - Implements all four import strategies (default namespace, aliased namespace, selective import, selective rename)
 - Handles the single-export optimization for namespace imports
 - Registers each booted package in the registry
+- Only loads files that define exported constants, never loading non-exported code
 
 #### `Boxwerk::Registry`
 

@@ -208,8 +208,16 @@ module Boxwerk
       a_dir = create_package_dir('a')
       create_package(a_dir, exports: %w[ClassA1 ClassA2 ClassA3])
       File.write(
-        File.join(a_dir, 'lib', 'classes.rb'),
-        "class ClassA1\nend\nclass ClassA2\nend\nclass ClassA3\nend\n",
+        File.join(a_dir, 'lib', 'class_a1.rb'),
+        "class ClassA1\nend\n",
+      )
+      File.write(
+        File.join(a_dir, 'lib', 'class_a2.rb'),
+        "class ClassA2\nend\n",
+      )
+      File.write(
+        File.join(a_dir, 'lib', 'class_a3.rb'),
+        "class ClassA3\nend\n",
       )
 
       # Create package B that selectively imports only ClassA1 and ClassA2
@@ -290,8 +298,12 @@ module Boxwerk
       a_dir = create_package_dir('a')
       create_package(a_dir, exports: %w[ClassA1 ClassA2])
       File.write(
-        File.join(a_dir, 'lib', 'classes.rb'),
-        "class ClassA1\nend\nclass ClassA2\nend\n",
+        File.join(a_dir, 'lib', 'class_a1.rb'),
+        "class ClassA1\nend\n",
+      )
+      File.write(
+        File.join(a_dir, 'lib', 'class_a2.rb'),
+        "class ClassA2\nend\n",
       )
 
       # Create package B that imports A as namespace
@@ -330,14 +342,14 @@ module Boxwerk
       # Create package D (leaf)
       d_dir = create_package_dir('d')
       create_package(d_dir, exports: ['ClassD'])
-      File.write(File.join(d_dir, 'lib', 'd.rb'), "class ClassD\nend\n")
+      File.write(File.join(d_dir, 'lib', 'class_d.rb'), "class ClassD\nend\n")
 
       # Create package C (imports D)
       # Single export optimization: D will be ClassD directly
       c_dir = create_package_dir('c')
       create_package(c_dir, exports: ['ClassC'], imports: ['packages/d'])
       File.write(
-        File.join(c_dir, 'lib', 'c.rb'),
+        File.join(c_dir, 'lib', 'class_c.rb'),
         "class ClassC\n  def self.has_d\n    defined?(D)\n  end\nend\n",
       )
 
@@ -346,7 +358,7 @@ module Boxwerk
       b_dir = create_package_dir('b')
       create_package(b_dir, exports: ['ClassB'], imports: ['packages/c'])
       File.write(
-        File.join(b_dir, 'lib', 'b.rb'),
+        File.join(b_dir, 'lib', 'class_b.rb'),
         "class ClassB\n  def self.has_c\n    defined?(C)\n  end\n  def self.has_d\n    defined?(D)\n  end\nend\n",
       )
 
@@ -355,7 +367,7 @@ module Boxwerk
       a_dir = create_package_dir('a')
       create_package(a_dir, exports: ['ClassA'], imports: ['packages/b'])
       File.write(
-        File.join(a_dir, 'lib', 'a.rb'),
+        File.join(a_dir, 'lib', 'class_a.rb'),
         "class ClassA\n  def self.has_b\n    defined?(B)\n  end\n  def self.has_c\n    defined?(C)\n  end\n  def self.has_d\n    defined?(D)\n  end\nend\n",
       )
 
@@ -431,7 +443,7 @@ module Boxwerk
       d_dir = create_package_dir('d')
       create_package(d_dir, exports: ['ClassD'])
       File.write(
-        File.join(d_dir, 'lib', 'd.rb'),
+        File.join(d_dir, 'lib', 'class_d.rb'),
         "class ClassD\n  def self.value\n    'from_d'\n  end\nend\n",
       )
 
@@ -439,7 +451,7 @@ module Boxwerk
       b_dir = create_package_dir('b')
       create_package(b_dir, exports: ['ClassB'], imports: ['packages/d'])
       File.write(
-        File.join(b_dir, 'lib', 'b.rb'),
+        File.join(b_dir, 'lib', 'class_b.rb'),
         "class ClassB\n  def self.value\n    D.value + '_via_b'\n  end\nend\n",
       )
 
@@ -447,7 +459,7 @@ module Boxwerk
       c_dir = create_package_dir('c')
       create_package(c_dir, exports: ['ClassC'], imports: ['packages/d'])
       File.write(
-        File.join(c_dir, 'lib', 'c.rb'),
+        File.join(c_dir, 'lib', 'class_c.rb'),
         "class ClassC\n  def self.value\n    D.value + '_via_c'\n  end\nend\n",
       )
 
@@ -459,7 +471,7 @@ module Boxwerk
         imports: %w[packages/b packages/c],
       )
       File.write(
-        File.join(a_dir, 'lib', 'a.rb'),
+        File.join(a_dir, 'lib', 'class_a.rb'),
         "class ClassA\n  def self.use_b\n    B.value\n  end\n  def self.use_c\n    C.value\n  end\n  def self.has_d\n    defined?(D)\n  end\nend\n",
       )
 

@@ -5,7 +5,7 @@ require 'yaml'
 module Boxwerk
   # Represents a package loaded from package.yml
   class Package
-    attr_reader :name, :path, :exports, :imports, :box
+    attr_reader :name, :path, :exports, :imports, :box, :loaded_exports
 
     def initialize(name, path)
       @name = name
@@ -13,6 +13,7 @@ module Boxwerk
       @box = nil
       @exports = []
       @imports = []
+      @loaded_exports = {}
 
       load_config
     end

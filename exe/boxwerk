@@ -18,10 +18,11 @@ unless defined?(Ruby::Box)
   exit 1
 end
 
-# Setup Bundler and run Boxwerk in root box
+# Setup Bundler, require any gems and run Boxwerk - all in the root box
 Ruby::Box.root.eval(<<~RUBY)
   require 'bundler/setup'
   # Application gems need to be required in the root box to be accessible in package boxes
   Bundler.require
+  # Run the CLI to handle the invocation
   Boxwerk::CLI.run(ARGV)
 RUBY
