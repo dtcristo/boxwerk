@@ -1,6 +1,6 @@
 # Boxwerk
 
-Boxwerk is a runtime package system for Ruby with strict isolation of constants using Ruby 4.0's [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html). It is used to organize code into packages with explicit dependency graphs and strict access to constants between packages. It is inspired by [Packwerk](https://github.com/Shopify/packwerk), a static package system.
+Boxwerk is a Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with explicit dependency graphs and strict access to constants between packages using Ruby 4.0 [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html). It is inspired by [Packwerk](https://github.com/Shopify/packwerk), a static package system.
 
 ## Features
 
