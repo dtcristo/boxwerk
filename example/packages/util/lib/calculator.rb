@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# Calculator provides basic arithmetic operations
 class Calculator
   def self.add(a, b)
     a + b

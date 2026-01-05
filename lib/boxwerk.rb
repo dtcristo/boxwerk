@@ -7,8 +7,3 @@ require_relative 'boxwerk/package'
 require_relative 'boxwerk/registry'
 require_relative 'boxwerk/setup'
 require_relative 'boxwerk/version'
-
-module Boxwerk
-  class Error < StandardError
-  end
-end

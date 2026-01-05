@@ -1,5 +1,3 @@
-# Util Package
-
 exports:
   - Calculator
   - Geometry

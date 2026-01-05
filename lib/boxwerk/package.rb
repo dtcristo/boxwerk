@@ -3,9 +3,11 @@
 require 'yaml'
 
 module Boxwerk
-  # Represents a package loaded from package.yml
+  # Package represents a single package loaded from package.yml.
+  # Tracks exports, imports, dependencies, and the isolated Ruby::Box instance.
   class Package
-    attr_reader :name, :path, :exports, :imports, :box, :loaded_exports
+    attr_reader :name, :path, :exports, :imports, :loaded_exports
+    attr_accessor :box
 
     def initialize(name, path)
       @name = name
@@ -22,18 +24,8 @@ module Boxwerk
       !@box.nil?
     end
 
-    def box=(box_instance)
-      @box = box_instance
-    end
-
     def dependencies
-      @imports.map do |item|
-        if item.is_a?(String)
-          item
-        else
-          item.keys.first
-        end
-      end
+      @imports.map { |item| item.is_a?(String) ? item : item.keys.first }
     end
 
     private
@@ -43,7 +35,6 @@ module Boxwerk
       return unless File.exist?(config_path)
 
       config = YAML.load_file(config_path)
-
       @exports = config['exports'] || []
       @imports = config['imports'] || []
     end

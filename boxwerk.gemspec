@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = 'Ruby package system with Box-powered constant isolation'
   spec.description =
-    "Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with an explicit dependency graph and strict access to constants between packages using Ruby 4.0 Box. It is inspired by Packwerk, a static package system."
+    'Boxwerk is an experimental Ruby package system with Box-powered constant isolation. It is used at runtime to organize code into packages with an explicit dependency graph and strict access to constants between packages using Ruby 4.0 Box. It is inspired by Packwerk, a static package system.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.0'
@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
         .readlines("\x0", chomp: true)
         .reject do |f|
           (f == gemspec) ||
-            f.start_with?(*%w[bin/ Gemfile .gitignore test/ .github/])
+            f.start_with?(*%w[bin/ example/ test/ .github/ Gemfile .gitignore])
         end
     end
   spec.bindir = 'exe'
@@ -40,7 +40,4 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_dependency 'irb', '~> 1.16'
-
-  # For more information and examples about making a new gem, check out our
-  # guide at: https://bundler.io/guides/creating_gem.html
 end

@@ -28,6 +28,7 @@ example/
 
 ```bash
 cd example
+bundle install
 RUBY_BOX=1 boxwerk run app.rb
 ```
 

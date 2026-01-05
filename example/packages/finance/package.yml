@@ -1,10 +1,7 @@
-# Finance Package
-
 exports:
   - Invoice
   - TaxCalculator
 
 imports:
-  # Import Calculator from util and rename it to UtilCalculator
   - packages/util:
       Calculator: UtilCalculator

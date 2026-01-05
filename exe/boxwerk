@@ -1,28 +1,20 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Boxwerk CLI
-# Usage: boxwerk <command> [args...]
-
-# Check if Ruby::Box is available and enabled
 unless ENV['RUBY_BOX'] == '1'
   puts "Error: Boxwerk requires Ruby::Box to be enabled"
   puts "Please set RUBY_BOX=1 environment variable"
   exit 1
 end
 
-# Verify Ruby::Box is actually available in this Ruby version
 unless defined?(Ruby::Box)
   puts "Error: Ruby::Box is not available in this Ruby version"
   puts "Boxwerk requires Ruby 4.0 or later with Box support"
   exit 1
 end
 
-# Setup Bundler, require any gems and run Boxwerk - all in the root box
 Ruby::Box.root.eval(<<~RUBY)
   require 'bundler/setup'
-  # Application gems need to be required in the root box to be accessible in package boxes
   Bundler.require
-  # Run the CLI to handle the invocation
   Boxwerk::CLI.run(ARGV)
 RUBY
