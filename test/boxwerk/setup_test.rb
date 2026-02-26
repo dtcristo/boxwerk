@@ -22,43 +22,43 @@ module Boxwerk
       assert_match(/Cannot find package.yml/, error.message)
     end
 
-    def test_run_finds_package_yml_and_boots_packages
-      create_package(@tmpdir, exports: ['App'])
+    def test_run_finds_package_yml_and_boots
+      create_package(@tmpdir)
 
-      graph = Setup.run!(start_dir: @tmpdir)
+      result = Setup.run!(start_dir: @tmpdir)
 
-      assert_instance_of Graph, graph
       assert Setup.booted?
-      assert_equal graph, Setup.graph
+      assert_instance_of PackageResolver, result[:resolver]
+      assert_instance_of BoxManager, result[:box_manager]
     end
 
     def test_run_searches_up_directory_tree
-      create_package(@tmpdir, exports: ['App'])
+      create_package(@tmpdir)
       nested_dir = File.join(@tmpdir, 'app', 'lib', 'deep')
       FileUtils.mkdir_p(nested_dir)
 
-      graph = Setup.run!(start_dir: nested_dir)
+      result = Setup.run!(start_dir: nested_dir)
 
-      assert_instance_of Graph, graph
-      assert_equal @tmpdir, graph.root.path
+      assert Setup.booted?
+      assert result[:resolver].root
     end
 
     def test_reset_clears_state
-      create_package(@tmpdir, exports: ['App'])
+      create_package(@tmpdir)
       Setup.run!(start_dir: @tmpdir)
 
       Setup.reset!
 
       refute Setup.booted?
-      assert_nil Setup.graph
+      assert_nil Setup.resolver
+      assert_nil Setup.box_manager
     end
 
     private
 
-    def create_package(path, exports: nil, imports: nil)
-      content = {}
-      content['exports'] = exports if exports
-      content['imports'] = imports if imports
+    def create_package(path, dependencies: nil)
+      content = { 'enforce_dependencies' => true }
+      content['dependencies'] = dependencies if dependencies
 
       File.write(File.join(path, 'package.yml'), YAML.dump(content))
     end

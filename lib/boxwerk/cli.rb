@@ -30,7 +30,7 @@ module Boxwerk
       private
 
       def print_usage
-        puts 'Boxwerk - Ruby package system with Box-powered constant isolation'
+        puts 'Boxwerk - Runtime enforcement companion to Packwerk using Ruby::Box'
         puts ''
         puts 'Usage: boxwerk <command> [args...]'
         puts ''
@@ -38,6 +38,8 @@ module Boxwerk
         puts '  run <script.rb> [args...]    Run a script in the root package context'
         puts '  console [irb-args...]        Start an IRB console in the root package context'
         puts '  help                         Show this help message'
+        puts ''
+        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and Packwerk package.yml files'
       end
 
       def run_command(args)
@@ -54,14 +56,16 @@ module Boxwerk
           exit 1
         end
 
-        graph = perform_setup
-        execute_in_box(graph.root.box, script_path, args[1..-1] || [])
+        result = perform_setup
+        root_box = result[:box_manager].boxes[result[:resolver].root.name]
+        execute_in_box(root_box, script_path, args[1..-1] || [])
       end
 
       def console_command(args)
         require 'irb'
-        graph = perform_setup
-        start_console_in_box(graph.root.box, args)
+        result = perform_setup
+        root_box = result[:box_manager].boxes[result[:resolver].root.name]
+        start_console_in_box(root_box, args)
       end
 
       def perform_setup
@@ -78,7 +82,7 @@ module Boxwerk
 
       def start_console_in_box(box, irb_args = [])
         puts '=' * 70
-        puts 'Boxwerk Console'
+        puts 'Boxwerk Console (Packwerk runtime enforcement)'
         puts '=' * 70
         puts ''
         puts 'All packages have been loaded and wired.'
