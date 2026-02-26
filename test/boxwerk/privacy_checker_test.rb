@@ -37,7 +37,7 @@ module Boxwerk
     def test_default_public_path
       pkg = create_package('packs/a', {})
       path = PrivacyChecker.public_path_for(pkg, @tmpdir)
-      assert_equal File.join(@tmpdir, 'packs/a', 'app/public/'), path
+      assert_equal File.join(@tmpdir, 'packs/a', 'public/'), path
     end
 
     def test_custom_public_path
@@ -48,7 +48,7 @@ module Boxwerk
 
     def test_public_constants_from_public_path
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
-      pub_dir = File.join(pkg_dir, 'app', 'public')
+      pub_dir = File.join(pkg_dir, 'public')
       FileUtils.mkdir_p(pub_dir)
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
       File.write(File.join(pub_dir, 'report.rb'), "class Report\nend\n")
@@ -92,10 +92,9 @@ module Boxwerk
     def test_private_constants_list
       pkg = create_package('packs/a',
         'enforce_privacy' => true,
-        'private_constants' => ['::A::Bar', '::Baz'])
+        'private_constants' => ['::Bar', '::Baz'])
 
-      # With namespace stripping
-      privates = PrivacyChecker.private_constants_list(pkg, namespace: 'A')
+      privates = PrivacyChecker.private_constants_list(pkg)
       assert_includes privates, 'Bar'
       assert_includes privates, 'Baz'
     end
@@ -110,7 +109,7 @@ module Boxwerk
 
     def test_accessible_allows_public_constant
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
-      pub_dir = File.join(pkg_dir, 'app', 'public')
+      pub_dir = File.join(pkg_dir, 'public')
       FileUtils.mkdir_p(pub_dir)
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
 

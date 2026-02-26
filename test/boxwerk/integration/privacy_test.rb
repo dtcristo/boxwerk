@@ -12,7 +12,7 @@ module Boxwerk
       a_dir = create_package_dir('a')
       create_package(a_dir, enforce_privacy: true)
 
-      pub_dir = File.join(a_dir, 'app', 'public')
+      pub_dir = File.join(a_dir, 'public')
       FileUtils.mkdir_p(pub_dir)
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\n  def self.value\n    'public'\n  end\nend\n")
       File.write(File.join(a_dir, 'lib', 'secret.rb'), "class Secret\nend\n")
@@ -22,8 +22,8 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'public', root_box.eval('A::Invoice.value')
-      assert_raises(NameError) { root_box.eval('A::Secret') }
+      assert_equal 'public', root_box.eval('Invoice.value')
+      assert_raises(NameError) { root_box.eval('Secret') }
     end
 
     def test_privacy_allows_all_when_not_enforced
@@ -39,7 +39,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'accessible', root_box.eval('A::Secret.value')
+      assert_equal 'accessible', root_box.eval('Secret.value')
     end
 
     def test_privacy_pack_public_sigil
@@ -60,15 +60,15 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'sigil', root_box.eval('A::Publicized.value')
-      assert_raises(NameError) { root_box.eval('A::PrivateThing') }
+      assert_equal 'sigil', root_box.eval('Publicized.value')
+      assert_raises(NameError) { root_box.eval('PrivateThing') }
     end
 
     def test_privacy_explicit_private_constants
       a_dir = create_package_dir('a')
-      create_package(a_dir, enforce_privacy: true, private_constants: ['::A::Invoice'])
+      create_package(a_dir, enforce_privacy: true, private_constants: ['::Invoice'])
 
-      pub_dir = File.join(a_dir, 'app', 'public')
+      pub_dir = File.join(a_dir, 'public')
       FileUtils.mkdir_p(pub_dir)
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
       File.write(File.join(pub_dir, 'report.rb'), "class Report\n  def self.value\n    'report'\n  end\nend\n")
@@ -78,8 +78,8 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'report', root_box.eval('A::Report.value')
-      assert_raises(NameError) { root_box.eval('A::Invoice') }
+      assert_equal 'report', root_box.eval('Report.value')
+      assert_raises(NameError) { root_box.eval('Invoice') }
     end
 
     def test_descriptive_error_for_privacy_violation
@@ -92,7 +92,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      error = assert_raises(NameError) { root_box.eval('A::Secret') }
+      error = assert_raises(NameError) { root_box.eval('Secret') }
       assert_match(/Privacy violation/, error.message)
       assert_match(/packs\/a/, error.message)
     end

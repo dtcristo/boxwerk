@@ -82,12 +82,6 @@ module Boxwerk
       assert_raises(RuntimeError) { PackageResolver.new(@tmpdir) }
     end
 
-    def test_namespace_for_derives_module_name
-      assert_equal 'Finance', PackageResolver.namespace_for('packs/finance')
-      assert_equal 'TaxCalc', PackageResolver.namespace_for('packs/tax_calc')
-      assert_nil PackageResolver.namespace_for('.')
-    end
-
     def test_direct_dependencies_returns_package_objects
       util_dir = create_package_dir('util')
       create_package(util_dir)

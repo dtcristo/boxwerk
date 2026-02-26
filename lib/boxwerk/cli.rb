@@ -48,7 +48,7 @@ module Boxwerk
         puts '  help                         Show this help message'
         puts '  version                      Show version'
         puts ''
-        puts 'Requires: Ruby 4.0.1+ with RUBY_BOX=1 and package.yml files'
+        puts 'Requires: Ruby 4.0+ with Ruby::Box support and package.yml files'
       end
 
       def run_command(args)
@@ -80,25 +80,16 @@ module Boxwerk
       def info_command
         result = perform_setup
         resolver = result[:resolver]
-        layers = LayerChecker.layers_for(File.expand_path('.'))
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
         puts "Root: #{resolver.root.name}"
         puts "Packages: #{resolver.packages.size}"
 
-        if layers.any?
-          puts "Layers: #{layers.join(' > ')}"
-        end
-
         puts ''
         resolver.topological_order.each do |pkg|
           flags = []
-          flags << "layer: #{pkg.config['layer']}" if pkg.config['layer']
           flags << 'private' if pkg.config['enforce_privacy']
-          flags << 'visible' if pkg.config['enforce_visibility']
-          flags << 'folder_private' if pkg.config['enforce_folder_privacy']
-          flags << 'layers' if pkg.config['enforce_layers'] || pkg.config['enforce_architecture']
 
           flag_str = flags.any? ? " [#{flags.join(', ')}]" : ''
           puts "  #{pkg.name}#{flag_str}"
@@ -106,11 +97,6 @@ module Boxwerk
           deps = pkg.dependencies
           if deps.any?
             puts "    dependencies: #{deps.join(', ')}"
-          end
-
-          visible_to = pkg.config['visible_to']
-          if visible_to
-            puts "    visible_to: #{visible_to.join(', ')}"
           end
         end
       end

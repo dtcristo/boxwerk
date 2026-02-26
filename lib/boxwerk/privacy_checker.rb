@@ -5,7 +5,7 @@ module Boxwerk
   # Reads enforce_privacy, public_path, private_constants from package.yml.
   # Files with `# pack_public: true` sigil are treated as public.
   module PrivacyChecker
-    DEFAULT_PUBLIC_PATH = 'app/public/'
+    DEFAULT_PUBLIC_PATH = 'public/'
     PUBLICIZED_SIGIL_REGEX = /#.*pack_public:\s*true/
 
     class << self
@@ -60,18 +60,11 @@ module Boxwerk
         constants
       end
 
-      # Returns the set of explicitly private constant names, relative to the package namespace.
-      # Strips leading :: and the package namespace prefix.
-      def private_constants_list(package, namespace: nil)
+      # Returns the set of explicitly private constant names.
+      # Strips leading :: prefix.
+      def private_constants_list(package)
         (package.config['private_constants'] || []).map do |name|
-          # Strip leading :: if present
-          stripped = name.start_with?('::') ? name[2..] : name
-          # Strip package namespace prefix (e.g., "Finance::Invoice" → "Invoice")
-          if namespace && stripped.start_with?("#{namespace}::")
-            stripped.delete_prefix("#{namespace}::")
-          else
-            stripped
-          end
+          name.start_with?('::') ? name[2..] : name
         end.to_set
       end
 

@@ -8,10 +8,7 @@ module Boxwerk
   #   2. Configure per-package gem load paths (if Gemfile present)
   #   3. Build file index — scan lib/ for .rb files, map to constant names
   #   4. Register autoload entries — constants loaded on first access
-  #   5. Wire namespace proxies for each direct dependency, enforcing:
-  #      - Visibility (visible_to)
-  #      - Folder privacy (sibling/parent access)
-  #      - Layer constraints (no upward dependencies)
+  #   5. Wire dependency constants, enforcing:
   #      - Constant privacy (public_path, private_constants)
   #
   # No code is loaded eagerly. Constants are resolved on first access via
@@ -25,7 +22,6 @@ module Boxwerk
       @boxes = {} # package name -> Ruby::Box
       @file_indexes = {} # package name -> {const_name => abs_path}
       @gem_resolver = GemResolver.new(root_path)
-      @layers = LayerChecker.layers_for(root_path)
     end
 
     # Boot all packages in topological order.
@@ -55,8 +51,8 @@ module Boxwerk
       # Set up autoloader for intra-package constant resolution
       setup_autoloader(box, file_index)
 
-      # Wire namespace proxies for each direct dependency
-      wire_dependency_namespaces(box, package, resolver)
+      # Wire dependency constants into this box
+      wire_dependency_constants(box, package, resolver)
     end
 
     private
@@ -85,7 +81,7 @@ module Boxwerk
       end
 
       # Scan public_path as a separate autoload root so that
-      # lib/public/invoice.rb maps to Invoice (not Public::Invoice).
+      # public/invoice.rb maps to Invoice (not Public::Invoice).
       if pub_path && File.directory?(pub_path)
         scan_for_constants(pub_path, index)
       end
@@ -123,49 +119,35 @@ module Boxwerk
       end
     end
 
-    def wire_dependency_namespaces(box, package, package_resolver)
+    # Installs a const_missing handler on the box that searches all direct
+    # dependency boxes for the requested constant. Constants are NOT wrapped
+    # in a namespace — they are accessible directly (e.g. Invoice, not
+    # Finance::Invoice). Privacy rules are enforced per-dependency.
+    def wire_dependency_constants(box, package, package_resolver)
+      deps_config = []
+
       package_resolver.direct_dependencies(package).each do |dep|
         dep_box = @boxes[dep.name]
         next unless dep_box
 
-        # Check visibility: is dep visible to this package?
-        unless VisibilityChecker.visible?(dep, package)
-          next
-        end
-
-        # Check folder privacy
-        unless FolderPrivacyChecker.accessible?(dep, package)
-          next
-        end
-
-        # Check layer constraints
-        if @layers.any?
-          violation = LayerChecker.validate_dependency(package, dep, @layers)
-          if violation
-            raise LayerViolationError, violation
-          end
-        end
-
-        namespace_name = PackageResolver.namespace_for(dep.name)
-        next unless namespace_name
-
-        # Get dep's file index for lazy loading
         dep_file_index = @file_indexes[dep.name] || {}
 
-        # Build privacy constraints if enforce_privacy is enabled
         pub_consts = PrivacyChecker.public_constants(dep, @root_path)
         priv_consts = PrivacyChecker.enforces_privacy?(dep) ?
-          PrivacyChecker.private_constants_list(dep, namespace: namespace_name) : nil
+          PrivacyChecker.private_constants_list(dep) : nil
 
-        proxy = ConstantResolver.create_namespace_proxy(
-          dep_box,
+        deps_config << {
+          box: dep_box,
           file_index: dep_file_index,
           public_constants: pub_consts,
           private_constants: priv_consts,
           package_name: dep.name,
-        )
-        box.const_set(namespace_name.to_sym, proxy)
+        }
       end
+
+      return if deps_config.empty?
+
+      ConstantResolver.install_dependency_resolver(box, deps_config)
     end
 
     def package_lib_path(package)
@@ -176,6 +158,4 @@ module Boxwerk
       end
     end
   end
-
-  class LayerViolationError < RuntimeError; end
 end

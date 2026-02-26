@@ -22,7 +22,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'charged', root_box.eval('A::Services::Billing.charge')
+      assert_equal 'charged', root_box.eval('Services::Billing.charge')
     end
 
     def test_deeply_nested_constant
@@ -40,7 +40,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal '/api/v2', root_box.eval('A::Api::V2::Endpoint.url')
+      assert_equal '/api/v2', root_box.eval('Api::V2::Endpoint.url')
     end
 
     def test_intra_package_require
@@ -61,7 +61,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'hello world', root_box.eval('A::Greeter.greet')
+      assert_equal 'hello world', root_box.eval('Greeter.greet')
     end
 
     def test_cross_package_method_call
@@ -82,7 +82,7 @@ module Boxwerk
       create_package(app_dir, dependencies: ['packs/util'])
       File.write(
         File.join(app_dir, 'lib', 'display.rb'),
-        "class Display\n  def self.show(val)\n    Util::Formatter.format(val)\n  end\nend\n",
+        "class Display\n  def self.show(val)\n    Formatter.format(val)\n  end\nend\n",
       )
 
       create_package(@tmpdir, dependencies: ['packs/app'])
@@ -90,7 +90,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal '[42]', root_box.eval('App::Display.show(42)')
+      assert_equal '[42]', root_box.eval('Display.show(42)')
     end
 
     def test_multiple_files_same_module
@@ -112,8 +112,8 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 5, root_box.eval('A::Ops::Add.call(2, 3)')
-      assert_equal 6, root_box.eval('A::Ops::Multiply.call(2, 3)')
+      assert_equal 5, root_box.eval('Ops::Add.call(2, 3)')
+      assert_equal 6, root_box.eval('Ops::Multiply.call(2, 3)')
     end
   end
 end

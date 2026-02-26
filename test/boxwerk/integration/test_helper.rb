@@ -27,20 +27,12 @@ module Boxwerk
     end
 
     def create_package(path, dependencies: nil, enforce_privacy: nil, public_path: nil,
-                       private_constants: nil,
-                       enforce_visibility: nil, visible_to: nil,
-                       enforce_folder_privacy: nil,
-                       enforce_layers: nil, layer: nil)
+                       private_constants: nil)
       content = { 'enforce_dependencies' => true }
       content['dependencies'] = dependencies if dependencies
       content['enforce_privacy'] = enforce_privacy unless enforce_privacy.nil?
       content['public_path'] = public_path if public_path
       content['private_constants'] = private_constants if private_constants
-      content['enforce_visibility'] = enforce_visibility unless enforce_visibility.nil?
-      content['visible_to'] = visible_to if visible_to
-      content['enforce_folder_privacy'] = enforce_folder_privacy unless enforce_folder_privacy.nil?
-      content['enforce_layers'] = enforce_layers unless enforce_layers.nil?
-      content['layer'] = layer if layer
 
       File.write(File.join(path, 'package.yml'), YAML.dump(content))
     end

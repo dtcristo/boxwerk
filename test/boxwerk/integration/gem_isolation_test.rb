@@ -39,7 +39,7 @@ module Boxwerk
       result = boot_system
 
       root_box = result[:box_manager].boxes['.']
-      parsed = root_box.eval('A::JsonUser.parse')
+      parsed = root_box.eval('JsonUser.parse')
       assert_equal [1, 2, 3], parsed
     end
 
@@ -74,8 +74,8 @@ module Boxwerk
       result = boot_system
 
       root_box = result[:box_manager].boxes['.']
-      assert_equal '1.0', root_box.eval('A::AService.version')
-      assert_equal '2.0', root_box.eval('B::BService.version')
+      assert_equal '1.0', root_box.eval('AService.version')
+      assert_equal '2.0', root_box.eval('BService.version')
     end
 
     def test_gem_load_path_isolated_per_box
@@ -145,7 +145,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      assert_equal 'no_gems', root_box.eval('A::Simple.value')
+      assert_equal 'no_gems', root_box.eval('Simple.value')
     end
 
     def test_gems_rb_format_detected
@@ -180,7 +180,7 @@ module Boxwerk
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
-      parsed = root_box.eval('A::JsonUser.parse')
+      parsed = root_box.eval('JsonUser.parse')
       assert_equal({ 'a' => 1 }, parsed)
     end
   end
