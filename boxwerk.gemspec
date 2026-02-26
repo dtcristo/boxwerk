@@ -11,8 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary = 'Runtime package isolation for Ruby using Ruby::Box'
   spec.description =
     'Boxwerk enforces package boundaries at runtime using Ruby::Box constant isolation. ' \
-    'It reads standard Packwerk package.yml files and packwerk-extensions config keys, ' \
-    'but works standalone without requiring the Packwerk gem.'
+    'It reads standard Packwerk package.yml files but works standalone without requiring ' \
+    'the Packwerk gem.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.1'

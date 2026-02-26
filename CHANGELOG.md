@@ -3,32 +3,29 @@
 ## [Unreleased]
 
 ### Breaking Changes
-- **Packwerk no longer required**: Boxwerk now works standalone. Package discovery uses direct YAML parsing instead of `Packwerk::PackageSet`. Packwerk is optional (for static analysis at CI time).
-- **Packs convention**: Example uses `packs/` directory instead of `packages/`. Both are supported — Boxwerk finds `package.yml` files anywhere via glob.
-
-### Added
-- **`Boxwerk::Package`**: Simple data class replacing `Packwerk::Package`. Loads from `package.yml` files directly.
-- **`boxwerk install`**: CLI command that runs `bundle install` in all packs with a Gemfile.
-- **Lazy constant loading**: No eager code loading at boot — files loaded on first access via `autoload` and `const_missing`
-- **CLI `info` command**: Shows package structure, dependencies, layers, and enforcement flags
-- **CLI `--version`/`-v` flag**: Prints version and exits
-- **Zeitwerk integration**: Uses Zeitwerk inflection for file→constant naming conventions
-- **Visibility enforcement**: `enforce_visibility` + `visible_to` restricts which packages can access a package
-- **Folder privacy enforcement**: `enforce_folder_privacy` restricts access to sibling/parent packages
-- **Layer enforcement**: `enforce_layers` + `layer` with `layers` defined in `packwerk.yml` prevents architectural violations
-- **Per-package gem isolation**: Each package can have its own `Gemfile`/`gems.rb` with isolated gem versions via `$LOAD_PATH` per box
-- **Privacy enforcement**: Compatible with [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) privacy config
-- Comprehensive test suite: 95 integration tests + 34 end-to-end tests
-- **FUTURE_IMPROVEMENTS.md**: Documents global gems, Rails integration, and other planned enhancements
+- **No namespace wrapping**: Constants from dependencies are now accessible directly (e.g. `Invoice` instead of `Finance::Invoice`). A `const_missing` handler searches all direct dependencies.
+- **Default public_path changed**: Default is now `public/` instead of `app/public/`.
+- **Removed features**: Visibility checker (`enforce_visibility`), folder-privacy checker (`enforce_folder_privacy`), and layer checker (`enforce_layers`) have been removed. Only the privacy checker remains.
+- **Removed packwerk.yml**: No longer read or required. Package discovery uses `package.yml` files only.
+- **Executable changed**: No longer checks `ENV['RUBY_BOX']`. Checks `Ruby::Box.enabled?` instead.
 
 ### Changed
-- **Standalone package discovery**: `PackageResolver` reads `packwerk.yml` for `package_paths`/`exclude` config, then globs for `package.yml` files. No Packwerk gem required.
-- **Lazy loading**: Replaced eager code loading with `build_file_index` + `setup_autoloader`
-- Upgraded to Ruby 4.0.1 (pinned via `.mise.toml`)
-- Added `zeitwerk` as explicit gem dependency
+- Renamed `Gemfile` → `gems.rb` throughout (root, example, packs)
+- Moved example to `examples/simple/`
+- `PackageResolver` no longer reads `packwerk.yml` or derives namespaces
+- `ConstantResolver` installs a dependency resolver instead of namespace proxies
+- Updated gemspec description (removed packwerk-extensions reference)
+
+### Added
+- `examples/rails/README.md`: Comprehensive Rails integration plan
+- Expanded `FUTURE_IMPROVEMENTS.md` with detailed plans for Zeitwerk autoloading, IRB console improvements, and constant reloading
 
 ### Removed
-- `packwerk` gem dependency (now optional)
+- `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker` modules
+- `LayerViolationError` exception class
+- `PackageResolver.namespace_for` method
+- `packwerk.yml` support
+- Complementary Tools section from README
 
 ## [v1.0.0] - 2026-02-26
 

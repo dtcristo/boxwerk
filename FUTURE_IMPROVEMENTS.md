@@ -2,23 +2,118 @@
 
 This document outlines planned improvements and design considerations for Boxwerk.
 
+## Zeitwerk Autoloading Inside Boxes
+
+**Current limitation:** Zeitwerk's autoloading does NOT work inside `Ruby::Box` because:
+
+1. Zeitwerk registers `const_missing` hooks on `Module` in the main context
+2. Inside a box, `Module` references the box's copy, not the main one
+3. The hooks never fire for constants referenced inside boxes
+
+Boxwerk works around this by scanning files at boot time and registering
+`autoload` entries directly in each box. This works but means Zeitwerk
+features (reloading, eager loading, inflections) are unavailable.
+
+### Plan
+
+**Short term:** Improve Boxwerk's file scanner to support more Zeitwerk
+features:
+- Custom inflections via a Boxwerk config (e.g. `boxwerk.yml`)
+- Collapse directories (Zeitwerk's `collapse` equivalent)
+- Ignore paths (Zeitwerk's `ignore` equivalent)
+
+**Medium term:** If `Ruby::Box` gains the ability to share or inherit
+`const_missing` hooks from the root box, Zeitwerk could work natively inside
+boxes. This would require Ruby core changes:
+- `Ruby::Box.new(inherit_const_missing: true)` or similar
+- Per-box Zeitwerk loader registration
+
+**Long term:** Contribute to Ruby core to make `Ruby::Box` Zeitwerk-compatible.
+This would enable full Rails autoloading inside boxes with no workarounds.
+
+## IRB Console Improvements
+
+**Current limitation:** The IRB console runs in the root box context with
+autocomplete disabled (`--noautocomplete`). Autocomplete is disabled because
+it uses `Module.constants` which doesn't reflect box-scoped constants.
+
+### Plan
+
+**Phase 1: Better constant discovery**
+- Implement a `constants` method on the root box that returns all accessible
+  constants (own + dependency constants)
+- Expose this via a helper: `Boxwerk.available_constants`
+
+**Phase 2: IRB integration**
+- Create a custom IRB completion proc that queries Boxwerk's constant index
+  instead of using `Module.constants`
+- Register it via `IRB::InputCompletor` or the newer `IRB::Completion` API
+- This would allow re-enabling autocomplete with box-aware completions
+
+**Phase 3: Per-package console**
+- `boxwerk console packs/billing` — drop into a specific package's box
+- Shows only that package's constants and its declared dependencies
+- Useful for testing package isolation interactively
+
+## Constant Reloading
+
+**Current limitation:** Constants loaded into a box are permanent — there's
+no way to "unload" them. This means development requires restarting the
+process after code changes.
+
+### Plan
+
+**Approach 1: Box recreation**
+- Watch for file changes (using `listen` gem or `rb-fsevent`)
+- When a file changes, identify which package it belongs to
+- Recreate that package's box and all boxes that depend on it
+- Re-wire dependency constants
+
+This is the most correct approach but potentially expensive for large
+dependency graphs. Optimizations:
+- Only recreate boxes in the affected dependency subgraph
+- Cache unchanged file indexes
+- Use checksums to detect actual code changes vs. touch-only saves
+
+**Approach 2: Constant removal + re-require**
+- Track which constants were loaded from each file
+- On file change, remove those constants from the box (`remove_const`)
+- Re-require the changed file
+
+This is faster but fragile — it doesn't handle cases where constants
+reference each other or where class/module reopening has side effects.
+
+**Approach 3: Ruby::Box API**
+- If Ruby core adds a `Box#reload` or `Box#remove_const` API, use it
+- This would be the cleanest solution but depends on Ruby development
+
+**Recommended path:** Start with Approach 1 (box recreation) behind an
+opt-in flag. It's correct by construction and the performance cost is
+acceptable for development workflows.
+
 ## Global Gems
 
-Currently, gems in the root `Gemfile` are loaded into the root box via Bundler and accessible globally. Per-package gems are loaded into individual boxes via `$LOAD_PATH` manipulation. There are several ways to improve this:
+Currently, gems in the root `gems.rb` are loaded into the root box via
+Bundler and accessible globally. Per-package gems are loaded into individual
+boxes via `$LOAD_PATH` manipulation. There are several ways to improve this:
 
 ### Approach 1: Root Box Inheritance (Current)
 
-Gems loaded in the root box are available in all boxes because `Ruby::Box.new` creates a copy of the ROOT box (the bootstrap box), not the main box. This means:
+Gems loaded in the root box are available in all boxes because `Ruby::Box.new`
+creates a copy of the ROOT box (the bootstrap box), not the main box. This
+means:
 
 - Gems required before box creation are available everywhere
-- The root `Gemfile` acts as a "global" gem set
-- Per-package `Gemfile` provides additional isolated gems
+- The root `gems.rb` acts as a "global" gem set
+- Per-package `gems.rb` provides additional isolated gems
 
-**Limitation:** Gems required after box creation are NOT shared. The order of operations matters.
+**Limitation:** Gems required after box creation are NOT shared. The order of
+operations matters.
 
 ### Approach 2: Shared Gem Box
 
-Create a dedicated "gems" box at the bottom of the dependency tree that all packages depend on:
+Create a dedicated "gems" box at the bottom of the dependency tree that all
+packages depend on:
 
 ```
                     ┌──────────┐
@@ -39,129 +134,21 @@ Create a dedicated "gems" box at the bottom of the dependency tree that all pack
 - A package with no gem dependencies gets a truly clean box
 - Easier to reason about gem visibility
 
-**Implementation:**
-1. Create a virtual "gems" package (no package.yml needed)
-2. Boot it first, require all shared gems into it
-3. Wire it as a dependency of every package that needs shared gems
-4. Packages that want isolation simply don't depend on the gems package
-
-### Approach 3: Gem Layers
-
-Combine both approaches — have multiple gem "layers":
-
-```yaml
-# packwerk.yml
-gem_layers:
-  - name: core
-    gemfile: Gemfile.core   # ActiveSupport, JSON, etc.
-  - name: web
-    gemfile: Gemfile.web    # Rails, Rack, etc.
-```
-
-Packages declare which gem layers they need. This would require custom config, which conflicts with the current "no custom YAML" constraint.
-
 ### Considerations
 
-- **Gem conflicts:** When two packages depend on different versions of the same gem, `$LOAD_PATH` isolation handles this naturally. But if a shared gem layer includes one version, packages can't override it.
-- **Native extensions:** Work per-box but may have global state (C-level globals) that leaks across boxes. This needs investigation.
-- **Bundler integration:** Currently we parse `Gemfile.lock` with `Bundler::LockfileParser` at boot (no subprocess). For a shared gem approach, we'd need to resolve a combined lockfile or use the root lockfile.
+- **Gem conflicts:** When two packages depend on different versions of the
+  same gem, `$LOAD_PATH` isolation handles this naturally. But if a shared gem
+  layer includes one version, packages can't override it.
+- **Native extensions:** Work per-box but may have global state (C-level
+  globals) that leaks across boxes. This needs investigation.
+- **Bundler integration:** Currently we parse lockfiles with
+  `Bundler::LockfileParser` at boot (no subprocess). For a shared gem approach,
+  we'd need to resolve a combined lockfile or use the root lockfile.
 
 ## Rails Integration
 
-Rails is the primary target for Packwerk, so Boxwerk should eventually work with Rails applications.
-
-### Challenges
-
-1. **Railties and Engine loading:** Rails expects gems to be globally available and uses Railties for initialization. Each gem with a Railtie registers hooks that run during boot. These hooks assume a single global constant namespace.
-
-2. **ActiveSupport autoloading:** Rails uses Zeitwerk via ActiveSupport for autoloading. Boxwerk's box isolation conflicts with this because Zeitwerk's `const_missing` hooks are registered on `Module` in the main context, not inside boxes.
-
-3. **ActiveRecord models:** Models share a database connection and schema. Even if isolated in boxes, they need to reference each other for associations (`belongs_to`, `has_many`). This requires cross-box constant resolution.
-
-4. **Initializers and middleware:** Rails initializers and middleware run in a specific order and assume global state. Boxing them would break the initialization chain.
-
-### Proposed Approach
-
-A Rails integration would likely work as follows:
-
-1. **Rails itself as a global gem:** Rails and its dependencies (ActiveSupport, ActiveRecord, ActionPack, etc.) would be in the root/shared gem layer, available to all boxes.
-
-2. **Application code in packages:** Controllers, models, services, jobs, etc. would live in packages with their own boxes.
-
-3. **Packwerk compatibility:** Since Rails apps already use Packwerk for static analysis, Boxwerk would read the same `package.yml` files and enforce boundaries at runtime.
-
-4. **Selective isolation:** Not everything needs to be in a box. Rails core components (Application, routes, middleware) would stay in the main context. Package code gets isolated.
-
-### Minimal Rails Example (Planned)
-
-```
-rails_app/
-├── Gemfile                    # Rails + shared gems
-├── packwerk.yml               # Layer definitions
-├── package.yml                # Root package
-├── config/                    # Rails config (not boxed)
-│   ├── application.rb
-│   └── routes.rb
-├── app/
-│   └── controllers/
-│       └── application_controller.rb
-└── packs/
-    ├── billing/
-    │   ├── package.yml
-    │   ├── app/
-    │   │   ├── controllers/
-    │   │   ├── models/
-    │   │   └── services/
-    │   └── lib/
-    └── inventory/
-        ├── package.yml
-        ├── app/
-        │   ├── controllers/
-        │   ├── models/
-        │   └── services/
-        └── lib/
-```
-
-## Zeitwerk Autoloading Inside Boxes
-
-Currently, Zeitwerk's autoloading does NOT work inside `Ruby::Box` because:
-
-1. Zeitwerk registers `const_missing` hooks on `Module` in the main context
-2. Inside a box, `Module` references the box's copy, not the main one
-3. The hooks never fire for constants referenced inside boxes
-
-If Ruby::Box evolves to support shared `Module` hooks or per-box Zeitwerk loaders, this would enable:
-- Full Zeitwerk autoloading inside each package's box
-- No need for our custom `autoload` registration or file index scanning
-- Seamless integration with Rails' autoloading
-
-## Constant Reloading
-
-Currently, constants loaded into a box are permanent — there's no way to "unload" them. This makes development workflows (edit → reload → test) impossible without restarting the process.
-
-Potential approaches:
-- Recreate boxes on file change (expensive but correct)
-- Track loaded constants and remove them from the box before reloading
-- Use Ruby::Box's future API for constant removal (if added)
-
-## Development Workflow
-
-### Packs CLI Integration
-
-[Packs](https://github.com/rubyatscale/packs) provides CLI tools for managing package structure. Potential integration:
-
-```bash
-packs create packs/billing          # Creates package structure
-boxwerk info                        # Shows runtime enforcement view
-packwerk check                      # Static analysis (optional)
-RUBY_BOX=1 boxwerk run app.rb       # Runtime enforcement
-```
-
-### IDE Support
-
-- Language servers could be aware of package boundaries
-- Autocomplete could filter to only accessible constants
-- Privacy violations could be highlighted in real-time
+See [examples/rails/README.md](examples/rails/README.md) for the comprehensive
+Rails integration plan.
 
 ## Per-Package Testing
 
@@ -172,4 +159,11 @@ boxwerk test packs/billing     # Run billing tests in isolated box
 boxwerk test --all             # Run all package tests
 ```
 
-This would verify that packages work correctly in isolation, not just when all code is loaded together.
+This would verify that packages work correctly in isolation, not just when
+all code is loaded together.
+
+## IDE Support
+
+- Language servers could be aware of package boundaries
+- Autocomplete could filter to only accessible constants
+- Privacy violations could be highlighted in real-time
