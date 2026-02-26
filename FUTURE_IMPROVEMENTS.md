@@ -105,7 +105,7 @@ rails_app/
 ├── app/
 │   └── controllers/
 │       └── application_controller.rb
-└── packages/
+└── packs/
     ├── billing/
     │   ├── package.yml
     │   ├── app/
@@ -151,10 +151,10 @@ Potential approaches:
 [Packs](https://github.com/rubyatscale/packs) provides CLI tools for managing package structure. Potential integration:
 
 ```bash
-packs create packages/billing     # Creates package structure
-boxwerk info                      # Shows runtime enforcement view
-packwerk check                    # Static analysis
-RUBY_BOX=1 boxwerk run app.rb     # Runtime enforcement
+packs create packs/billing          # Creates package structure
+boxwerk info                        # Shows runtime enforcement view
+packwerk check                      # Static analysis (optional)
+RUBY_BOX=1 boxwerk run app.rb       # Runtime enforcement
 ```
 
 ### IDE Support
@@ -168,8 +168,8 @@ RUBY_BOX=1 boxwerk run app.rb     # Runtime enforcement
 Each package could have its own test suite that runs in its own box:
 
 ```bash
-boxwerk test packages/billing     # Run billing tests in isolated box
-boxwerk test --all                # Run all package tests
+boxwerk test packs/billing     # Run billing tests in isolated box
+boxwerk test --all             # Run all package tests
 ```
 
 This would verify that packages work correctly in isolation, not just when all code is loaded together.

@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
+### Breaking Changes
+- **Packwerk no longer required**: Boxwerk now works standalone. Package discovery uses direct YAML parsing instead of `Packwerk::PackageSet`. Packwerk is optional (for static analysis at CI time).
+- **Packs convention**: Example uses `packs/` directory instead of `packages/`. Both are supported — Boxwerk finds `package.yml` files anywhere via glob.
+
 ### Added
+- **`Boxwerk::Package`**: Simple data class replacing `Packwerk::Package`. Loads from `package.yml` files directly.
+- **`boxwerk install`**: CLI command that runs `bundle install` in all packs with a Gemfile.
 - **Lazy constant loading**: No eager code loading at boot — files loaded on first access via `autoload` and `const_missing`
 - **CLI `info` command**: Shows package structure, dependencies, layers, and enforcement flags
 - **CLI `--version`/`-v` flag**: Prints version and exits
@@ -11,50 +17,34 @@
 - **Folder privacy enforcement**: `enforce_folder_privacy` restricts access to sibling/parent packages
 - **Layer enforcement**: `enforce_layers` + `layer` with `layers` defined in `packwerk.yml` prevents architectural violations
 - **Per-package gem isolation**: Each package can have its own `Gemfile`/`gems.rb` with isolated gem versions via `$LOAD_PATH` per box
-- **GemResolver**: Parses `Gemfile.lock` with `Bundler::LockfileParser`, resolves gem paths via `Gem::Specification`
-- **VisibilityChecker** module: reads `enforce_visibility` and `visible_to` from package.yml
-- **FolderPrivacyChecker** module: reads `enforce_folder_privacy`, enforces sibling/parent access rules
-- **LayerChecker** module: reads `enforce_layers`, `layer` from package.yml and `layers` from `packwerk.yml`
-- `LayerViolationError` raised at boot time for layer constraint violations
 - **Privacy enforcement**: Compatible with [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) privacy config
-  - `enforce_privacy: true` in `package.yml` restricts constant access to the public API
-  - `public_path` (default: `app/public/`) defines the public API directory
-  - `pack_public: true` sigil makes individual files public
-  - `private_constants` explicitly blocks specific constants
-- `PrivacyChecker` module: reads packwerk-extensions config and enforces privacy at runtime
-- Comprehensive test suite: 95 integration tests + 31 end-to-end tests
-- Integration tests split by feature area (isolation, privacy, visibility, folder privacy, layers, gem isolation, nested constants, packwerk parity)
-- End-to-end test suite (`test/e2e/run.rb`) tests full CLI stack via subprocess
-- Rake tasks: `rake e2e`, `rake all` (unit + integration + e2e)
+- Comprehensive test suite: 95 integration tests + 34 end-to-end tests
 - **FUTURE_IMPROVEMENTS.md**: Documents global gems, Rails integration, and other planned enhancements
 
 ### Changed
-- **Lazy loading**: Replaced eager `load_package_code` with `build_file_index` + `setup_autoloader` — no code loaded until first constant access
-- **CLI errors to stderr**: Error output now goes to stderr, not stdout
+- **Standalone package discovery**: `PackageResolver` reads `packwerk.yml` for `package_paths`/`exclude` config, then globs for `package.yml` files. No Packwerk gem required.
+- **Lazy loading**: Replaced eager code loading with `build_file_index` + `setup_autoloader`
 - Upgraded to Ruby 4.0.1 (pinned via `.mise.toml`)
 - Added `zeitwerk` as explicit gem dependency
-- `PackageResolver` and `PrivacyChecker` now use `Zeitwerk::Inflector#camelize` instead of manual inflection
+
+### Removed
+- `packwerk` gem dependency (now optional)
 
 ## [v1.0.0] - 2026-02-26
 
 ### Breaking Changes
-- **Full rewrite**: Boxwerk is now a runtime enforcement companion to Packwerk
-- **Packwerk dependency**: Boxwerk depends on and reads Packwerk's `package.yml` format
-- **No custom config**: Removed `exports` and `imports` from `package.yml`; uses Packwerk's `dependencies` and `enforce_dependencies` instead
-- **Namespace-based access**: Dependencies accessed via derived namespace (e.g., `packages/finance` → `Finance::Invoice`)
-- **No selective/renamed imports**: All constants in a dependency package are accessible via the namespace
+- **Full rewrite**: Boxwerk is now a runtime package isolation tool using Ruby::Box
+- **Packwerk format**: Uses Packwerk's `package.yml` format for configuration
+- **No custom config**: Removed `exports` and `imports` from `package.yml`; uses `dependencies` and `enforce_dependencies` instead
+- **Namespace-based access**: Dependencies accessed via derived namespace (e.g., `packs/finance` → `Finance::Invoice`)
 
 ### Added
-- `PackageResolver`: Discovers packages via Packwerk's `PackageSet`, builds dependency map, topological sort
+- `PackageResolver`: Discovers packages via `package.yml` globbing, builds dependency map, topological sort
 - `BoxManager`: Creates `Ruby::Box` per package, loads code, wires namespace proxy modules
 - `ConstantResolver`: Creates proxy modules with `const_missing` for lazy constant resolution and caching
 - Transitive dependency prevention: only direct dependencies are searchable
 
 ### Removed
-- `Graph` class (replaced by `PackageResolver` using Packwerk)
-- `Package` class (replaced by Packwerk's `Package`)
-- `Loader` class (replaced by `BoxManager`)
-- `Registry` class (box tracking moved to `BoxManager`)
 - Custom `exports`/`imports` YAML configuration
 - Import strategies (aliased, selective, renamed)
 

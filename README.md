@@ -4,16 +4,14 @@
   </h1>
 </div>
 
-Boxwerk is the **runtime enforcement companion** to [Packwerk](https://github.com/Shopify/packwerk). While Packwerk catches dependency violations at CI time through static analysis, Boxwerk enforces those same boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html) isolation.
+Boxwerk enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html) isolation. Each package gets its own `Ruby::Box` — constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
 
-Each package gets its own `Ruby::Box`. Dependencies are exposed via namespace proxies — constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
-
-Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files and [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) config keys. No custom configuration format.
+Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files and [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) config keys. No custom configuration format. Packwerk itself is optional — Boxwerk works standalone.
 
 ## Requirements
 
 - Ruby 4.0.1+ with `RUBY_BOX=1` environment variable
-- [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files
+- `package.yml` files ([Packwerk](https://github.com/Shopify/packwerk) format)
 
 ## Quick Start
 
@@ -23,14 +21,14 @@ Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.
 gem 'boxwerk'
 ```
 
-### 2. Create packages with Packwerk format
+### 2. Create packages
 
 ```
 my_app/
 ├── Gemfile
 ├── package.yml              # Root package
 ├── app.rb
-└── packages/
+└── packs/
     ├── finance/
     │   ├── package.yml
     │   └── lib/
@@ -45,14 +43,14 @@ my_app/
 ```yaml
 enforce_dependencies: true
 dependencies:
-  - packages/finance
+  - packs/finance
 ```
 
-**`packages/finance/package.yml`:**
+**`packs/finance/package.yml`:**
 ```yaml
 enforce_dependencies: true
 dependencies:
-  - packages/util
+  - packs/util
 ```
 
 ### 3. Write your application
@@ -81,19 +79,20 @@ RUBY_BOX=1 boxwerk run app.rb
 boxwerk run <script.rb> [args...]    Run a script with package isolation
 boxwerk console [irb-args...]        Interactive console in root package context
 boxwerk info                         Show package structure and dependencies
+boxwerk install                      Run bundle install in all packs with a Gemfile
 boxwerk version                      Show version
 boxwerk help                         Show usage
 ```
 
 ## Package Configuration
 
-Standard Packwerk `package.yml` with [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) keys:
+Standard `package.yml` with [packwerk-extensions](https://github.com/rubyatscale/packwerk-extensions) keys:
 
 ```yaml
-# packages/finance/package.yml
+# packs/finance/package.yml
 enforce_dependencies: true
 dependencies:
-  - packages/util
+  - packs/util
 
 # Privacy — only public_path constants are accessible to dependents
 enforce_privacy: true
@@ -104,7 +103,7 @@ private_constants:
 # Visibility — restrict which packages can see this one
 enforce_visibility: true
 visible_to:
-  - packages/billing
+  - packs/billing
   - .
 
 # Folder privacy — only sibling/parent packages can access
@@ -126,10 +125,10 @@ layers:
 
 ### Per-Package Gems
 
-Packages can have their own `Gemfile` (or `gems.rb`) for isolated gem dependencies. Different packages can use different versions of the same gem.
+Packs can have their own `Gemfile` (or `gems.rb`) for isolated gem dependencies. Different packs can use different versions of the same gem.
 
 ```
-packages/billing/
+packs/billing/
 ├── package.yml
 ├── Gemfile               # gem 'stripe', '~> 5.0'
 ├── Gemfile.lock
@@ -137,7 +136,7 @@ packages/billing/
     └── payment.rb        # require 'stripe' → gets v5
 ```
 
-Run `bundle install` in the package directory to generate the lockfile. Boxwerk resolves gem paths at boot via Bundler.
+Run `boxwerk install` to install gems for all packs, or `bundle install` in individual pack directories.
 
 ### `pack_public: true` Sigil
 
@@ -153,8 +152,8 @@ end
 
 Package paths map to namespaces using [Zeitwerk](https://github.com/fxn/zeitwerk) conventions:
 
-- `packages/finance` → `Finance`
-- `packages/tax_calc` → `TaxCalc`
+- `packs/finance` → `Finance`
+- `packs/tax_calc` → `TaxCalc`
 
 File paths within packages follow the same conventions for autoloading.
 
