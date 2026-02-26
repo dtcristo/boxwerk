@@ -3,10 +3,9 @@
 require 'bundler'
 
 module Boxwerk
-  # GemResolver handles per-package gem isolation.
-  # Each package can optionally have its own Gemfile/gems.rb with
-  # Gemfile.lock/gems.locked. Gems are resolved via Bundler and
-  # loaded into the package's box via $LOAD_PATH manipulation.
+  # Resolves per-package gem dependencies from Gemfile.lock.
+  # Parses lockfiles with Bundler::LockfileParser and resolves gem
+  # load paths via Gem::Specification for $LOAD_PATH isolation per box.
   class GemResolver
     attr_reader :root_path
 

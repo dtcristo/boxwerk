@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # CLI parses commands and delegates to Setup for package management.
-  # Handles run, console, info, and help commands.
+  # Command-line interface. Delegates to Setup for package boot.
   module CLI
     class << self
       def run(argv)

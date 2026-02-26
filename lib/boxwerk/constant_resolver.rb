@@ -1,20 +1,19 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # ConstantResolver creates namespace proxy modules that lazily resolve
-  # constants from dependency packages via const_missing. Constants are
-  # loaded on first access — the proxy finds the file in the dependency's
-  # file index, requires it into the dependency box, then caches the result.
-  # Optionally enforces privacy (packwerk-extensions compatibility).
+  # Creates namespace proxy modules for cross-package constant resolution.
+  #
+  # When package A depends on package B, a proxy module is injected into A's
+  # box under B's namespace name. When A accesses B::SomeConstant, the proxy's
+  # const_missing fires, resolves the constant from B's box, and caches it
+  # via const_set for fast subsequent access.
+  #
+  # Privacy enforcement: if the dependency has enforce_privacy enabled, only
+  # constants in public_constants are accessible. Constants in private_constants
+  # are always blocked.
   module ConstantResolver
-    # Creates a namespace proxy module that lazily resolves constants
-    # from a dependency's Ruby::Box via const_missing.
-    #
-    # @param dep_box [Ruby::Box] the dependency's box
-    # @param file_index [Hash] mapping of constant names to absolute file paths
-    # @param public_constants [Set, nil] if non-nil, only these constants are accessible
-    # @param private_constants [Set] constants explicitly marked private
-    # @param package_name [String] name of the dependency package (for error messages)
+    # Creates a proxy module that resolves constants from a dependency's box.
+    # Constants are loaded lazily and cached after first access.
     def self.create_namespace_proxy(dep_box, file_index: {}, public_constants: nil, private_constants: nil, package_name: nil)
       proxy = Module.new
       pkg_name = package_name

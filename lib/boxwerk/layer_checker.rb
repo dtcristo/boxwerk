@@ -3,9 +3,9 @@
 require 'yaml'
 
 module Boxwerk
-  # LayerChecker enforces packwerk-extensions layer rules.
-  # Layers are defined in `packwerk.yml` as an ordered list (highest to lowest).
-  # Packages declare their layer and can only depend on same or lower layers.
+  # Enforces packwerk-extensions layer rules.
+  # Layers defined in packwerk.yml (ordered highest to lowest).
+  # Packages can only depend on same or lower layers.
   module LayerChecker
     class << self
       # Reads layer definitions from packwerk.yml.

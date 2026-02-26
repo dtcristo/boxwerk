@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # VisibilityChecker enforces packwerk-extensions visibility rules.
-  # A package with `enforce_visibility: true` and `visible_to` list
-  # is only accessible to the listed packages.
+  # Enforces packwerk-extensions visibility rules.
+  # When enforce_visibility is true, only packages listed in visible_to can access.
   module VisibilityChecker
     class << self
       def enforces_visibility?(package)

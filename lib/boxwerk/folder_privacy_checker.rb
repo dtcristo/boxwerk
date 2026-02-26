@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # FolderPrivacyChecker enforces packwerk-extensions folder_privacy rules.
-  # A package with `enforce_folder_privacy: true` is only accessible to
-  # its sibling packs and parent packs.
+  # Enforces packwerk-extensions folder_privacy rules.
+  # When enabled, only sibling packs and parent packs can access this package.
   module FolderPrivacyChecker
     class << self
       def enforces_folder_privacy?(package)

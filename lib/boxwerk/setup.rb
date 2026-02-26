@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Setup finds the root package.yml, discovers packages via Packwerk,
-  # and boots all packages with Box isolation.
+  # Finds the root package.yml directory and boots all packages.
   module Setup
     class << self
       def run!(start_dir: Dir.pwd)
