@@ -2,11 +2,11 @@
 
 require 'yaml'
 require 'packwerk'
-require 'zeitwerk'
 
 module Boxwerk
-  # PackageResolver discovers packages using Packwerk's package.yml format,
-  # builds a dependency map, and provides topological ordering for boot.
+  # Discovers packages via Packwerk's PackageSet and provides
+  # topological ordering for boot. Derives namespace names using
+  # Zeitwerk conventions (e.g., packages/tax_calc → TaxCalc).
   class PackageResolver
     attr_reader :packages, :root
 
@@ -32,7 +32,7 @@ module Boxwerk
       return nil if package_name == '.'
 
       basename = File.basename(package_name)
-      Zeitwerk::Inflector.new.camelize(basename, nil)
+      Boxwerk.inflector.camelize(basename, nil)
     end
 
     # Returns the direct dependency Package objects for a given package.

@@ -1,18 +1,9 @@
 # frozen_string_literal: true
 
-require 'zeitwerk'
-
 module Boxwerk
-  # PrivacyChecker reads packwerk-extensions privacy config from package.yml
-  # and determines which constants are public (accessible to dependents).
-  #
-  # Config keys (same as packwerk-extensions):
-  #   enforce_privacy: true|false|'strict'
-  #   public_path: 'app/public/'  (default)
-  #   private_constants: ['::Foo::Bar']
-  #
-  # When enforce_privacy is enabled, only constants from the public_path
-  # (or files with `pack_public: true` sigil) are accessible to dependents.
+  # Enforces packwerk-extensions privacy rules at runtime.
+  # Reads enforce_privacy, public_path, private_constants from package.yml.
+  # Files with `# pack_public: true` sigil are treated as public.
   module PrivacyChecker
     DEFAULT_PUBLIC_PATH = 'app/public/'
     PUBLICIZED_SIGIL_REGEX = /#.*pack_public:\s*true/
@@ -109,13 +100,11 @@ module Boxwerk
       # Derives a constant name from a file path relative to a base directory.
       # Uses Zeitwerk naming conventions.
       def constant_name_from_path(file_path, base_path)
-        # Ensure base_path ends with / so delete_prefix works cleanly
         normalized_base = base_path.end_with?('/') ? base_path : "#{base_path}/"
         relative = file_path.delete_prefix(normalized_base).delete_suffix('.rb')
         return nil if relative.empty?
 
-        inflector = Zeitwerk::Inflector.new
-        relative.split('/').map { |part| inflector.camelize(part, nil) }.join('::')
+        relative.split('/').map { |part| Boxwerk.inflector.camelize(part, nil) }.join('::')
       end
 
       # Checks if a file contains the pack_public: true sigil in first 5 lines.

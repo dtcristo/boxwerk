@@ -1,10 +1,22 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # BoxManager creates Ruby::Box instances for packages, builds file indexes
-  # for lazy loading, injects autoloaders, and wires namespace proxies.
-  # Enforces visibility, folder privacy, layer, and privacy constraints.
-  # No code is eagerly loaded — all constants are resolved on first access.
+  # BoxManager creates a Ruby::Box for each package and wires them together.
+  #
+  # Boot sequence for each package (in topological order):
+  #   1. Create Ruby::Box
+  #   2. Configure per-package gem load paths (if Gemfile present)
+  #   3. Build file index — scan lib/ for .rb files, map to constant names
+  #   4. Register autoload entries — constants loaded on first access
+  #   5. Wire namespace proxies for each direct dependency, enforcing:
+  #      - Visibility (visible_to)
+  #      - Folder privacy (sibling/parent access)
+  #      - Layer constraints (no upward dependencies)
+  #      - Constant privacy (public_path, private_constants)
+  #
+  # No code is loaded eagerly. Constants are resolved on first access via
+  # Ruby's autoload mechanism (intra-package) or const_missing proxies
+  # (cross-package). Resolved constants are cached via const_set.
   class BoxManager
     attr_reader :boxes
 
@@ -62,29 +74,32 @@ module Boxwerk
     # using Zeitwerk naming conventions. Does not load any code.
     def build_file_index(package)
       index = {}
-      inflector = Zeitwerk::Inflector.new
+
+      pub_path = if PrivacyChecker.enforces_privacy?(package)
+                   PrivacyChecker.public_path_for(package, @root_path)
+                 end
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)
-        scan_for_constants(lib_path, index, inflector)
+        scan_for_constants(lib_path, index, exclude: pub_path)
       end
 
-      # Also include public_path files if privacy is enforced
-      if PrivacyChecker.enforces_privacy?(package)
-        pub_path = PrivacyChecker.public_path_for(package, @root_path)
-        if pub_path && File.directory?(pub_path) && pub_path != lib_path
-          scan_for_constants(pub_path, index, inflector)
-        end
+      # Scan public_path as a separate autoload root so that
+      # lib/public/invoice.rb maps to Invoice (not Public::Invoice).
+      if pub_path && File.directory?(pub_path)
+        scan_for_constants(pub_path, index)
       end
 
       index
     end
 
-    def scan_for_constants(dir, index, inflector)
+    def scan_for_constants(dir, index, exclude: nil)
       base = dir.end_with?('/') ? dir : "#{dir}/"
       Dir.glob(File.join(dir, '**', '*.rb')).sort.each do |file|
+        next if exclude && file.start_with?(exclude)
+
         relative = file.delete_prefix(base).delete_suffix('.rb')
-        const_name = relative.split('/').map { |part| inflector.camelize(part, nil) }.join('::')
+        const_name = relative.split('/').map { |part| Boxwerk.inflector.camelize(part, nil) }.join('::')
         index[const_name] = file
       end
     end
