@@ -105,9 +105,9 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('defined?(ClassB)'), 'A should have ClassB'
-      refute a_box.eval('defined?(ClassC)'), 'A should not have ClassC'
-      refute a_box.eval('defined?(ClassD)'), 'A should not have ClassD'
+      assert a_box.eval('begin; ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
+      refute a_box.eval('begin; ClassC; true; rescue NameError; false; end'), 'A should not have ClassC'
+      refute a_box.eval('begin; ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
     end
 
     def test_diamond_dependency_isolation
@@ -141,9 +141,9 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('defined?(ClassB)'), 'A should have ClassB'
-      assert a_box.eval('defined?(ClassC)'), 'A should have ClassC'
-      refute a_box.eval('defined?(ClassD)'), 'A should not have ClassD'
+      assert a_box.eval('begin; ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
+      assert a_box.eval('begin; ClassC; true; rescue NameError; false; end'), 'A should have ClassC'
+      refute a_box.eval('begin; ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
     end
 
     def test_constant_caching

@@ -13,14 +13,18 @@ module Boxwerk
     # contains: :box, :file_index, :public_constants, :private_constants,
     # :package_name.
     def self.install_dependency_resolver(box, deps_config)
-      box.eval(<<~RUBY)
-        def self.const_missing(const_name)
-          BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
-        end
-      RUBY
-
       resolver = build_resolver(deps_config)
       box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, resolver)
+
+      # Define const_missing on Object within the box so that top-level
+      # constant lookups (e.g. Invoice) trigger the dependency search.
+      box.eval(<<~RUBY)
+        class Object
+          def self.const_missing(const_name)
+            BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
+          end
+        end
+      RUBY
     end
 
     # Builds a resolver proc that searches dependencies for a constant.

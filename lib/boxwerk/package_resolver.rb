@@ -6,8 +6,6 @@ require 'pathname'
 module Boxwerk
   # Discovers packages by scanning for package.yml files and provides
   # topological ordering for boot.
-  #
-  # Does NOT require the Packwerk gem — works standalone.
   class PackageResolver
     attr_reader :packages, :root
 

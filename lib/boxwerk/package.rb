@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Simple data class representing a package. Replaces Packwerk::Package
-  # so that Boxwerk can work standalone without the Packwerk gem.
-  # Reads the same package.yml format that Packwerk defines.
+  # Data class representing a package. Reads the standard package.yml format.
   class Package
     attr_reader :name, :config
 

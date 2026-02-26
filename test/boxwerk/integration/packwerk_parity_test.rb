@@ -116,7 +116,7 @@ module Boxwerk
       refute_includes root_pkg.dependencies, 'packs/b'
 
       root_box = result[:box_manager].boxes['.']
-      assert root_box.eval('defined?(Surface)'), 'Root should see Surface'
+      assert root_box.eval('begin; Surface; true; rescue NameError; false; end'), 'Root should see Surface'
       assert_raises(NameError) { root_box.eval('Deep') }
 
       # But A CAN access Deep (direct dependency)

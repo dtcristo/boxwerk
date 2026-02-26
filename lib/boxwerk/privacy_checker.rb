@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Enforces packwerk-extensions privacy rules at runtime.
-  # Reads enforce_privacy, public_path, private_constants from package.yml.
+  # Enforces privacy rules at runtime.
+  # Reads enforce_privacy, public_path, and private_constants from package.yml.
   # Files with `# pack_public: true` sigil are treated as public.
   module PrivacyChecker
     DEFAULT_PUBLIC_PATH = 'public/'
