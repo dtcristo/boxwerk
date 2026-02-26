@@ -1,15 +1,14 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-unless ENV['RUBY_BOX'] == '1'
-  puts "Error: Boxwerk requires Ruby::Box to be enabled"
-  puts "Please set RUBY_BOX=1 environment variable"
+unless defined?(Ruby::Box)
+  $stderr.puts "Error: Ruby::Box is not available"
+  $stderr.puts "Boxwerk requires Ruby 4.0 or later with Box support"
   exit 1
 end
 
-unless defined?(Ruby::Box)
-  puts "Error: Ruby::Box is not available in this Ruby version"
-  puts "Boxwerk requires Ruby 4.0 or later with Box support"
+unless Ruby::Box.enabled?
+  $stderr.puts "Ruby Box is disabled. Set RUBY_BOX=1 environment variable to use Ruby::Box."
   exit 1
 end
 

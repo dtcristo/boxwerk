@@ -1,7 +1,4 @@
 enforce_dependencies: true
 enforce_privacy: true
-public_path: lib/public/
-enforce_layers: true
-layer: core
 dependencies:
   - packs/util

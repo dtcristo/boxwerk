@@ -37,8 +37,6 @@ class E2ERunner
     test_missing_script_error
     test_nonexistent_script_error
     test_missing_package_yml_error
-    test_layer_violation_at_boot
-    test_visibility_enforcement
     test_nested_constants
     test_unknown_command_error
 
@@ -60,7 +58,7 @@ class E2ERunner
         end
       RUBY
       write_file(dir, 'app.rb', <<~RUBY)
-        puts Greeter::Greeter.hello
+        puts Greeter.hello
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
@@ -79,7 +77,7 @@ class E2ERunner
         end
       RUBY
       write_file(dir, 'app.rb', <<~RUBY)
-        result = Math::Calc.add(3, 4)
+        result = Calc.add(3, 4)
         puts "Result: \#{result}"
         exit(result == 7 ? 0 : 1)
       RUBY
@@ -99,7 +97,7 @@ class E2ERunner
       write_file(dir, 'packs/b/lib/class_b.rb', "class ClassB; end\n")
       write_file(dir, 'app.rb', <<~RUBY)
         begin
-          B::ClassB
+          ClassB
           puts "FAIL: transitive dependency was accessible"
           exit 1
         rescue NameError
@@ -119,9 +117,9 @@ class E2ERunner
       create_root_package(dir, dependencies: ['packs/secure'])
       create_package(dir, 'secure', enforce_privacy: true)
 
-      pub_dir = File.join(dir, 'packs', 'secure', 'app', 'public')
+      pub_dir = File.join(dir, 'packs', 'secure', 'public')
       FileUtils.mkdir_p(pub_dir)
-      write_file(dir, 'packs/secure/app/public/api.rb', <<~RUBY)
+      write_file(dir, 'packs/secure/public/api.rb', <<~RUBY)
         class Api
           def self.call = 'public api'
         end
@@ -134,11 +132,11 @@ class E2ERunner
 
       write_file(dir, 'app.rb', <<~RUBY)
         # Public constant should work
-        puts Secure::Api.call
+        puts Api.call
 
         # Private constant should raise
         begin
-          Secure::Internal
+          Internal
           puts "FAIL: private constant accessible"
           exit 1
         rescue NameError => e
@@ -189,7 +187,6 @@ class E2ERunner
     with_project do |dir|
       create_root_package(dir, dependencies: ['packs/a'])
       create_package(dir, 'a')
-      # No Gemfiles — should report nothing to install
       out, status = run_boxwerk(dir, 'install')
       assert_equal 0, status.exitstatus, "install_no_gemfiles: exit status"
       assert_match /No packs with Gemfiles found/, out, "install_no_gemfiles: output"
@@ -217,56 +214,6 @@ class E2ERunner
     end
   end
 
-  def test_layer_violation_at_boot
-    with_project do |dir|
-      write_file(dir, 'packwerk.yml', YAML.dump('layers' => %w[feature utility]))
-      create_root_package(dir, dependencies: %w[packs/feat packs/util])
-      create_package(dir, 'feat', layer: 'feature')
-      create_package(dir, 'util', layer: 'utility', dependencies: ['packs/feat'],
-                     enforce_layers: true)
-      write_file(dir, 'packs/feat/lib/feat.rb', "class Feat; end\n")
-      write_file(dir, 'packs/util/lib/util_class.rb', "class UtilClass; end\n")
-      write_file(dir, 'app.rb', "puts 'should not reach here'\n")
-
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 1, status.exitstatus, "layer_violation: exit status"
-      assert_match /cannot depend on/, out, "layer_violation: error message"
-    end
-  end
-
-  def test_visibility_enforcement
-    with_project do |dir|
-      create_root_package(dir, dependencies: %w[packs/secret packs/allowed])
-
-      create_package(dir, 'secret', enforce_visibility: true,
-                     visible_to: ['packs/allowed'])
-      write_file(dir, 'packs/secret/lib/hidden.rb', <<~RUBY)
-        class Hidden
-          def self.value = 'secret'
-        end
-      RUBY
-
-      create_package(dir, 'allowed', dependencies: ['packs/secret'])
-      write_file(dir, 'packs/allowed/lib/viewer.rb', "class Viewer; end\n")
-
-      write_file(dir, 'app.rb', <<~RUBY)
-        # Root is NOT in visible_to, so Secret namespace should not exist
-        begin
-          Secret::Hidden
-          puts "FAIL: root can see Secret"
-          exit 1
-        rescue NameError
-          puts "PASS: Secret not visible to root"
-          exit 0
-        end
-      RUBY
-
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "visibility: exit status"
-      assert_match /PASS/, out, "visibility: blocked"
-    end
-  end
-
   def test_nested_constants
     with_project do |dir|
       create_root_package(dir, dependencies: ['packs/api'])
@@ -280,7 +227,7 @@ class E2ERunner
         end
       RUBY
       write_file(dir, 'app.rb', <<~RUBY)
-        puts Api::V2::Endpoint.path
+        puts V2::Endpoint.path
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
@@ -304,7 +251,8 @@ class E2ERunner
   end
 
   def run_boxwerk(dir, *args)
-    env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => File.expand_path('../../Gemfile', __dir__) }
+    gemfile = File.expand_path('../../gems.rb', __dir__)
+    env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => gemfile }
     cmd = ['ruby', @boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
     [stdout + stderr, status]
@@ -316,18 +264,12 @@ class E2ERunner
     File.write(File.join(dir, 'package.yml'), YAML.dump(content))
   end
 
-  def create_package(dir, name, dependencies: nil, enforce_privacy: false,
-                     enforce_visibility: false, visible_to: nil,
-                     enforce_layers: false, layer: nil)
+  def create_package(dir, name, dependencies: nil, enforce_privacy: false)
     pkg_dir = File.join(dir, 'packs', name)
     FileUtils.mkdir_p(File.join(pkg_dir, 'lib'))
     content = { 'enforce_dependencies' => true }
     content['dependencies'] = dependencies if dependencies
     content['enforce_privacy'] = true if enforce_privacy
-    content['enforce_visibility'] = true if enforce_visibility
-    content['visible_to'] = visible_to if visible_to
-    content['enforce_layers'] = true if enforce_layers
-    content['layer'] = layer if layer
     File.write(File.join(pkg_dir, 'package.yml'), YAML.dump(content))
   end
 

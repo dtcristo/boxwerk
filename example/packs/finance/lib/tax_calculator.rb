@@ -2,6 +2,6 @@
 
 class TaxCalculator
   def self.calculate(amount_cents, rate)
-    (Util::Calculator.multiply(amount_cents, rate)).round
+    (Calculator.multiply(amount_cents, rate)).round
   end
 end

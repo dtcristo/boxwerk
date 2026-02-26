@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
         .readlines("\x0", chomp: true)
         .reject do |f|
           (f == gemspec) ||
-            f.start_with?(*%w[bin/ example/ test/ .github/ Gemfile .gitignore])
+            f.start_with?(*%w[bin/ example/ examples/ test/ .github/ gems.rb .gitignore])
         end
     end
   spec.bindir = 'exe'
