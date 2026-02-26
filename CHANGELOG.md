@@ -22,8 +22,10 @@
   - `pack_public: true` sigil makes individual files public
   - `private_constants` explicitly blocks specific constants
 - `PrivacyChecker` module: reads packwerk-extensions config and enforces privacy at runtime
-- Comprehensive test suite: 81 tests, 138 assertions
-- Integration tests split by feature area (isolation, privacy, visibility, folder privacy, layers, gem isolation)
+- Comprehensive test suite: 95 integration tests + 31 end-to-end tests
+- Integration tests split by feature area (isolation, privacy, visibility, folder privacy, layers, gem isolation, nested constants, packwerk parity)
+- End-to-end test suite (`test/e2e/run.rb`) tests full CLI stack via subprocess
+- Rake tasks: `rake e2e`, `rake all` (unit + integration + e2e)
 - **FUTURE_IMPROVEMENTS.md**: Documents global gems, Rails integration, and other planned enhancements
 
 ### Changed
