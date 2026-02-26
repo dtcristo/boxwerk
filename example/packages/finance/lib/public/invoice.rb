@@ -9,16 +9,16 @@ class Invoice
   end
 
   def add_item(description, amount_cents)
-    @items << { description: description, amount: Money.new(amount_cents, 'USD') }
+    @items << { description: description, amount: amount_cents }
     self
   end
 
   def subtotal
-    @items.reduce(Money.new(0, 'USD')) { |sum, item| sum + item[:amount] }
+    @items.sum { |item| item[:amount] }
   end
 
   def tax
-    TaxCalculator.calculate(subtotal.cents, tax_rate)
+    TaxCalculator.calculate(subtotal, tax_rate)
   end
 
   def total

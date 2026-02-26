@@ -6,13 +6,13 @@ Multi-package application demonstrating runtime package isolation.
 
 ```
 example/
-├── Gemfile                  # Gem dependencies (money gem)
+├── Gemfile                  # Root gem dependencies
 ├── packwerk.yml             # Layer definitions (feature > core > utility)
 ├── package.yml              # Root package (depends on finance, notifications)
 ├── app.rb                   # Entry point
 └── packages/
     ├── finance/
-    │   ├── package.yml      # Depends on util; enforce_privacy + layer: core
+    │   ├── package.yml      # enforce_privacy, layer: core, depends on util
     │   └── lib/
     │       ├── public/
     │       │   └── invoice.rb       # Public API
@@ -22,9 +22,11 @@ example/
     │   └── lib/
     │       └── notifier.rb
     └── util/
-        ├── package.yml      # No dependencies; layer: utility
+        ├── package.yml      # layer: utility
+        ├── Gemfile          # Per-package gem: json
+        ├── Gemfile.lock
         └── lib/
-            ├── calculator.rb
+            ├── calculator.rb    # Uses json gem
             └── geometry.rb
 ```
 
