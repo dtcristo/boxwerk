@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- **Lazy constant loading**: No eager code loading at boot — files loaded on first access via `autoload` and `const_missing`
+- **CLI `info` command**: Shows package structure, dependencies, layers, and enforcement flags
+- **CLI `--version`/`-v` flag**: Prints version and exits
 - **Zeitwerk integration**: Uses Zeitwerk inflection for file→constant naming conventions
 - **Visibility enforcement**: `enforce_visibility` + `visible_to` restricts which packages can access a package
 - **Folder privacy enforcement**: `enforce_folder_privacy` restricts access to sibling/parent packages
@@ -20,8 +23,12 @@
   - `private_constants` explicitly blocks specific constants
 - `PrivacyChecker` module: reads packwerk-extensions config and enforces privacy at runtime
 - Comprehensive test suite: 81 tests, 138 assertions
+- Integration tests split by feature area (isolation, privacy, visibility, folder privacy, layers, gem isolation)
+- **FUTURE_IMPROVEMENTS.md**: Documents global gems, Rails integration, and other planned enhancements
 
 ### Changed
+- **Lazy loading**: Replaced eager `load_package_code` with `build_file_index` + `setup_autoloader` — no code loaded until first constant access
+- **CLI errors to stderr**: Error output now goes to stderr, not stdout
 - Upgraded to Ruby 4.0.1 (pinned via `.mise.toml`)
 - Added `zeitwerk` as explicit gem dependency
 - `PackageResolver` and `PrivacyChecker` now use `Zeitwerk::Inflector#camelize` instead of manual inflection

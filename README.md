@@ -407,7 +407,7 @@ Related to Ruby::Box in Ruby 4.0+. See [Ruby::Box documentation](https://docs.ru
 4. Read layer definitions from `packwerk.yml` (if present)
 5. Validate dependency graph (DAG — no cycles)
 6. Boot packages in topological order, creating isolated boxes
-7. For each package: resolve per-package gems → load code → wire namespaces
+7. For each package: resolve per-package gems → build file index → setup autoloader → wire namespaces
 8. Enforce visibility, folder privacy, layer, and privacy constraints during wiring
 9. Execute command in root package context
 
@@ -415,7 +415,7 @@ Related to Ruby::Box in Ruby 4.0+. See [Ruby::Box documentation](https://docs.ru
 - **CLI**: Parses commands, validates environment, delegates to Setup
 - **Setup**: Finds root, orchestrates PackageResolver + BoxManager
 - **PackageResolver**: Uses Packwerk to discover packages, builds dependency map, topological sort
-- **BoxManager**: Creates `Ruby::Box` per package, loads code, wires namespace proxies, orchestrates all checkers
+- **BoxManager**: Creates `Ruby::Box` per package, builds file indexes, sets up autoloaders, wires namespace proxies, orchestrates all checkers
 - **ConstantResolver**: Creates proxy modules with `const_missing` for lazy resolution
 - **PrivacyChecker**: Reads `enforce_privacy`, `public_path`, `private_constants` config
 - **VisibilityChecker**: Reads `enforce_visibility`, `visible_to` config
