@@ -1,0 +1,186 @@
+# frozen_string_literal: true
+
+require_relative 'test_helper'
+
+module Boxwerk
+  # Tests for core box isolation: namespace access, transitive prevention,
+  # sibling isolation, dependency chains, diamond deps, constant caching.
+  class IsolationTest < Minitest::Test
+    include IntegrationTestHelper
+
+    def test_package_can_access_dependency_constants_via_namespace
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'class_a.rb'),
+        "class ClassA\n  def self.value\n    'from_a'\n  end\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert root_box.eval('defined?(A)'), 'Root should have A namespace'
+      assert_equal 'from_a', root_box.eval('A::ClassA.value')
+    end
+
+    def test_package_cannot_access_non_dependency_constants
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert root_box.eval('defined?(A)'), 'Root should have A namespace'
+      assert_raises(NameError) { root_box.eval('B') }
+    end
+
+    def test_transitive_dependencies_not_accessible
+      c_dir = create_package_dir('c')
+      create_package(c_dir)
+      File.write(File.join(c_dir, 'lib', 'class_c.rb'), "class ClassC\nend\n")
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir, dependencies: ['packages/c'])
+      File.write(
+        File.join(b_dir, 'lib', 'class_b.rb'),
+        "class ClassB\n  def self.value\n    C::ClassC.value + '_via_b'\n  end\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packages/b'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert root_box.eval('defined?(B)'), 'Root should have B namespace'
+      assert_raises(NameError) { root_box.eval('C') }
+    end
+
+    def test_sibling_packages_isolated
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
+
+      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+
+      result = boot_system
+
+      a_box = result[:box_manager].boxes['packages/a']
+      b_box = result[:box_manager].boxes['packages/b']
+
+      refute a_box.eval('defined?(B)'), 'Package A should not see B'
+      refute a_box.eval('defined?(ClassB)'), 'Package A should not see ClassB'
+      refute b_box.eval('defined?(A)'), 'Package B should not see A'
+      refute b_box.eval('defined?(ClassA)'), 'Package B should not see ClassA'
+    end
+
+    def test_complex_chain_isolation
+      d_dir = create_package_dir('d')
+      create_package(d_dir)
+      File.write(File.join(d_dir, 'lib', 'class_d.rb'), "class ClassD\nend\n")
+
+      c_dir = create_package_dir('c')
+      create_package(c_dir, dependencies: ['packages/d'])
+      File.write(File.join(c_dir, 'lib', 'class_c.rb'), "class ClassC\nend\n")
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir, dependencies: ['packages/c'])
+      File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
+
+      a_dir = create_package_dir('a')
+      create_package(a_dir, dependencies: ['packages/b'])
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      a_box = result[:box_manager].boxes['packages/a']
+
+      assert a_box.eval('defined?(B)'), 'A should have B'
+      refute a_box.eval('defined?(C)'), 'A should not have C'
+      refute a_box.eval('defined?(D)'), 'A should not have D'
+    end
+
+    def test_diamond_dependency_isolation
+      d_dir = create_package_dir('d')
+      create_package(d_dir)
+      File.write(
+        File.join(d_dir, 'lib', 'class_d.rb'),
+        "class ClassD\n  def self.value\n    'from_d'\n  end\nend\n",
+      )
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir, dependencies: ['packages/d'])
+      File.write(
+        File.join(b_dir, 'lib', 'class_b.rb'),
+        "class ClassB\n  def self.value\n    D::ClassD.value + '_via_b'\n  end\nend\n",
+      )
+
+      c_dir = create_package_dir('c')
+      create_package(c_dir, dependencies: ['packages/d'])
+      File.write(
+        File.join(c_dir, 'lib', 'class_c.rb'),
+        "class ClassC\n  def self.value\n    D::ClassD.value + '_via_c'\n  end\nend\n",
+      )
+
+      a_dir = create_package_dir('a')
+      create_package(a_dir, dependencies: %w[packages/b packages/c])
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      a_box = result[:box_manager].boxes['packages/a']
+
+      assert a_box.eval('defined?(B)'), 'A should have B'
+      assert a_box.eval('defined?(C)'), 'A should have C'
+      refute a_box.eval('defined?(D)'), 'A should not have D'
+    end
+
+    def test_constant_caching_via_const_set
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'class_a.rb'),
+        "class ClassA\n  def self.value\n    'cached'\n  end\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert_equal 'cached', root_box.eval('A::ClassA.value')
+      assert_equal 'cached', root_box.eval('A::ClassA.value')
+    end
+
+    def test_multiple_constants_from_same_package
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(File.join(a_dir, 'lib', 'foo.rb'), "class Foo\n  def self.name = 'foo'\nend\n")
+      File.write(File.join(a_dir, 'lib', 'bar.rb'), "class Bar\n  def self.name = 'bar'\nend\n")
+      File.write(File.join(a_dir, 'lib', 'baz.rb'), "class Baz\n  def self.name = 'baz'\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packages/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert_equal 'foo', root_box.eval('A::Foo.name')
+      assert_equal 'bar', root_box.eval('A::Bar.name')
+      assert_equal 'baz', root_box.eval('A::Baz.name')
+    end
+  end
+end
