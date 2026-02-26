@@ -10,10 +10,10 @@ module Boxwerk
 
     def test_visibility_blocks_non_visible_package
       a_dir = create_package_dir('a')
-      create_package(a_dir, enforce_visibility: true, visible_to: ['packages/c'])
+      create_package(a_dir, enforce_visibility: true, visible_to: ['packs/c'])
       File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -29,7 +29,7 @@ module Boxwerk
         "class ClassA\n  def self.value\n    'visible'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -45,7 +45,7 @@ module Boxwerk
         "class ClassA\n  def self.value\n    'open'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']

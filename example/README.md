@@ -10,7 +10,7 @@ example/
 ├── packwerk.yml             # Layer definitions (feature > core > utility)
 ├── package.yml              # Root package (depends on finance, notifications)
 ├── app.rb                   # Entry point
-└── packages/
+└── packs/
     ├── finance/
     │   ├── package.yml      # enforce_privacy, layer: core, depends on util
     │   └── lib/

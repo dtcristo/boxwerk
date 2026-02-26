@@ -17,7 +17,7 @@ module Boxwerk
         "module Services\n  class Billing\n    def self.charge\n      'charged'\n    end\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -35,7 +35,7 @@ module Boxwerk
         "module Api\n  module V2\n    class Endpoint\n      def self.url\n        '/api/v2'\n      end\n    end\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -56,7 +56,7 @@ module Boxwerk
         "class Greeter\n  def self.greet\n    Helper.greet + ' world'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -79,13 +79,13 @@ module Boxwerk
       )
 
       app_dir = create_package_dir('app')
-      create_package(app_dir, dependencies: ['packages/util'])
+      create_package(app_dir, dependencies: ['packs/util'])
       File.write(
         File.join(app_dir, 'lib', 'display.rb'),
         "class Display\n  def self.show(val)\n    Util::Formatter.format(val)\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/app'])
+      create_package(@tmpdir, dependencies: ['packs/app'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -107,7 +107,7 @@ module Boxwerk
         "module Ops\n  class Multiply\n    def self.call(a, b) = a * b\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']

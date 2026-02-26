@@ -4,4 +4,4 @@ public_path: lib/public/
 enforce_layers: true
 layer: core
 dependencies:
-  - packages/util
+  - packs/util

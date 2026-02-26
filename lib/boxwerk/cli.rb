@@ -17,6 +17,8 @@ module Boxwerk
           console_command(argv[1..])
         when 'info'
           info_command
+        when 'install'
+          install_command
         when 'help', '--help', '-h'
           print_usage
           exit 0
@@ -42,6 +44,7 @@ module Boxwerk
         puts '  run <script.rb> [args...]    Run a script in the root package context'
         puts '  console [irb-args...]        Start an IRB console in the root package context'
         puts '  info                         Show package structure and dependency graph'
+        puts '  install                      Run bundle install in all packs with a Gemfile'
         puts '  help                         Show this help message'
         puts '  version                      Show version'
         puts ''
@@ -109,6 +112,40 @@ module Boxwerk
           if visible_to
             puts "    visible_to: #{visible_to.join(', ')}"
           end
+        end
+      end
+
+      def install_command
+        root_path = Setup.send(:find_root, Dir.pwd)
+        unless root_path
+          $stderr.puts 'Error: Cannot find package.yml in current directory or ancestors'
+          exit 1
+        end
+
+        resolver = PackageResolver.new(root_path)
+        installed = 0
+
+        resolver.topological_order.each do |pkg|
+          pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
+          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
+          next unless gemfile
+
+          puts "Installing gems for #{pkg.name}..."
+          Dir.chdir(pkg_dir) do
+            success = system({ 'BUNDLE_GEMFILE' => File.join(pkg_dir, gemfile) },
+                             'bundle', 'install', '--quiet')
+            unless success
+              $stderr.puts "  Error: bundle install failed in #{pkg.name}"
+              exit 1
+            end
+          end
+          installed += 1
+        end
+
+        if installed == 0
+          puts 'No packs with Gemfiles found.'
+        else
+          puts "Installed gems for #{installed} pack#{'s' unless installed == 1}."
         end
       end
 

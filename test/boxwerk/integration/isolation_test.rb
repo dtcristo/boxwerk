@@ -16,7 +16,7 @@ module Boxwerk
         "class ClassA\n  def self.value\n    'from_a'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -34,7 +34,7 @@ module Boxwerk
       create_package(b_dir)
       File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -49,13 +49,13 @@ module Boxwerk
       File.write(File.join(c_dir, 'lib', 'class_c.rb'), "class ClassC\nend\n")
 
       b_dir = create_package_dir('b')
-      create_package(b_dir, dependencies: ['packages/c'])
+      create_package(b_dir, dependencies: ['packs/c'])
       File.write(
         File.join(b_dir, 'lib', 'class_b.rb'),
         "class ClassB\n  def self.value\n    C::ClassC.value + '_via_b'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/b'])
+      create_package(@tmpdir, dependencies: ['packs/b'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -73,12 +73,12 @@ module Boxwerk
       create_package(b_dir)
       File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
-      a_box = result[:box_manager].boxes['packages/a']
-      b_box = result[:box_manager].boxes['packages/b']
+      a_box = result[:box_manager].boxes['packs/a']
+      b_box = result[:box_manager].boxes['packs/b']
 
       refute a_box.eval('defined?(B)'), 'Package A should not see B'
       refute a_box.eval('defined?(ClassB)'), 'Package A should not see ClassB'
@@ -92,21 +92,21 @@ module Boxwerk
       File.write(File.join(d_dir, 'lib', 'class_d.rb'), "class ClassD\nend\n")
 
       c_dir = create_package_dir('c')
-      create_package(c_dir, dependencies: ['packages/d'])
+      create_package(c_dir, dependencies: ['packs/d'])
       File.write(File.join(c_dir, 'lib', 'class_c.rb'), "class ClassC\nend\n")
 
       b_dir = create_package_dir('b')
-      create_package(b_dir, dependencies: ['packages/c'])
+      create_package(b_dir, dependencies: ['packs/c'])
       File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
 
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: ['packages/b'])
+      create_package(a_dir, dependencies: ['packs/b'])
       File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
 
       assert a_box.eval('defined?(B)'), 'A should have B'
       refute a_box.eval('defined?(C)'), 'A should not have C'
@@ -122,27 +122,27 @@ module Boxwerk
       )
 
       b_dir = create_package_dir('b')
-      create_package(b_dir, dependencies: ['packages/d'])
+      create_package(b_dir, dependencies: ['packs/d'])
       File.write(
         File.join(b_dir, 'lib', 'class_b.rb'),
         "class ClassB\n  def self.value\n    D::ClassD.value + '_via_b'\n  end\nend\n",
       )
 
       c_dir = create_package_dir('c')
-      create_package(c_dir, dependencies: ['packages/d'])
+      create_package(c_dir, dependencies: ['packs/d'])
       File.write(
         File.join(c_dir, 'lib', 'class_c.rb'),
         "class ClassC\n  def self.value\n    D::ClassD.value + '_via_c'\n  end\nend\n",
       )
 
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: %w[packages/b packages/c])
+      create_package(a_dir, dependencies: %w[packs/b packs/c])
       File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
 
       assert a_box.eval('defined?(B)'), 'A should have B'
       assert a_box.eval('defined?(C)'), 'A should have C'
@@ -157,7 +157,7 @@ module Boxwerk
         "class ClassA\n  def self.value\n    'cached'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -173,7 +173,7 @@ module Boxwerk
       File.write(File.join(a_dir, 'lib', 'bar.rb'), "class Bar\n  def self.name = 'bar'\nend\n")
       File.write(File.join(a_dir, 'lib', 'baz.rb'), "class Baz\n  def self.name = 'baz'\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']

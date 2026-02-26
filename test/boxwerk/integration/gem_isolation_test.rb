@@ -34,7 +34,7 @@ module Boxwerk
         "class JsonUser\n  def self.parse\n    require 'json'\n    JSON.parse('[1,2,3]')\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
 
@@ -69,7 +69,7 @@ module Boxwerk
         "class BService\n  def self.version\n    $LOAD_PATH.unshift('#{b_gem_dir}')\n    require 'my_lib'\n    MyLib::VERSION\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
@@ -118,12 +118,12 @@ module Boxwerk
         "class Loader\n  def self.load_path_count\n    $LOAD_PATH.size\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
-      a_box = result[:box_manager].boxes['packages/a']
-      b_box = result[:box_manager].boxes['packages/b']
+      a_box = result[:box_manager].boxes['packs/a']
+      b_box = result[:box_manager].boxes['packs/b']
 
       # A has gem load paths added, B does not — their $LOAD_PATHs should differ
       a_count = a_box.eval('$LOAD_PATH.size')
@@ -140,7 +140,7 @@ module Boxwerk
         "class Simple\n  def self.value\n    'no_gems'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -176,7 +176,7 @@ module Boxwerk
         "class JsonUser\n  def self.parse\n    require 'json'\n    JSON.parse('{\"a\":1}')\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']

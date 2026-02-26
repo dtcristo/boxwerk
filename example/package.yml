@@ -1,4 +1,4 @@
 enforce_dependencies: true
 dependencies:
-  - packages/finance
-  - packages/notifications
+  - packs/finance
+  - packs/notifications

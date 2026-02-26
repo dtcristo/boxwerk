@@ -12,7 +12,7 @@ module Boxwerk
 
     def test_undeclared_dependency_blocked_at_runtime
       # Packwerk: package A does NOT list B as a dependency
-      # Packwerk check would flag: "packages/a cannot depend on packages/b"
+      # Packwerk check would flag: "packs/a cannot depend on packs/b"
       # Boxwerk: A cannot access B:: namespace at runtime
       a_dir = create_package_dir('a')
       create_package(a_dir) # no dependencies
@@ -22,18 +22,18 @@ module Boxwerk
       create_package(b_dir)
       File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
       # Verify via Packwerk API: A does not declare B as dependency
       resolver = result[:resolver]
-      a_pkg = resolver.packages['packages/a']
-      refute_includes a_pkg.dependencies, 'packages/b',
+      a_pkg = resolver.packages['packs/a']
+      refute_includes a_pkg.dependencies, 'packs/b',
                       'Packwerk: A should not declare B as dependency'
 
       # Verify Boxwerk runtime: A cannot access B namespace
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
       refute a_box.eval('defined?(B)'),
              'Boxwerk: A should not have B namespace (undeclared dependency)'
     end
@@ -42,7 +42,7 @@ module Boxwerk
       # Packwerk: package A lists B as a dependency — no violation
       # Boxwerk: A can access B:: namespace at runtime
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: ['packages/b'])
+      create_package(a_dir, dependencies: ['packs/b'])
       File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
 
       b_dir = create_package_dir('b')
@@ -52,18 +52,18 @@ module Boxwerk
         "class ClassB\n  def self.value\n    'allowed'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
       # Verify via Packwerk API: A declares B
       resolver = result[:resolver]
-      a_pkg = resolver.packages['packages/a']
-      assert_includes a_pkg.dependencies, 'packages/b',
+      a_pkg = resolver.packages['packs/a']
+      assert_includes a_pkg.dependencies, 'packs/b',
                       'Packwerk: A should declare B as dependency'
 
       # Verify Boxwerk runtime: A can access B
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
       assert_equal 'allowed', a_box.eval('B::ClassB.value'),
                    'Boxwerk: A should access B::ClassB'
     end
@@ -84,20 +84,20 @@ module Boxwerk
       File.write(File.join(b_dir, 'lib', 'secret.rb'), "class Secret\nend\n")
 
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: ['packages/b'])
+      create_package(a_dir, dependencies: ['packs/b'])
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
       # Verify via Packwerk config: B enforces privacy
       resolver = result[:resolver]
-      b_pkg = resolver.packages['packages/b']
+      b_pkg = resolver.packages['packs/b']
       assert b_pkg.config['enforce_privacy'],
              'Packwerk: B should enforce privacy'
 
       # Verify Boxwerk runtime
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
       assert_equal 'public', a_box.eval('B::Api.call'),
                    'Boxwerk: public constant should be accessible'
 
@@ -108,33 +108,33 @@ module Boxwerk
 
     def test_visibility_violation_blocked_at_runtime
       # Packwerk-extensions: C is visible only to B, not A
-      # packwerk check would flag: "packages/a cannot depend on packages/c (visibility)"
+      # packwerk check would flag: "packs/a cannot depend on packs/c (visibility)"
       # Boxwerk: A cannot see C namespace at runtime
       c_dir = create_package_dir('c')
-      create_package(c_dir, enforce_visibility: true, visible_to: ['packages/b'])
+      create_package(c_dir, enforce_visibility: true, visible_to: ['packs/b'])
       File.write(File.join(c_dir, 'lib', 'class_c.rb'), "class ClassC\nend\n")
 
       b_dir = create_package_dir('b')
-      create_package(b_dir, dependencies: ['packages/c'])
+      create_package(b_dir, dependencies: ['packs/c'])
 
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: %w[packages/b packages/c])
+      create_package(a_dir, dependencies: %w[packs/b packs/c])
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b packages/c])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b packs/c])
 
       result = boot_system
 
       # Verify config: C is visible to B only
       resolver = result[:resolver]
-      c_pkg = resolver.packages['packages/c']
+      c_pkg = resolver.packages['packs/c']
       assert c_pkg.config['enforce_visibility']
-      assert_equal ['packages/b'], c_pkg.config['visible_to']
+      assert_equal ['packs/b'], c_pkg.config['visible_to']
 
       # Boxwerk runtime: B can see C, A cannot
-      b_box = result[:box_manager].boxes['packages/b']
+      b_box = result[:box_manager].boxes['packs/b']
       assert b_box.eval('defined?(C)'), 'Boxwerk: B should see C (in visible_to)'
 
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
       refute a_box.eval('defined?(C)'), 'Boxwerk: A should not see C (not in visible_to)'
     end
 
@@ -153,10 +153,10 @@ module Boxwerk
 
       util_dir = create_package_dir('util')
       create_package(util_dir, enforce_layers: true, layer: 'utility',
-                     dependencies: ['packages/feature'])
+                     dependencies: ['packs/feature'])
       File.write(File.join(util_dir, 'lib', 'util_class.rb'), "class UtilClass\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/feature packages/util])
+      create_package(@tmpdir, dependencies: %w[packs/feature packs/util])
 
       # Verify layer config
       layers = LayerChecker.layers_for(@tmpdir)
@@ -179,20 +179,20 @@ module Boxwerk
       )
 
       a_dir = create_package_dir('a')
-      create_package(a_dir, dependencies: ['packages/b'])
+      create_package(a_dir, dependencies: ['packs/b'])
       File.write(
         File.join(a_dir, 'lib', 'surface.rb'),
         "class Surface\n  def self.value\n    B::Deep.value\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
 
       # Packwerk: root does not declare B
       resolver = result[:resolver]
       root_pkg = resolver.root
-      refute_includes root_pkg.dependencies, 'packages/b'
+      refute_includes root_pkg.dependencies, 'packs/b'
 
       # Boxwerk: root can access A but not B
       root_box = result[:box_manager].boxes['.']
@@ -200,7 +200,7 @@ module Boxwerk
       assert_raises(NameError) { root_box.eval('B') }
 
       # But A CAN access B (direct dependency)
-      a_box = result[:box_manager].boxes['packages/a']
+      a_box = result[:box_manager].boxes['packs/a']
       assert_equal 'deep', a_box.eval('B::Deep.value')
     end
   end

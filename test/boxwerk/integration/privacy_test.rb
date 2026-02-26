@@ -17,7 +17,7 @@ module Boxwerk
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\n  def self.value\n    'public'\n  end\nend\n")
       File.write(File.join(a_dir, 'lib', 'secret.rb'), "class Secret\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -34,7 +34,7 @@ module Boxwerk
         "class Secret\n  def self.value\n    'accessible'\n  end\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -55,7 +55,7 @@ module Boxwerk
         "class PrivateThing\nend\n",
       )
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -73,7 +73,7 @@ module Boxwerk
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
       File.write(File.join(pub_dir, 'report.rb'), "class Report\n  def self.value\n    'report'\n  end\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
@@ -87,14 +87,14 @@ module Boxwerk
       create_package(a_dir, enforce_privacy: true)
       File.write(File.join(a_dir, 'lib', 'secret.rb'), "class Secret\nend\n")
 
-      create_package(@tmpdir, dependencies: ['packages/a'])
+      create_package(@tmpdir, dependencies: ['packs/a'])
 
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
       error = assert_raises(NameError) { root_box.eval('A::Secret') }
       assert_match(/Privacy violation/, error.message)
-      assert_match(/packages\/a/, error.message)
+      assert_match(/packs\/a/, error.message)
     end
   end
 end

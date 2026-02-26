@@ -19,14 +19,14 @@ module Boxwerk
       )
 
       b_dir = create_package_dir('b')
-      create_package(b_dir, enforce_layers: true, layer: 'core', dependencies: ['packages/a'])
+      create_package(b_dir, enforce_layers: true, layer: 'core', dependencies: ['packs/a'])
       File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/a packages/b])
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
 
       result = boot_system
 
-      b_box = result[:box_manager].boxes['packages/b']
+      b_box = result[:box_manager].boxes['packs/b']
       assert_equal 'core', b_box.eval('A::ClassA.value')
     end
 
@@ -41,14 +41,14 @@ module Boxwerk
       )
 
       feature_dir = create_package_dir('feature')
-      create_package(feature_dir, enforce_layers: true, layer: 'feature', dependencies: ['packages/util'])
+      create_package(feature_dir, enforce_layers: true, layer: 'feature', dependencies: ['packs/util'])
       File.write(File.join(feature_dir, 'lib', 'feature_class.rb'), "class FeatureClass\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/util packages/feature])
+      create_package(@tmpdir, dependencies: %w[packs/util packs/feature])
 
       result = boot_system
 
-      feature_box = result[:box_manager].boxes['packages/feature']
+      feature_box = result[:box_manager].boxes['packs/feature']
       assert_equal 'util', feature_box.eval('Util::UtilClass.value')
     end
 
@@ -60,10 +60,10 @@ module Boxwerk
       File.write(File.join(feature_dir, 'lib', 'feature_class.rb'), "class FeatureClass\nend\n")
 
       util_dir = create_package_dir('util')
-      create_package(util_dir, enforce_layers: true, layer: 'utility', dependencies: ['packages/feature'])
+      create_package(util_dir, enforce_layers: true, layer: 'utility', dependencies: ['packs/feature'])
       File.write(File.join(util_dir, 'lib', 'util_class.rb'), "class UtilClass\nend\n")
 
-      create_package(@tmpdir, dependencies: %w[packages/feature packages/util])
+      create_package(@tmpdir, dependencies: %w[packs/feature packs/util])
 
       assert_raises(Boxwerk::LayerViolationError) { boot_system }
     end

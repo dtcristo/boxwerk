@@ -5,4 +5,4 @@ enforce_visibility: true
 visible_to:
   - .
 dependencies:
-  - packages/finance
+  - packs/finance

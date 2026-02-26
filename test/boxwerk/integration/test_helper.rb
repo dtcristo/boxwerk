@@ -21,7 +21,7 @@ module Boxwerk
     private
 
     def create_package_dir(name)
-      dir = File.join(@tmpdir, 'packages', name)
+      dir = File.join(@tmpdir, 'packs', name)
       FileUtils.mkdir_p(File.join(dir, 'lib'))
       dir
     end

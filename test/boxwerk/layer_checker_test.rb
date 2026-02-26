@@ -37,40 +37,40 @@ module Boxwerk
     end
 
     def test_enforces_layers_when_true
-      pkg = Package.new(name: 'packages/a', config: { 'enforce_layers' => true })
+      pkg = Package.new(name: 'packs/a', config: { 'enforce_layers' => true })
       assert LayerChecker.enforces_layers?(pkg)
     end
 
     def test_enforces_layers_when_strict
-      pkg = Package.new(name: 'packages/a', config: { 'enforce_layers' => 'strict' })
+      pkg = Package.new(name: 'packs/a', config: { 'enforce_layers' => 'strict' })
       assert LayerChecker.enforces_layers?(pkg)
     end
 
     def test_enforces_deprecated_architecture
-      pkg = Package.new(name: 'packages/a', config: { 'enforce_architecture' => true })
+      pkg = Package.new(name: 'packs/a', config: { 'enforce_architecture' => true })
       assert LayerChecker.enforces_layers?(pkg)
     end
 
     def test_validate_allows_same_layer
       layers = %w[feature core utility]
-      from = Package.new(name: 'packages/a', config: { 'enforce_layers' => true, 'layer' => 'core' })
-      to = Package.new(name: 'packages/b', config: { 'layer' => 'core' })
+      from = Package.new(name: 'packs/a', config: { 'enforce_layers' => true, 'layer' => 'core' })
+      to = Package.new(name: 'packs/b', config: { 'layer' => 'core' })
 
       assert_nil LayerChecker.validate_dependency(from, to, layers)
     end
 
     def test_validate_allows_lower_layer
       layers = %w[feature core utility]
-      from = Package.new(name: 'packages/a', config: { 'enforce_layers' => true, 'layer' => 'core' })
-      to = Package.new(name: 'packages/b', config: { 'layer' => 'utility' })
+      from = Package.new(name: 'packs/a', config: { 'enforce_layers' => true, 'layer' => 'core' })
+      to = Package.new(name: 'packs/b', config: { 'layer' => 'utility' })
 
       assert_nil LayerChecker.validate_dependency(from, to, layers)
     end
 
     def test_validate_blocks_higher_layer
       layers = %w[feature core utility]
-      from = Package.new(name: 'packages/a', config: { 'enforce_layers' => true, 'layer' => 'utility' })
-      to = Package.new(name: 'packages/b', config: { 'layer' => 'feature' })
+      from = Package.new(name: 'packs/a', config: { 'enforce_layers' => true, 'layer' => 'utility' })
+      to = Package.new(name: 'packs/b', config: { 'layer' => 'feature' })
 
       error = LayerChecker.validate_dependency(from, to, layers)
       assert_match(/cannot depend on/, error)
@@ -79,16 +79,16 @@ module Boxwerk
 
     def test_validate_allows_when_not_enforced
       layers = %w[feature core utility]
-      from = Package.new(name: 'packages/a', config: { 'layer' => 'utility' })
-      to = Package.new(name: 'packages/b', config: { 'layer' => 'feature' })
+      from = Package.new(name: 'packs/a', config: { 'layer' => 'utility' })
+      to = Package.new(name: 'packs/b', config: { 'layer' => 'feature' })
 
       assert_nil LayerChecker.validate_dependency(from, to, layers)
     end
 
     def test_validate_allows_when_no_layer_assigned
       layers = %w[feature core utility]
-      from = Package.new(name: 'packages/a', config: { 'enforce_layers' => true })
-      to = Package.new(name: 'packages/b', config: { 'layer' => 'feature' })
+      from = Package.new(name: 'packs/a', config: { 'enforce_layers' => true })
+      to = Package.new(name: 'packs/b', config: { 'layer' => 'feature' })
 
       assert_nil LayerChecker.validate_dependency(from, to, layers)
     end

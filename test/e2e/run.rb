@@ -33,6 +33,7 @@ class E2ERunner
     test_version_command
     test_info_command
     test_help_command
+    test_install_command
     test_missing_script_error
     test_nonexistent_script_error
     test_missing_package_yml_error
@@ -51,9 +52,9 @@ class E2ERunner
 
   def test_basic_run
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/greeter'])
+      create_root_package(dir, dependencies: ['packs/greeter'])
       create_package(dir, 'greeter')
-      write_file(dir, 'packages/greeter/lib/greeter.rb', <<~RUBY)
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
         class Greeter
           def self.hello = 'Hello from Boxwerk!'
         end
@@ -70,9 +71,9 @@ class E2ERunner
 
   def test_dependency_access
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/math'])
+      create_root_package(dir, dependencies: ['packs/math'])
       create_package(dir, 'math')
-      write_file(dir, 'packages/math/lib/calc.rb', <<~RUBY)
+      write_file(dir, 'packs/math/lib/calc.rb', <<~RUBY)
         class Calc
           def self.add(a, b) = a + b
         end
@@ -91,11 +92,11 @@ class E2ERunner
 
   def test_transitive_blocked
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/a'])
-      create_package(dir, 'a', dependencies: ['packages/b'])
+      create_root_package(dir, dependencies: ['packs/a'])
+      create_package(dir, 'a', dependencies: ['packs/b'])
       create_package(dir, 'b')
-      write_file(dir, 'packages/a/lib/class_a.rb', "class ClassA; end\n")
-      write_file(dir, 'packages/b/lib/class_b.rb', "class ClassB; end\n")
+      write_file(dir, 'packs/a/lib/class_a.rb', "class ClassA; end\n")
+      write_file(dir, 'packs/b/lib/class_b.rb', "class ClassB; end\n")
       write_file(dir, 'app.rb', <<~RUBY)
         begin
           B::ClassB
@@ -115,17 +116,17 @@ class E2ERunner
 
   def test_privacy_enforcement
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/secure'])
+      create_root_package(dir, dependencies: ['packs/secure'])
       create_package(dir, 'secure', enforce_privacy: true)
 
-      pub_dir = File.join(dir, 'packages', 'secure', 'app', 'public')
+      pub_dir = File.join(dir, 'packs', 'secure', 'app', 'public')
       FileUtils.mkdir_p(pub_dir)
-      write_file(dir, 'packages/secure/app/public/api.rb', <<~RUBY)
+      write_file(dir, 'packs/secure/app/public/api.rb', <<~RUBY)
         class Api
           def self.call = 'public api'
         end
       RUBY
-      write_file(dir, 'packages/secure/lib/internal.rb', <<~RUBY)
+      write_file(dir, 'packs/secure/lib/internal.rb', <<~RUBY)
         class Internal
           def self.secret = 'should not see this'
         end
@@ -166,7 +167,7 @@ class E2ERunner
 
   def test_info_command
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/core'])
+      create_root_package(dir, dependencies: ['packs/core'])
       create_package(dir, 'core')
 
       out, status = run_boxwerk(dir, 'info')
@@ -181,6 +182,18 @@ class E2ERunner
     assert_equal 0, status.exitstatus, "help: exit status"
     assert_match /Usage:/, out, "help: shows usage"
     assert_match /Commands:/, out, "help: shows commands"
+    assert_match /install/, out, "help: shows install command"
+  end
+
+  def test_install_command
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/a'])
+      create_package(dir, 'a')
+      # No Gemfiles — should report nothing to install
+      out, status = run_boxwerk(dir, 'install')
+      assert_equal 0, status.exitstatus, "install_no_gemfiles: exit status"
+      assert_match /No packs with Gemfiles found/, out, "install_no_gemfiles: output"
+    end
   end
 
   def test_missing_script_error
@@ -207,12 +220,12 @@ class E2ERunner
   def test_layer_violation_at_boot
     with_project do |dir|
       write_file(dir, 'packwerk.yml', YAML.dump('layers' => %w[feature utility]))
-      create_root_package(dir, dependencies: %w[packages/feat packages/util])
+      create_root_package(dir, dependencies: %w[packs/feat packs/util])
       create_package(dir, 'feat', layer: 'feature')
-      create_package(dir, 'util', layer: 'utility', dependencies: ['packages/feat'],
+      create_package(dir, 'util', layer: 'utility', dependencies: ['packs/feat'],
                      enforce_layers: true)
-      write_file(dir, 'packages/feat/lib/feat.rb', "class Feat; end\n")
-      write_file(dir, 'packages/util/lib/util_class.rb', "class UtilClass; end\n")
+      write_file(dir, 'packs/feat/lib/feat.rb', "class Feat; end\n")
+      write_file(dir, 'packs/util/lib/util_class.rb', "class UtilClass; end\n")
       write_file(dir, 'app.rb', "puts 'should not reach here'\n")
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
@@ -223,18 +236,18 @@ class E2ERunner
 
   def test_visibility_enforcement
     with_project do |dir|
-      create_root_package(dir, dependencies: %w[packages/secret packages/allowed])
+      create_root_package(dir, dependencies: %w[packs/secret packs/allowed])
 
       create_package(dir, 'secret', enforce_visibility: true,
-                     visible_to: ['packages/allowed'])
-      write_file(dir, 'packages/secret/lib/hidden.rb', <<~RUBY)
+                     visible_to: ['packs/allowed'])
+      write_file(dir, 'packs/secret/lib/hidden.rb', <<~RUBY)
         class Hidden
           def self.value = 'secret'
         end
       RUBY
 
-      create_package(dir, 'allowed', dependencies: ['packages/secret'])
-      write_file(dir, 'packages/allowed/lib/viewer.rb', "class Viewer; end\n")
+      create_package(dir, 'allowed', dependencies: ['packs/secret'])
+      write_file(dir, 'packs/allowed/lib/viewer.rb', "class Viewer; end\n")
 
       write_file(dir, 'app.rb', <<~RUBY)
         # Root is NOT in visible_to, so Secret namespace should not exist
@@ -256,10 +269,10 @@ class E2ERunner
 
   def test_nested_constants
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packages/api'])
+      create_root_package(dir, dependencies: ['packs/api'])
       create_package(dir, 'api')
-      FileUtils.mkdir_p(File.join(dir, 'packages', 'api', 'lib', 'v2'))
-      write_file(dir, 'packages/api/lib/v2/endpoint.rb', <<~RUBY)
+      FileUtils.mkdir_p(File.join(dir, 'packs', 'api', 'lib', 'v2'))
+      write_file(dir, 'packs/api/lib/v2/endpoint.rb', <<~RUBY)
         module V2
           class Endpoint
             def self.path = '/api/v2'
@@ -306,7 +319,7 @@ class E2ERunner
   def create_package(dir, name, dependencies: nil, enforce_privacy: false,
                      enforce_visibility: false, visible_to: nil,
                      enforce_layers: false, layer: nil)
-    pkg_dir = File.join(dir, 'packages', name)
+    pkg_dir = File.join(dir, 'packs', name)
     FileUtils.mkdir_p(File.join(pkg_dir, 'lib'))
     content = { 'enforce_dependencies' => true }
     content['dependencies'] = dependencies if dependencies
