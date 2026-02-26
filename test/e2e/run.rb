@@ -30,6 +30,8 @@ class E2ERunner
     test_dependency_access
     test_transitive_blocked
     test_privacy_enforcement
+    test_exec_ruby_script
+    test_exec_missing_command
     test_version_command
     test_info_command
     test_help_command
@@ -157,6 +159,31 @@ class E2ERunner
     end
   end
 
+  def test_exec_ruby_script
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello via exec!'
+        end
+      RUBY
+      write_file(dir, 'app.rb', <<~RUBY)
+        puts Greeter.hello
+      RUBY
+
+      out, status = run_boxwerk(dir, 'exec', 'app.rb')
+      assert_equal 0, status.exitstatus, "exec_ruby_script: exit status"
+      assert_match /Hello via exec!/, out, "exec_ruby_script: output"
+    end
+  end
+
+  def test_exec_missing_command
+    out, status = run_boxwerk(Dir.pwd, 'exec')
+    assert_equal 1, status.exitstatus, "exec_missing_command: exit status"
+    assert_match /No command specified/, out, "exec_missing_command: error message"
+  end
+
   def test_version_command
     out, status = run_boxwerk(Dir.pwd, 'version')
     assert_equal 0, status.exitstatus, "version: exit status"
@@ -181,6 +208,7 @@ class E2ERunner
     assert_match /Usage:/, out, "help: shows usage"
     assert_match /Commands:/, out, "help: shows commands"
     assert_match /install/, out, "help: shows install command"
+    assert_match /exec/, out, "help: shows exec command"
   end
 
   def test_install_command
