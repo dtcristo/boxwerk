@@ -8,9 +8,11 @@ Gem::Specification.new do |spec|
   spec.authors = ['David Cristofaro']
   spec.email = ['david@dtcristo.com']
 
-  spec.summary = 'Runtime enforcement companion to Packwerk using Ruby::Box'
+  spec.summary = 'Runtime package isolation for Ruby using Ruby::Box'
   spec.description =
-    'Boxwerk is the runtime enforcement companion to Packwerk. While Packwerk provides static analysis of package dependencies, Boxwerk enforces those boundaries at runtime using Ruby::Box constant isolation.'
+    'Boxwerk enforces package boundaries at runtime using Ruby::Box constant isolation. ' \
+    'It reads standard Packwerk package.yml files and packwerk-extensions config keys, ' \
+    'but works standalone without requiring the Packwerk gem.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 4.0.1'
@@ -37,6 +39,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'irb', '~> 1.16'
-  spec.add_dependency 'packwerk'
   spec.add_dependency 'zeitwerk'
 end

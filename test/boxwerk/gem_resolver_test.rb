@@ -19,7 +19,7 @@ module Boxwerk
       FileUtils.mkdir_p(pkg_dir)
       File.write(File.join(pkg_dir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
 
-      pkg = Packwerk::Package.new(name: 'packages/a', config: {})
+      pkg = Package.new(name: 'packages/a', config: {})
       resolver = GemResolver.new(@tmpdir)
 
       assert_nil resolver.resolve_for(pkg)
@@ -32,7 +32,7 @@ module Boxwerk
 
       resolver = GemResolver.new(@tmpdir)
       # No lockfile, so returns nil
-      pkg = Packwerk::Package.new(name: 'packages/a', config: {})
+      pkg = Package.new(name: 'packages/a', config: {})
       assert_nil resolver.resolve_for(pkg)
     end
 
@@ -43,7 +43,7 @@ module Boxwerk
 
       resolver = GemResolver.new(@tmpdir)
       # gems.rb detected but no gems.locked, so returns nil
-      pkg = Packwerk::Package.new(name: 'packages/a', config: {})
+      pkg = Package.new(name: 'packages/a', config: {})
       assert_nil resolver.resolve_for(pkg)
     end
 
@@ -73,7 +73,7 @@ module Boxwerk
            2.7.5
       LOCK
 
-      pkg = Packwerk::Package.new(name: 'packages/a', config: {})
+      pkg = Package.new(name: 'packages/a', config: {})
       resolver = GemResolver.new(@tmpdir)
       paths = resolver.resolve_for(pkg)
 

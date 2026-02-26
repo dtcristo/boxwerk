@@ -34,7 +34,7 @@ module Boxwerk
       private
 
       def print_usage
-        puts "boxwerk #{Boxwerk::VERSION} — Runtime enforcement companion to Packwerk"
+        puts "boxwerk #{Boxwerk::VERSION} — Runtime package isolation for Ruby"
         puts ''
         puts 'Usage: boxwerk <command> [args...]'
         puts ''
@@ -45,7 +45,7 @@ module Boxwerk
         puts '  help                         Show this help message'
         puts '  version                      Show version'
         puts ''
-        puts 'Requires: Ruby 4.0.1+ with RUBY_BOX=1 and Packwerk package.yml files'
+        puts 'Requires: Ruby 4.0.1+ with RUBY_BOX=1 and package.yml files'
       end
 
       def run_command(args)

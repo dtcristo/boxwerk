@@ -15,33 +15,33 @@ module Boxwerk
     end
 
     def test_enforces_privacy_when_true
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => true)
+      pkg = create_package('packages/a', 'enforce_privacy' => true)
       assert PrivacyChecker.enforces_privacy?(pkg)
     end
 
     def test_enforces_privacy_when_strict
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => 'strict')
+      pkg = create_package('packages/a', 'enforce_privacy' => 'strict')
       assert PrivacyChecker.enforces_privacy?(pkg)
     end
 
     def test_does_not_enforce_privacy_when_false
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => false)
+      pkg = create_package('packages/a', 'enforce_privacy' => false)
       refute PrivacyChecker.enforces_privacy?(pkg)
     end
 
     def test_does_not_enforce_privacy_when_nil
-      pkg = create_packwerk_package('packages/a', {})
+      pkg = create_package('packages/a', {})
       refute PrivacyChecker.enforces_privacy?(pkg)
     end
 
     def test_default_public_path
-      pkg = create_packwerk_package('packages/a', {})
+      pkg = create_package('packages/a', {})
       path = PrivacyChecker.public_path_for(pkg, @tmpdir)
       assert_equal File.join(@tmpdir, 'packages/a', 'app/public/'), path
     end
 
     def test_custom_public_path
-      pkg = create_packwerk_package('packages/a', 'public_path' => 'lib/public')
+      pkg = create_package('packages/a', 'public_path' => 'lib/public')
       path = PrivacyChecker.public_path_for(pkg, @tmpdir)
       assert_equal File.join(@tmpdir, 'packages/a', 'lib/public/'), path
     end
@@ -58,7 +58,7 @@ module Boxwerk
       FileUtils.mkdir_p(lib_dir)
       File.write(File.join(lib_dir, 'secret.rb'), "class Secret\nend\n")
 
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => true)
+      pkg = create_package('packages/a', 'enforce_privacy' => true)
       consts = PrivacyChecker.public_constants(pkg, @tmpdir)
 
       assert_includes consts, 'Invoice'
@@ -67,7 +67,7 @@ module Boxwerk
     end
 
     def test_public_constants_nil_when_privacy_not_enforced
-      pkg = create_packwerk_package('packages/a', {})
+      pkg = create_package('packages/a', {})
       consts = PrivacyChecker.public_constants(pkg, @tmpdir)
       assert_nil consts
     end
@@ -82,7 +82,7 @@ module Boxwerk
       File.write(File.join(lib_dir, 'private_thing.rb'),
         "class PrivateThing\nend\n")
 
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => true)
+      pkg = create_package('packages/a', 'enforce_privacy' => true)
       consts = PrivacyChecker.public_constants(pkg, @tmpdir)
 
       assert_includes consts, 'Publicized'
@@ -90,7 +90,7 @@ module Boxwerk
     end
 
     def test_private_constants_list
-      pkg = create_packwerk_package('packages/a',
+      pkg = create_package('packages/a',
         'enforce_privacy' => true,
         'private_constants' => ['::A::Bar', '::Baz'])
 
@@ -101,7 +101,7 @@ module Boxwerk
     end
 
     def test_accessible_blocks_private_constant
-      pkg = create_packwerk_package('packages/a',
+      pkg = create_package('packages/a',
         'enforce_privacy' => true,
         'private_constants' => ['::Secret'])
 
@@ -114,21 +114,21 @@ module Boxwerk
       FileUtils.mkdir_p(pub_dir)
       File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
 
-      pkg = create_packwerk_package('packages/a', 'enforce_privacy' => true)
+      pkg = create_package('packages/a', 'enforce_privacy' => true)
 
       assert PrivacyChecker.accessible?('Invoice', pkg, @tmpdir)
     end
 
     def test_accessible_all_when_privacy_not_enforced
-      pkg = create_packwerk_package('packages/a', {})
+      pkg = create_package('packages/a', {})
 
       assert PrivacyChecker.accessible?('Anything', pkg, @tmpdir)
     end
 
     private
 
-    def create_packwerk_package(name, config)
-      Packwerk::Package.new(name: name, config: config)
+    def create_package(name, config)
+      Package.new(name: name, config: config)
     end
   end
 end
