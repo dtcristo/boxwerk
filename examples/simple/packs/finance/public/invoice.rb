@@ -24,4 +24,9 @@ class Invoice
   def total
     subtotal + tax
   end
+
+  # Exposes the faker version from the util pack (via Calculator).
+  def self.faker_version
+    Calculator.faker_version
+  end
 end

@@ -3,18 +3,22 @@
 require 'bundler'
 
 module Boxwerk
-  # Resolves per-package gem dependencies from Gemfile.lock.
+  # Resolves per-package gem dependencies from lockfiles.
   # Parses lockfiles with Bundler::LockfileParser and resolves gem
-  # load paths via Gem::Specification for $LOAD_PATH isolation per box.
+  # load paths for $LOAD_PATH isolation per box.
+  #
+  # Unlike Bundler itself, this resolver can find gems outside the
+  # current bundle by searching all gem installation directories.
   class GemResolver
     attr_reader :root_path
 
     def initialize(root_path)
       @root_path = root_path
+      @all_specs = nil
     end
 
     # Returns an array of load paths for a package's gem dependencies.
-    # Returns nil if the package has no Gemfile.
+    # Returns nil if the package has no gems.rb/Gemfile.
     def resolve_for(package)
       gemfile_path = find_gemfile(package)
       return nil unless gemfile_path
@@ -35,11 +39,9 @@ module Boxwerk
       end
     end
 
-    # Finds a Gemfile or gems.rb for the package.
     def find_gemfile(package)
       dir = package_dir(package)
 
-      # Check for gems.rb first (modern convention), then Gemfile
       gemfile = File.join(dir, 'gems.rb')
       return gemfile if File.exist?(gemfile)
 
@@ -49,7 +51,6 @@ module Boxwerk
       nil
     end
 
-    # Finds the lockfile corresponding to a gemfile.
     def find_lockfile(gemfile_path)
       if gemfile_path.end_with?('gems.rb')
         gemfile_path.sub('gems.rb', 'gems.locked')
@@ -72,18 +73,34 @@ module Boxwerk
       paths.uniq
     end
 
-    # Resolves load paths for a specific gem version and its runtime dependencies.
+    # Resolves load paths for a specific gem version.
+    # Searches all gem installation directories, bypassing Bundler's
+    # filtering so that per-package gems can be found even when they
+    # are not in the root bundle.
     def resolve_gem_paths(name, version)
-      spec = Gem::Specification.find_by_name(name, "= #{version}")
+      spec = find_gem_spec(name, version)
+      unless spec
+        # Don't warn about boxwerk itself (loaded via path: in development)
+        warn "Boxwerk: gem '#{name}' (#{version}) not installed, skipping" unless name == 'boxwerk'
+        return nil
+      end
       collect_paths(spec)
-    rescue Gem::MissingSpecError
-      # Gem not installed at this version, try without version constraint
-      begin
-        spec = Gem::Specification.find_by_name(name)
-        collect_paths(spec)
-      rescue Gem::MissingSpecError
-        warn "Boxwerk: gem '#{name}' (#{version}) not installed, skipping"
-        nil
+    end
+
+    # Finds a gem specification by searching all gem directories.
+    # This works even under Bundler, which normally filters specs
+    # to only those in the current bundle.
+    def find_gem_spec(name, version)
+      all_gem_specs.find { |s| s.name == name && s.version.to_s == version } ||
+        all_gem_specs.find { |s| s.name == name }
+    end
+
+    # Loads all gem specifications from all gem directories.
+    # Cached for the lifetime of this resolver.
+    def all_gem_specs
+      @all_specs ||= begin
+        dirs = Gem.path.flat_map { |p| Dir.glob(File.join(p, 'specifications', '*.gemspec')) }
+        dirs.map { |path| Gem::Specification.load(path) }.compact
       end
     end
 
@@ -95,11 +112,10 @@ module Boxwerk
       paths = spec.full_require_paths.dup
 
       spec.runtime_dependencies.each do |dep|
-        begin
-          dep_spec = dep.to_spec
+        dep_spec = find_gem_spec(dep.name, dep.requirement.to_s.delete('= '))
+        dep_spec ||= all_gem_specs.find { |s| s.name == dep.name }
+        if dep_spec
           paths.concat(collect_paths(dep_spec, resolved))
-        rescue Gem::MissingSpecError
-          # Skip missing optional dependencies
         end
       end
 

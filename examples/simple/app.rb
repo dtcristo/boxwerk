@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Boxwerk Example
-# Run with: RUBY_BOX=1 boxwerk run app.rb
+# Run with: bundle exec boxwerk run app.rb
 
 puts '=' * 60
 puts 'Boxwerk Example'
@@ -56,10 +56,18 @@ rescue NameError
 end
 puts ''
 
-# --- Per-package gem isolation ---
-puts '5. Per-package gem (json in util via gems.rb)'
-puts '  ✓ Util has its own gems.rb with json gem'
-puts '  ✓ Gems loaded into util box via $LOAD_PATH isolation'
+# --- Per-package gem version isolation ---
+puts '5. Per-package gem version isolation (faker)'
+finance_version = Invoice.faker_version
+greeting_version = Greeting.faker_version
+puts "  packs/finance (via util) → Faker #{finance_version}"
+puts "  packs/greeting           → Faker #{greeting_version}"
+if finance_version != greeting_version
+  puts '  ✓ Different faker versions running in isolated boxes!'
+else
+  puts '  ✗ ERROR: versions should differ!'
+  exit 1
+end
 puts ''
 
 puts '=' * 60

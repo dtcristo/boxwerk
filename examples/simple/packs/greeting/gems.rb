@@ -2,4 +2,4 @@
 
 source 'https://rubygems.org'
 
-gem 'faker', '3.5.1'
+gem 'faker', '3.6.0'

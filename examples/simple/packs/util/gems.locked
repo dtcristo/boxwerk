@@ -1,13 +1,17 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    json (2.18.1)
+    concurrent-ruby (1.3.6)
+    faker (3.5.1)
+      i18n (>= 1.8.11, < 2)
+    i18n (1.14.8)
+      concurrent-ruby (~> 1.0)
 
 PLATFORMS
   arm64-darwin-25
 
 DEPENDENCIES
-  json
+  faker (= 3.5.1)
 
 BUNDLED WITH
   4.0.3

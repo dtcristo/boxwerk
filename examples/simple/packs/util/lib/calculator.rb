@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'json'
+require 'faker'
 
 class Calculator
   def self.add(a, b)
@@ -20,7 +20,7 @@ class Calculator
     a.to_f / b
   end
 
-  def self.to_json_report(operations)
-    JSON.generate(operations)
+  def self.faker_version
+    Faker::VERSION
   end
 end
