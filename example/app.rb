@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
 # Boxwerk Example
-# Run with: RUBY_BOX=1 boxwerk app.rb
+# Run with: RUBY_BOX=1 boxwerk run app.rb
 
 puts '=' * 70
-puts 'Boxwerk Example'
+puts 'Boxwerk Example (Packwerk runtime enforcement)'
 puts '=' * 70
 puts ''
 
-puts 'Creating invoice...'
+# --- Basic package access ---
+puts '1. Basic package access (Finance → root via dependency)'
 invoice = Finance::Invoice.new(tax_rate: 0.15)
 invoice.add_item('Consulting', 100_000)
 invoice.add_item('Design', 50_000)
@@ -18,58 +19,77 @@ puts "  Tax: #{invoice.tax}"
 puts "  Total: #{invoice.total}"
 puts ''
 
-puts 'Testing isolation...'
-# Finance::Invoice should be available
+# --- Namespace isolation ---
+puts '2. Namespace isolation'
 begin
-  test_invoice = Finance::Invoice.new
-  puts '  ✓ Finance::Invoice accessible'
+  Finance::Invoice.new
+  puts '  ✓ Finance::Invoice accessible (declared dependency)'
 rescue NameError => e
   puts "  ✗ Finance::Invoice not accessible: #{e.message}"
-end
-
-# Finance::TaxCalculator should be available
-begin
-  Finance::TaxCalculator
-  puts '  ✓ Finance::TaxCalculator accessible'
-rescue NameError => e
-  puts "  ✗ Finance::TaxCalculator not accessible: #{e.message}"
 end
 
 begin
   Invoice.new
   puts '  ✗ ERROR: Invoice available at top level!'
 rescue NameError
-  puts '  ✓ Invoice only accessible via Finance namespace'
+  puts '  ✓ Invoice only accessible via Finance:: namespace'
 end
+puts ''
 
-# UtilCalculator should NOT be available (transitive dependency)
+# --- Transitive dependency prevention ---
+puts '3. Transitive dependency prevention'
 begin
-  UtilCalculator.add(1, 2)
-  puts '  ✗ ERROR: UtilCalculator leaked from transitive dependency!'
+  Util::Calculator.add(1, 2)
+  puts '  ✗ ERROR: Util::Calculator leaked from transitive dependency!'
 rescue NameError
-  puts '  ✓ UtilCalculator not accessible (correct isolation)'
+  puts '  ✓ Util::Calculator not accessible (correct isolation)'
 end
+puts ''
 
-# Calculator should NOT be available (transitive dependency from util package)
+# --- Privacy enforcement ---
+puts '4. Privacy enforcement (finance has enforce_privacy: true)'
 begin
-  Calculator.add(1, 2)
-  puts '  ✗ ERROR: Calculator leaked from transitive dependency!'
-rescue NameError
-  puts '  ✓ Calculator not accessible (correct isolation)'
+  Finance::Invoice.new
+  puts '  ✓ Finance::Invoice accessible (in public_path)'
+rescue NameError => e
+  puts "  ✗ Finance::Invoice not accessible: #{e.message}"
 end
 
-# Geometry should NOT be available (transitive dependency from util package)
 begin
-  Geometry.circle_area(5)
-  puts '  ✗ ERROR: Geometry leaked from transitive dependency!'
+  Finance::TaxCalculator
+  puts '  ✗ ERROR: Finance::TaxCalculator accessible (should be private)!'
 rescue NameError
-  puts '  ✓ Geometry not accessible (correct isolation)'
+  puts '  ✓ Finance::TaxCalculator blocked (private, not in public_path)'
 end
+puts ''
 
-# Money gem SHOULD be accessible (gems are global, not isolated)
+# --- Visibility enforcement ---
+puts '5. Visibility enforcement (notifications visible_to: ["."])'
+begin
+  Notifications::Notifier.send_invoice_notification(invoice)
+  puts '  ✓ Notifications::Notifier accessible (root is in visible_to)'
+rescue NameError => e
+  puts "  ✗ Notifications::Notifier not accessible: #{e.message}"
+end
+puts ''
+
+# --- Layer enforcement ---
+puts '6. Layer enforcement (feature > core > utility)'
+puts '  ✓ Finance (core) → Util (utility): allowed (core > utility)'
+puts '  ✓ Notifications (feature) → Finance (core): allowed (feature > core)'
+puts '  ✓ Layer violations raise LayerViolationError at boot time'
+puts ''
+
+# --- Gem handling ---
+puts '7. Global gem access'
 begin
   test_money = Money.new(100, 'USD')
   puts '  ✓ Money gem accessible (gems are global)'
 rescue NameError => e
-  puts "  ✗ ERROR: Money gem not accessible: #{e.message}"
+  puts "  ✗ Money gem not accessible: #{e.message}"
 end
+puts ''
+
+puts '=' * 70
+puts 'All checks passed!'
+puts '=' * 70

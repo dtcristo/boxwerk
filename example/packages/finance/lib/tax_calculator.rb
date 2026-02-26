@@ -2,7 +2,7 @@
 
 class TaxCalculator
   def self.calculate(amount_cents, rate)
-    tax_cents = UtilCalculator.multiply(amount_cents, rate).round
+    tax_cents = Util::Calculator.multiply(amount_cents, rate).round
     Money.new(tax_cents, 'USD')
   end
 end

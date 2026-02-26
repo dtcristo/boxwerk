@@ -1,34 +1,66 @@
 # Boxwerk Example
 
-Complete example demonstrating strict package isolation and dependency management.
+Complete example demonstrating runtime package isolation using Packwerk's dependency
+declarations and Ruby::Box enforcement — including privacy, visibility, layers, and gem isolation.
 
 ## Structure
 
 ```
 example/
 ├── Gemfile                  # Gem dependencies (money gem)
-├── package.yml              # Root package (imports finance)
+├── packwerk.yml             # Layer definitions (feature > core > utility)
+├── package.yml              # Root package (depends on finance, notifications)
 ├── app.rb                   # Entry point
 └── packages/
     ├── finance/
-    │   ├── package.yml      # Exports Invoice, TaxCalculator; imports util
+    │   ├── package.yml      # Depends on util; enforce_privacy + layer: core
     │   └── lib/
+    │       ├── public/
+    │       │   └── invoice.rb       # Public API
     │       ├── invoice.rb
-    │       └── tax_calculator.rb
+    │       └── tax_calculator.rb    # Private (not in public_path)
+    ├── notifications/
+    │   ├── package.yml      # layer: feature; visible_to: ["."]
+    │   └── lib/
+    │       └── notifier.rb
     └── util/
-        ├── package.yml      # Exports Calculator, Geometry
+        ├── package.yml      # No dependencies; layer: utility
         └── lib/
             ├── calculator.rb
             └── geometry.rb
 ```
 
-**Dependency chain:** root → finance → util
+## Dependency Graph
 
-## Configuration
+```
+root (.) → finance (core) → util (utility)
+root (.) → notifications (feature) → finance (core)
+```
 
-- **Root:** imports `packages/finance` as `Finance::` (default namespace)
-- **Finance:** exports `Invoice`, `TaxCalculator`; imports `Calculator` as `UtilCalculator`
-- **Util:** exports `Calculator`, `Geometry`
+## Features Demonstrated
+
+### Privacy enforcement
+- Finance has `enforce_privacy: true` with `public_path: lib/public/`
+- `Finance::Invoice` is accessible (in public path)
+- `Finance::TaxCalculator` is blocked (private, not in public path)
+
+### Visibility enforcement
+- Notifications has `enforce_visibility: true` with `visible_to: ["."]`
+- Only the root package can access `Notifications::Notifier`
+
+### Layer enforcement
+- Layers: `feature > core > utility` (defined in `packwerk.yml`)
+- Notifications (feature) → Finance (core) ✓
+- Finance (core) → Util (utility) ✓
+- Utility → Feature would raise `LayerViolationError` at boot ✗
+
+### Namespace isolation
+- Root accesses `Finance::Invoice` and `Notifications::Notifier` (declared dependencies)
+- Root cannot access `Util::Calculator` (transitive, not declared)
+- `Invoice` not accessible without `Finance::` namespace
+
+### Global gem access
+- Money gem globally accessible in all packages
 
 ## Running
 
@@ -38,25 +70,7 @@ bundle install
 RUBY_BOX=1 boxwerk run app.rb
 ```
 
-Or use the console (note: currently runs in root box):
+Or use the console:
 ```bash
 RUBY_BOX=1 boxwerk console
 ```
-
-## Demonstrates
-
-**Strict isolation:**
-- Root accesses `Finance::Invoice` and `Finance::TaxCalculator` (explicit import)
-- Root cannot access `Calculator` or `Geometry` (transitive dependency)
-- `Invoice` not accessible without `Finance::` namespace
-
-**Import strategies:**
-- Root uses default namespace: `packages/finance` → `Finance::`
-- Finance uses selective rename: `Calculator` → `UtilCalculator`
-
-**Gem handling:**
-- Money gem globally accessible in all packages
-
-**Clean boundaries:**
-- Packages export only public API
-- Implementation details stay hidden

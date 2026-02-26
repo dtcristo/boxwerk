@@ -1,0 +1,8 @@
+enforce_dependencies: true
+enforce_layers: true
+layer: feature
+enforce_visibility: true
+visible_to:
+  - .
+dependencies:
+  - packages/finance
