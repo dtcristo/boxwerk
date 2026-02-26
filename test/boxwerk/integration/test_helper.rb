@@ -26,13 +26,15 @@ module Boxwerk
       dir
     end
 
-    def create_package(path, dependencies: nil, enforce_privacy: nil, private_constants: nil,
+    def create_package(path, dependencies: nil, enforce_privacy: nil, public_path: nil,
+                       private_constants: nil,
                        enforce_visibility: nil, visible_to: nil,
                        enforce_folder_privacy: nil,
                        enforce_layers: nil, layer: nil)
       content = { 'enforce_dependencies' => true }
       content['dependencies'] = dependencies if dependencies
       content['enforce_privacy'] = enforce_privacy unless enforce_privacy.nil?
+      content['public_path'] = public_path if public_path
       content['private_constants'] = private_constants if private_constants
       content['enforce_visibility'] = enforce_visibility unless enforce_visibility.nil?
       content['visible_to'] = visible_to if visible_to
