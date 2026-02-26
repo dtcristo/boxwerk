@@ -36,6 +36,10 @@ class E2ERunner
     test_missing_script_error
     test_nonexistent_script_error
     test_missing_package_yml_error
+    test_layer_violation_at_boot
+    test_visibility_enforcement
+    test_nested_constants
+    test_unknown_command_error
 
     puts ""
     puts "=" * 60
@@ -200,6 +204,84 @@ class E2ERunner
     end
   end
 
+  def test_layer_violation_at_boot
+    with_project do |dir|
+      write_file(dir, 'packwerk.yml', YAML.dump('layers' => %w[feature utility]))
+      create_root_package(dir, dependencies: %w[packages/feat packages/util])
+      create_package(dir, 'feat', layer: 'feature')
+      create_package(dir, 'util', layer: 'utility', dependencies: ['packages/feat'],
+                     enforce_layers: true)
+      write_file(dir, 'packages/feat/lib/feat.rb', "class Feat; end\n")
+      write_file(dir, 'packages/util/lib/util_class.rb', "class UtilClass; end\n")
+      write_file(dir, 'app.rb', "puts 'should not reach here'\n")
+
+      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      assert_equal 1, status.exitstatus, "layer_violation: exit status"
+      assert_match /cannot depend on/, out, "layer_violation: error message"
+    end
+  end
+
+  def test_visibility_enforcement
+    with_project do |dir|
+      create_root_package(dir, dependencies: %w[packages/secret packages/allowed])
+
+      create_package(dir, 'secret', enforce_visibility: true,
+                     visible_to: ['packages/allowed'])
+      write_file(dir, 'packages/secret/lib/hidden.rb', <<~RUBY)
+        class Hidden
+          def self.value = 'secret'
+        end
+      RUBY
+
+      create_package(dir, 'allowed', dependencies: ['packages/secret'])
+      write_file(dir, 'packages/allowed/lib/viewer.rb', "class Viewer; end\n")
+
+      write_file(dir, 'app.rb', <<~RUBY)
+        # Root is NOT in visible_to, so Secret namespace should not exist
+        begin
+          Secret::Hidden
+          puts "FAIL: root can see Secret"
+          exit 1
+        rescue NameError
+          puts "PASS: Secret not visible to root"
+          exit 0
+        end
+      RUBY
+
+      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      assert_equal 0, status.exitstatus, "visibility: exit status"
+      assert_match /PASS/, out, "visibility: blocked"
+    end
+  end
+
+  def test_nested_constants
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packages/api'])
+      create_package(dir, 'api')
+      FileUtils.mkdir_p(File.join(dir, 'packages', 'api', 'lib', 'v2'))
+      write_file(dir, 'packages/api/lib/v2/endpoint.rb', <<~RUBY)
+        module V2
+          class Endpoint
+            def self.path = '/api/v2'
+          end
+        end
+      RUBY
+      write_file(dir, 'app.rb', <<~RUBY)
+        puts Api::V2::Endpoint.path
+      RUBY
+
+      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      assert_equal 0, status.exitstatus, "nested_constants: exit status"
+      assert_match %r{/api/v2}, out, "nested_constants: output"
+    end
+  end
+
+  def test_unknown_command_error
+    out, status = run_boxwerk(Dir.pwd, 'foobar')
+    assert_equal 1, status.exitstatus, "unknown_command: exit status"
+    assert_match /Unknown command/, out, "unknown_command: error message"
+  end
+
   # --- Helpers ---
 
   def with_project
@@ -221,12 +303,18 @@ class E2ERunner
     File.write(File.join(dir, 'package.yml'), YAML.dump(content))
   end
 
-  def create_package(dir, name, dependencies: nil, enforce_privacy: false)
+  def create_package(dir, name, dependencies: nil, enforce_privacy: false,
+                     enforce_visibility: false, visible_to: nil,
+                     enforce_layers: false, layer: nil)
     pkg_dir = File.join(dir, 'packages', name)
     FileUtils.mkdir_p(File.join(pkg_dir, 'lib'))
     content = { 'enforce_dependencies' => true }
     content['dependencies'] = dependencies if dependencies
     content['enforce_privacy'] = true if enforce_privacy
+    content['enforce_visibility'] = true if enforce_visibility
+    content['visible_to'] = visible_to if visible_to
+    content['enforce_layers'] = true if enforce_layers
+    content['layer'] = layer if layer
     File.write(File.join(pkg_dir, 'package.yml'), YAML.dump(content))
   end
 
