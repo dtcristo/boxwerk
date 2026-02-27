@@ -35,8 +35,6 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 
 ### Removed
 
-- `enforce_visibility`, `enforce_folder_privacy`, `enforce_layers` checkers.
-- `packwerk.yml` support.
 - Zeitwerk runtime dependency.
 - Namespace wrapping.
 
