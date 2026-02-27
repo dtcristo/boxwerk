@@ -116,7 +116,7 @@ Calculator.add(1, 2)
 
 ```bash
 bundle binstubs boxwerk             # Create bin/boxwerk binstub
-bin/boxwerk install                  # Install gems for all packages with gems
+bin/boxwerk install                 # Install gems for all packages with gems
 RUBY_BOX=1 bin/boxwerk run app.rb   # Run with package isolation
 ```
 
