@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'zeitwerk'
+
 module Boxwerk
   # Enforces privacy rules at runtime.
   # Reads enforce_privacy, public_path, and private_constants from package.yml.
@@ -91,13 +93,14 @@ module Boxwerk
       private
 
       # Derives a constant name from a file path relative to a base directory.
-      # Uses Ruby naming conventions.
+      # Uses Zeitwerk's inflector for Ruby naming conventions.
       def constant_name_from_path(file_path, base_path)
         normalized_base = base_path.end_with?('/') ? base_path : "#{base_path}/"
         relative = file_path.delete_prefix(normalized_base).delete_suffix('.rb')
         return nil if relative.empty?
 
-        relative.split('/').map { |part| Boxwerk.camelize(part) }.join('::')
+        inflector = Zeitwerk::Inflector.new
+        relative.split('/').map { |part| inflector.camelize(part, base_path) }.join('::')
       end
 
       # Checks if a file contains the pack_public: true sigil in first 5 lines.

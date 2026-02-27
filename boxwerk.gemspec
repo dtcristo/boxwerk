@@ -39,4 +39,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'irb', '~> 1.16'
+  spec.add_dependency 'zeitwerk', '~> 2.7'
 end

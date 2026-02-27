@@ -6,14 +6,15 @@ module Boxwerk
   # Boot sequence for each package (in topological order):
   #   1. Create Ruby::Box
   #   2. Configure per-package gem load paths (if Gemfile present)
-  #   3. Build file index — scan lib/ for .rb files, map to constant names
-  #   4. Register autoload entries — constants loaded on first access
+  #   3. Scan directories with Zeitwerk (file discovery + inflection)
+  #   4. Register autoload entries in the box
   #   5. Wire dependency constants, enforcing:
   #      - Constant privacy (public_path, private_constants)
   #
-  # No code is loaded eagerly. Constants are resolved on first access via
-  # Ruby's autoload mechanism (intra-package) or const_missing proxies
-  # (cross-package). Resolved constants are cached via const_set.
+  # Zeitwerk is used for file scanning and inflection only. Autoload
+  # registration is done directly via box.eval because Zeitwerk's own
+  # autoload calls execute in the root box context (where Zeitwerk was
+  # loaded), not the target package box.
   class BoxManager
     attr_reader :boxes
 
@@ -33,8 +34,8 @@ module Boxwerk
       end
     end
 
-    # Boot a single package: create box, set up gems, build file index,
-    # set up autoloader, wire dependencies. No code is loaded eagerly.
+    # Boot a single package: create box, set up gems, scan with Zeitwerk,
+    # register autoloads, wire dependencies.
     def boot(package, resolver)
       return if @boxes.key?(package.name)
 
@@ -44,12 +45,9 @@ module Boxwerk
       # Set up per-package gem load paths
       setup_gem_load_paths(box, package)
 
-      # Build file index (scan directories, don't load any code)
-      file_index = build_file_index(package)
+      # Scan directories and register autoloads
+      file_index = scan_and_register(box, package)
       @file_indexes[package.name] = file_index
-
-      # Set up autoloader for intra-package constant resolution
-      setup_autoloader(box, file_index)
 
       # Wire dependency constants into this box
       wire_dependency_constants(box, package, resolver)
@@ -66,10 +64,10 @@ module Boxwerk
       end
     end
 
-    # Scans package directories and maps constant names to file paths
-    # using Ruby naming conventions. Does not load any code.
-    def build_file_index(package)
-      index = {}
+    # Scans package directories with ZeitwerkScanner and registers autoloads
+    # in the box. Returns a file index for use by ConstantResolver.
+    def scan_and_register(box, package)
+      all_entries = []
 
       pub_path = if PrivacyChecker.enforces_privacy?(package)
                    PrivacyChecker.public_path_for(package, @root_path)
@@ -77,46 +75,22 @@ module Boxwerk
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)
-        scan_for_constants(lib_path, index, exclude: pub_path)
+        entries = ZeitwerkScanner.scan(lib_path)
+        # Exclude constants under public_path (scanned separately)
+        if pub_path && pub_path.start_with?(lib_path)
+          entries = entries.reject { |e| e.file&.start_with?(pub_path) || e.dir&.start_with?(pub_path) }
+        end
+        all_entries.concat(entries)
       end
 
       # Scan public_path as a separate autoload root so that
       # public/invoice.rb maps to Invoice (not Public::Invoice).
       if pub_path && File.directory?(pub_path)
-        scan_for_constants(pub_path, index)
+        all_entries.concat(ZeitwerkScanner.scan(pub_path))
       end
 
-      index
-    end
-
-    def scan_for_constants(dir, index, exclude: nil)
-      base = dir.end_with?('/') ? dir : "#{dir}/"
-      Dir.glob(File.join(dir, '**', '*.rb')).sort.each do |file|
-        next if exclude && file.start_with?(exclude)
-
-        relative = file.delete_prefix(base).delete_suffix('.rb')
-        const_name = relative.split('/').map { |part| Boxwerk.camelize(part) }.join('::')
-        index[const_name] = file
-      end
-    end
-
-    # Registers autoload entries in the box for intra-package lazy loading.
-    def setup_autoloader(box, file_index)
-      file_index.each do |const_name, file_path|
-        if const_name.include?('::')
-          parts = const_name.split('::')
-          # Ensure parent modules exist
-          parts[0..-2].each_with_index do |_, i|
-            mod_path = parts[0..i].join('::')
-            box.eval("#{mod_path} = Module.new unless defined?(#{mod_path})")
-          end
-          parent = parts[0..-2].join('::')
-          child = parts.last
-          box.eval("#{parent}.autoload :#{child}, #{file_path.inspect}")
-        else
-          box.eval("autoload :#{const_name}, #{file_path.inspect}")
-        end
-      end
+      ZeitwerkScanner.register_autoloads(box, all_entries)
+      ZeitwerkScanner.build_file_index(all_entries)
     end
 
     # Installs a const_missing handler on the box that searches all direct

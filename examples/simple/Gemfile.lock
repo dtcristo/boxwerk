@@ -3,6 +3,7 @@ PATH
   specs:
     boxwerk (0.3.0)
       irb (~> 1.16)
+      zeitwerk (~> 2.7)
 
 GEM
   remote: https://rubygems.org/
@@ -36,6 +37,7 @@ GEM
       io-console (~> 0.5)
     stringio (3.2.0)
     tsort (0.2.0)
+    zeitwerk (2.7.5)
 
 PLATFORMS
   arm64-darwin-25
@@ -65,6 +67,7 @@ CHECKSUMS
   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
+  zeitwerk (2.7.5) sha256=d8da92128c09ea6ec62c949011b00ed4a20242b255293dd66bf41545398f73dd
 
 BUNDLED WITH
   4.0.3
