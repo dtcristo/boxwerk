@@ -152,15 +152,29 @@ Rails integration plan.
 
 ## Per-Package Testing
 
-Each package could have its own test suite that runs in its own box:
+Currently, integration tests run in the root box via `boxwerk exec rake test`.
+Each package could additionally have its own test suite running in its own box:
 
 ```bash
 boxwerk test packs/billing     # Run billing tests in isolated box
 boxwerk test --all             # Run all package tests
 ```
 
-This would verify that packages work correctly in isolation, not just when
-all code is loaded together.
+### Current Approach
+
+Tests in `test/` run in the root box, verifying boundary enforcement:
+- Direct dependency constants are accessible
+- Transitive dependencies raise `NameError`
+- Private constants raise `NameError`
+
+### Future: Per-Pack Box Tests
+
+Each pack could have a `test/` directory with tests that run in that pack's
+box. This would verify that a pack works correctly with only its declared
+dependencies. The test runner would:
+1. Discover test files per pack (`packs/*/test/**/*_test.rb`)
+2. Run each pack's tests inside that pack's box
+3. Minitest (a global gem) would be available in all boxes via root box inheritance
 
 ## IDE Support
 

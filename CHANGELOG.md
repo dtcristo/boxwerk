@@ -15,10 +15,16 @@
 - `PackageResolver` no longer reads `packwerk.yml` or derives namespaces
 - `ConstantResolver` installs a dependency resolver instead of namespace proxies
 - Updated gemspec description (removed packwerk-extensions reference)
+- `GemResolver` now searches all gem directories (not just current bundle) for per-package gem isolation
 
 ### Added
+- **`boxwerk exec` command**: Execute any Ruby command (gem binstub) in the boxed environment, e.g. `boxwerk exec rake test`, `boxwerk exec rails console`
+- **Goals section** in README: project goals inspired by Packwerk
+- **Per-package gem version isolation**: Example demonstrates faker 3.5.1 and 3.6.0 in different packs
+- **Integration tests in example**: `test/integration_test.rb` with 5 tests, run via `boxwerk exec rake test`
 - `examples/rails/README.md`: Comprehensive Rails integration plan
 - Expanded `FUTURE_IMPROVEMENTS.md` with detailed plans for Zeitwerk autoloading, IRB console improvements, and constant reloading
+- `packs/greeting` example pack with faker 3.6.0
 
 ### Removed
 - `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker` modules
