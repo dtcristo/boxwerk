@@ -94,7 +94,7 @@ Ruby::Box stabilizes.
 2. Create a custom IRB completion proc that queries the Boxwerk constant index
 3. Register via `IRB::Completion` API to enable box-aware autocomplete
 
-## Global Gems
+## Gems
 
 Root `Gemfile`/`gems.rb` gems are loaded into the root box via Bundler before
 any package boxes are created. All child boxes inherit them via
