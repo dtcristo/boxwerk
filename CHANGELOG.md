@@ -2,45 +2,43 @@
 
 ## [Unreleased] — v0.3.0
 
-Complete architecture rewrite. Boxwerk now enforces package boundaries at
-runtime using `Ruby::Box` isolation instead of static analysis.
+Complete architecture rewrite. Each package now runs in its own `Ruby::Box`
+with constants resolved lazily at runtime. Reads standard Packwerk
+`package.yml` files.
 
-### Breaking Changes
+### Changed
 
-- **Runtime isolation via Ruby::Box.** Each package runs in its own
-  `Ruby::Box`. Constants are resolved lazily via `const_missing` and cached.
-  Only direct dependencies are accessible; transitive dependencies raise
-  `NameError`.
-- **No namespace wrapping.** Dependency constants are accessed directly
-  (`Invoice`, not `Finance::Invoice`).
-- **Removed checkers.** Only `enforce_privacy` remains. Removed
-  `enforce_visibility`, `enforce_folder_privacy`, and `enforce_layers`.
-- **Removed `packwerk.yml`.** Package discovery uses `package.yml` files only.
-- **Default `public_path` changed** to `public/`.
-- **Removed Zeitwerk dependency.** Uses `autoload` directly inside boxes.
+- Constants from dependencies are accessed directly (`Invoice`, not
+  `Finance::Invoice`). A `const_missing` handler on `Object` within each box
+  searches direct dependencies.
+- Default `public_path` changed from `app/public/` to `public/`.
+- Core internals replaced: `Graph`, `Loader`, `Registry` → `BoxManager`,
+  `ConstantResolver`, `GemResolver`, `PackageResolver`, `PrivacyChecker`.
+- `exe/boxwerk` boots into `Ruby::Box.root`, loads gems via Bundler, then
+  delegates to CLI. Re-execs when launched via `bundle exec` to prevent
+  double gem loading. Commands that don't need Ruby::Box (`install`, `info`,
+  `help`, `version`) work without `RUBY_BOX=1`.
+- Example restructured: `example/` → `examples/simple/` with per-package
+  gems, unit tests, and privacy demos. `examples/rails/` added as a plan.
+- Requires Ruby >= 4.0.1 (was 4.0.0).
 
 ### Added
 
-- **CLI commands:** `exec`, `run`, `console`, `install`, `info`.
-- **Package flags:** `--package`/`-p`, `--all`, `--root-box`/`-r`.
-- **Per-package gem isolation.** Packages can have their own `Gemfile` with
-  different gem versions.
-- **Per-package testing.** `boxwerk exec --all rake test` runs each package's
-  tests in isolated subprocesses.
-- **Bundler re-exec.** When invoked via `bundle exec` or binstub, Boxwerk
-  re-execs into a clean Ruby process to prevent double gem loading.
-- **Privacy enforcement.** `enforce_privacy`, `public_path`,
+- CLI commands: `exec`, `run`, `console`, `install`, `info`.
+- CLI flags: `-p`/`--package`, `--all`, `-r`/`--root-box`.
+- Per-package gem isolation via `Gemfile`/`gems.rb` per package.
+- Privacy enforcement: `enforce_privacy`, `public_path`,
   `private_constants`, `pack_public: true` sigil.
+- `irb` gem dependency for `boxwerk console`.
 - `ARCHITECTURE.md`, `TODO.md`, `AGENTS.md`.
-- `examples/simple/` with per-package gems, tests, and privacy demos.
-- `examples/rails/README.md` integration plan.
+- E2E test suite (57 tests) alongside unit/integration tests (58 tests).
 
 ### Removed
 
-- `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker`.
+- `enforce_visibility`, `enforce_folder_privacy`, `enforce_layers` checkers.
 - `packwerk.yml` support.
 - Zeitwerk runtime dependency.
-- Namespace wrapping (`PackageResolver.namespace_for`).
+- Namespace wrapping.
 
 ## [v0.2.0] - 2026-01-06
 
