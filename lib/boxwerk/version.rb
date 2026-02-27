@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  VERSION = '2.0.0'
+  VERSION = '0.3.0'
 end

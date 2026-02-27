@@ -6,7 +6,7 @@ Multi-package application demonstrating runtime package isolation with per-packa
 
 ```
 simple/
-├── gems.rb                  # Root dependencies (boxwerk, minitest, rake)
+├── gems.rb                  # Root dependencies (minitest, rake)
 ├── package.yml              # Root package (depends on finance, greeting)
 ├── app.rb                   # Entry point
 ├── Rakefile                 # Test runner
@@ -45,12 +45,10 @@ root (.) → finance → util (faker 3.5.1)
 
 ```bash
 cd examples/simple
-bundle install                           # Install global gems
-bundle binstub boxwerk                   # Create bin/boxwerk binstub
-bin/boxwerk install                      # Install gems for all packs
-bin/boxwerk run app.rb                   # Run the example app
-bin/boxwerk exec rake test               # Run integration tests
-bin/boxwerk info                         # Show package structure
+boxwerk install                              # Install gems for all packages
+RUBY_BOX=1 boxwerk run app.rb               # Run the example app
+RUBY_BOX=1 boxwerk exec rake test           # Run integration tests
+RUBY_BOX=1 boxwerk info                     # Show package structure
 ```
 
 ## What It Demonstrates

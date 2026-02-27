@@ -4,7 +4,7 @@
   </h1>
 </div>
 
-Boxwerk enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/master/Ruby/Box.html) isolation. Each package gets its own `Ruby::Box` — constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
+Boxwerk enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) isolation. Each package gets its own `Ruby::Box` — constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
 
 Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files. No custom configuration format. Packwerk itself is optional — Boxwerk works standalone.
 
@@ -14,8 +14,21 @@ Boxwerk shares Packwerk's goal of bringing modular boundaries to Ruby applicatio
 
 - **Enforce boundaries at runtime.** Ruby doesn't provide a built-in mechanism for constant-level boundaries between modules. Boxwerk fills this gap using `Ruby::Box` isolation, turning architectural guidelines into runtime guarantees.
 - **Enable gradual modularization.** Large applications can adopt packages incrementally. Add `package.yml` files around existing code, declare dependencies, and Boxwerk enforces them. No big-bang rewrite.
-- **Feel Ruby-native.** Boxwerk integrates with Bundler, gems.rb, and the standard Ruby toolchain. `boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
+- **Feel Ruby-native.** Boxwerk integrates with Bundler, `gems.rb`, and the standard Ruby toolchain. `boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
 - **Work standalone.** Boxwerk reads `package.yml` files directly. Packwerk is optional for static analysis at CI time, but not required at runtime.
+
+## Ruby::Box
+
+[`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) provides in-process isolation of classes, modules, and constants. Key behaviours relevant to Boxwerk:
+
+- **Box creation.** `Ruby::Box.new` creates a user box copied from the root box. All user boxes are flat — there is no nesting.
+- **File scope.** One `.rb` file runs in a single box. Methods and procs defined in that file always execute in that file's box.
+- **Top-level constants.** Constants defined at the top level are constants of `Object` within that box. `box::Foo` accesses them from outside.
+- **Monkey patch isolation.** Reopened built-in classes (e.g. adding `String#blank?`) are visible only within the box that defined them.
+- **Global variable isolation.** `$LOAD_PATH`, `$LOADED_FEATURES`, and other globals are isolated per box.
+- **Enabling.** Set `RUBY_BOX=1` before starting Ruby. It cannot be enabled after process boot.
+
+See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for full details and known issues.
 
 ## Requirements
 
@@ -24,13 +37,23 @@ Boxwerk shares Packwerk's goal of bringing modular boundaries to Ruby applicatio
 
 ## Quick Start
 
-### 1. Add to your gems.rb
+### 1. Install Boxwerk
 
-```ruby
-gem 'boxwerk'
+```bash
+gem install boxwerk
 ```
 
-### 2. Create packages
+### 2. Add a `gems.rb` for your project
+
+```ruby
+# gems.rb
+source 'https://rubygems.org'
+
+gem 'minitest'
+gem 'rake'
+```
+
+### 3. Create packages
 
 ```
 my_app/
@@ -65,7 +88,7 @@ dependencies:
   - packs/util
 ```
 
-### 3. Write your application
+### 4. Write your application
 
 ```ruby
 # app.rb — access dependency constants directly
@@ -80,13 +103,11 @@ Invoice.new
 Calculator.add(1, 2)
 ```
 
-### 4. Install and run
+### 5. Install and run
 
 ```bash
-bundle install                    # Install global gems
-bundle binstub boxwerk            # Create bin/boxwerk binstub
-bin/boxwerk install               # Install gems for all packs
-bin/boxwerk run app.rb            # Run with package isolation
+boxwerk install                   # Bundle install for all packages
+RUBY_BOX=1 boxwerk run app.rb    # Run with package isolation
 ```
 
 ## CLI
@@ -96,7 +117,7 @@ boxwerk exec <command> [args...]     Execute a Ruby command in the boxed environ
 boxwerk run <script.rb> [args...]    Run a Ruby script in the root box
 boxwerk console [irb-args...]        Interactive console in the root box
 boxwerk info                         Show package structure and dependencies
-boxwerk install                      Run bundle install in all packs with a gems.rb
+boxwerk install                      Bundle install for all packages
 boxwerk version                      Show version
 boxwerk help                         Show usage
 ```
@@ -110,8 +131,6 @@ boxwerk exec rails console      # Start Rails console in boxed environment
 boxwerk console                 # Interactive IRB in root box
 boxwerk info                    # Show package graph
 ```
-
-> **Tip:** Use `bundle binstub boxwerk` to create a `bin/boxwerk` binstub. Then use `bin/boxwerk` instead of `bundle exec boxwerk`.
 
 ## Package Configuration
 
@@ -132,7 +151,7 @@ private_constants:
 
 ### Per-Package Gems
 
-Packs can have their own `gems.rb` for isolated gem dependencies. Different packs can use different versions of the same gem — each gets its own `$LOAD_PATH`:
+Packages can have their own `gems.rb` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
 
 ```
 packs/billing/
@@ -143,9 +162,9 @@ packs/billing/
     └── payment.rb        # require 'stripe' → gets v5
 ```
 
-Gems in the root `gems.rb` are global — available in all boxes (e.g. `minitest`, `rake`). Per-package gems provide additional isolation on top.
+Gems in the root `gems.rb` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
 
-Run `boxwerk install` to install gems for all packs.
+Run `boxwerk install` to install gems for all packages.
 
 ### `pack_public: true` Sigil
 
@@ -167,6 +186,17 @@ File paths within packages follow [Zeitwerk](https://github.com/fxn/zeitwerk) co
 
 Constants from dependencies are accessible directly — no namespace wrapping.
 
+## Gem Loading Architecture
+
+Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once:
+
+1. The `boxwerk` executable runs `Bundler.setup` and `Bundler.require` inside the **root box**.
+2. All gems from the project's `gems.rb` are loaded into the root box.
+3. `Ruby::Box.new` creates child boxes copied from the root box — they inherit all root gems.
+4. Per-package `gems.rb` gems get additional `$LOAD_PATH` entries in their box only.
+
+This avoids double-loading gems that would occur if `bundle exec` loaded gems into the main box and then Boxwerk loaded them again into the root box.
+
 ## Limitations
 
 - `Ruby::Box` is experimental in Ruby 4.0
@@ -182,12 +212,10 @@ See [examples/simple/](examples/simple/) for a working multi-package application
 
 ```bash
 cd examples/simple
-bundle install
-bundle binstub boxwerk
-bin/boxwerk install
-bin/boxwerk run app.rb           # Run the example app
-bin/boxwerk exec rake test       # Run integration tests
-bin/boxwerk info                 # Show package structure
+boxwerk install                  # Install gems for all packages
+RUBY_BOX=1 boxwerk run app.rb   # Run the example app
+RUBY_BOX=1 boxwerk exec rake test  # Run integration tests
+RUBY_BOX=1 boxwerk info         # Show package structure
 ```
 
 See [examples/rails/](examples/rails/) for the Rails integration plan.
@@ -196,8 +224,9 @@ See [examples/rails/](examples/rails/) for the Rails integration plan.
 
 ```bash
 bundle install
-RUBY_BOX=1 bundle exec rake test         # Unit + integration tests
-RUBY_BOX=1 bundle exec rake e2e          # End-to-end tests
+rake install                              # Build and install boxwerk gem
+RUBY_BOX=1 bundle exec rake test          # Unit + integration tests
+RUBY_BOX=1 bundle exec rake e2e           # End-to-end tests
 ```
 
 ## License

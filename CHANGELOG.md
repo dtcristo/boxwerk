@@ -1,55 +1,69 @@
 # Changelog
 
-## [Unreleased]
+## [Unreleased] — v0.3.0
+
+Complete rewrite: Boxwerk is now a runtime package isolation tool using
+Ruby::Box with lazy constant loading, per-package gem isolation, and a
+CLI designed to feel Ruby-native.
 
 ### Breaking Changes
-- **No namespace wrapping**: Constants from dependencies are now accessible directly (e.g. `Invoice` instead of `Finance::Invoice`). A `const_missing` handler searches all direct dependencies.
-- **Default public_path changed**: Default is now `public/` instead of `app/public/`.
-- **Removed features**: Visibility checker (`enforce_visibility`), folder-privacy checker (`enforce_folder_privacy`), and layer checker (`enforce_layers`) have been removed. Only the privacy checker remains.
-- **Removed packwerk.yml**: No longer read or required. Package discovery uses `package.yml` files only.
-- **Executable changed**: No longer checks `ENV['RUBY_BOX']`. Checks `Ruby::Box.enabled?` instead.
+- **No namespace wrapping**: Constants from dependencies are accessible
+  directly (e.g. `Invoice` instead of `Finance::Invoice`). A `const_missing`
+  handler on `Object` within each box searches direct dependencies.
+- **Default public_path changed**: Default is now `public/` instead of
+  `app/public/`.
+- **Removed checkers**: Visibility checker (`enforce_visibility`),
+  folder-privacy checker (`enforce_folder_privacy`), and layer checker
+  (`enforce_layers`) have been removed. Only the privacy checker remains.
+- **Removed packwerk.yml**: No longer read or required. Package discovery
+  uses `package.yml` files only.
+- **Executable changed**: Checks `defined?(Ruby::Box)` and
+  `Ruby::Box.enabled?` instead of `ENV['RUBY_BOX']`.
+- **Install method**: Boxwerk is designed to be installed via
+  `gem install boxwerk` rather than through Bundler, avoiding double gem
+  loading.
+
+### Added
+- **`boxwerk exec` command**: Execute any Ruby command in the boxed
+  environment (e.g. `boxwerk exec rake test`, `boxwerk exec rails console`).
+- **`boxwerk run` command**: Run a Ruby script in the root box.
+- **`boxwerk console` command**: Interactive IRB in the root box.
+- **`boxwerk install` command**: Bundle install for all packages with a
+  `gems.rb`.
+- **`boxwerk info` command**: Show package structure, dependencies, and flags.
+- **Per-package gem version isolation**: Packages can have their own `gems.rb`
+  with different gem versions. Each box gets isolated `$LOAD_PATH` entries.
+- **Lazy constant loading**: Constants loaded on first access via `autoload`
+  and `const_missing`, then cached.
+- **Privacy enforcement**: `enforce_privacy`, `public_path`,
+  `private_constants`, and `pack_public: true` sigil.
+- **Transitive dependency blocking**: Only direct dependencies are accessible.
+- **Goals section** in README inspired by Packwerk.
+- **Ruby::Box section** in README summarising relevant Box behaviours.
+- **Gem loading architecture** section in README explaining the root box
+  inheritance model.
+- `examples/simple/`: Multi-package example with faker version isolation,
+  integration tests, and per-package gems.
+- `examples/rails/README.md`: Comprehensive Rails integration plan.
+- `FUTURE_IMPROVEMENTS.md`: Plans for Zeitwerk, IRB console, constant
+  reloading, global gems, per-package console, gem conflicts, and more.
 
 ### Changed
-- Renamed `Gemfile` → `gems.rb` throughout (root, example, packs)
-- Moved example to `examples/simple/`
-- `PackageResolver` no longer reads `packwerk.yml` or derives namespaces
-- `ConstantResolver` installs a dependency resolver instead of namespace proxies
-- Updated gemspec description (removed packwerk-extensions reference)
-- `GemResolver` now searches all gem directories (not just current bundle) for per-package gem isolation
-
-### Added
-- **`boxwerk exec` command**: Execute any Ruby command (gem binstub) in the boxed environment, e.g. `boxwerk exec rake test`, `boxwerk exec rails console`
-- **Goals section** in README: project goals inspired by Packwerk
-- **Per-package gem version isolation**: Example demonstrates faker 3.5.1 and 3.6.0 in different packs
-- **Integration tests in example**: `test/integration_test.rb` with 5 tests, run via `boxwerk exec rake test`
-- `examples/rails/README.md`: Comprehensive Rails integration plan
-- Expanded `FUTURE_IMPROVEMENTS.md` with detailed plans for Zeitwerk autoloading, IRB console improvements, and constant reloading
-- `packs/greeting` example pack with faker 3.6.0
+- Renamed `Gemfile` → `gems.rb` throughout.
+- `PackageResolver` no longer reads `packwerk.yml` or derives namespaces.
+- `ConstantResolver` installs a dependency resolver on `Object` within each
+  box instead of namespace proxies.
+- `GemResolver` searches all gem directories (not just current bundle) for
+  per-package gem isolation.
+- Example restructured from `example/` → `examples/simple/`.
 
 ### Removed
-- `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker` modules
-- `LayerViolationError` exception class
-- `PackageResolver.namespace_for` method
-- `packwerk.yml` support
-- Complementary Tools section from README
-
-## [v1.0.0] - 2026-02-26
-
-### Breaking Changes
-- **Full rewrite**: Boxwerk is now a runtime package isolation tool using Ruby::Box
-- **Packwerk format**: Uses Packwerk's `package.yml` format for configuration
-- **No custom config**: Removed `exports` and `imports` from `package.yml`; uses `dependencies` and `enforce_dependencies` instead
-- **Namespace-based access**: Dependencies accessed via derived namespace (e.g., `packs/finance` → `Finance::Invoice`)
-
-### Added
-- `PackageResolver`: Discovers packages via `package.yml` globbing, builds dependency map, topological sort
-- `BoxManager`: Creates `Ruby::Box` per package, loads code, wires namespace proxy modules
-- `ConstantResolver`: Creates proxy modules with `const_missing` for lazy constant resolution and caching
-- Transitive dependency prevention: only direct dependencies are searchable
-
-### Removed
-- Custom `exports`/`imports` YAML configuration
-- Import strategies (aliased, selective, renamed)
+- `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker` modules.
+- `LayerViolationError` exception class.
+- `PackageResolver.namespace_for` method.
+- `packwerk.yml` support.
+- Complementary Tools section from README.
+- Custom `exports`/`imports` YAML configuration.
 
 ## [v0.2.0] - 2026-01-06
 
@@ -63,7 +77,7 @@
 
 ### Removed
 - Removed `Gemfile.lock` from git (library best practice)
-- Removed `sig/boxwerk.rbs` 
+- Removed `sig/boxwerk.rbs`
 - Excluded `example/` from gem package
 
 ### Tests
@@ -75,7 +89,6 @@
 
 Initial release.
 
-[Unreleased]: https://github.com/dtcristo/boxwerk/compare/v1.0.0...HEAD
-[v1.0.0]: https://github.com/dtcristo/boxwerk/releases/tag/v1.0.0
+[Unreleased]: https://github.com/dtcristo/boxwerk/compare/v0.2.0...HEAD
 [v0.2.0]: https://github.com/dtcristo/boxwerk/releases/tag/v0.2.0
 [v0.1.0]: https://github.com/dtcristo/boxwerk/releases/tag/v0.1.0

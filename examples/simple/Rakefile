@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Tests run inside boxwerk's root box for boundary enforcement.
-# Usage: bundle exec boxwerk exec rake test
+# Usage: boxwerk exec rake test
 task :test do
   Dir.glob('test/**/*_test.rb').sort.each { |f| load f }
 end

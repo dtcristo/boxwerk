@@ -1,18 +1,31 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# Boxwerk is designed to be installed globally (gem install boxwerk) rather
+# than via Bundler. This ensures gems are loaded exactly once — in the root
+# box — and inherited by all child boxes via Ruby::Box's copy-on-write.
+
 unless defined?(Ruby::Box)
-  $stderr.puts "Error: Ruby::Box is not available"
-  $stderr.puts "Boxwerk requires Ruby 4.0 or later with Box support"
+  $stderr.puts "Error: Ruby::Box is not available."
+  $stderr.puts "Boxwerk requires Ruby 4.0 or later with Ruby::Box support."
   exit 1
 end
 
 unless Ruby::Box.enabled?
-  $stderr.puts "Ruby Box is disabled. Set RUBY_BOX=1 environment variable to use Ruby::Box."
+  $stderr.puts "Error: Ruby::Box is not enabled."
+  $stderr.puts "Set the RUBY_BOX=1 environment variable before starting Ruby."
   exit 1
 end
 
+# Resolve boxwerk's lib directory from the installed gem location.
+boxwerk_lib = File.expand_path('../lib', __dir__)
+
+# Load and run in the root box. Boxwerk is loaded first (before Bundler
+# restricts $LOAD_PATH), then project gems are loaded via Bundler. All
+# definitions end up in the root box, inherited by child boxes.
 Ruby::Box.root.eval(<<~RUBY)
+  $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
+  require 'boxwerk'
   require 'bundler/setup'
   Bundler.require
   Boxwerk::CLI.run(ARGV)

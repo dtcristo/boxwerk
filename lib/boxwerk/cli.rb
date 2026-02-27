@@ -51,7 +51,7 @@ module Boxwerk
         puts '  run <script.rb> [args...]    Run a Ruby script in the root box'
         puts '  console [irb-args...]        Start an IRB console in the root box'
         puts '  info                         Show package structure and dependencies'
-        puts '  install                      Run bundle install in all packs with a gems.rb'
+        puts '  install                      Bundle install for all packages with a gems.rb'
         puts '  help                         Show this help message'
         puts '  version                      Show version'
         puts ''
@@ -62,11 +62,10 @@ module Boxwerk
         puts '  boxwerk console'
         puts ''
         puts 'Setup:'
-        puts '  bundle install                  Install global gems'
-        puts '  bundle binstub boxwerk          Create bin/boxwerk binstub'
-        puts '  bin/boxwerk install             Install gems for all packs'
+        puts '  gem install boxwerk             Install boxwerk'
+        puts '  boxwerk install                 Bundle install for all packages'
         puts ''
-        puts 'Requires: Ruby 4.0+ with Ruby::Box support and package.yml files'
+        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
       end
 
       # Execute a Ruby command (gem binstub) in the boxed environment.
@@ -84,6 +83,13 @@ module Boxwerk
 
         result = perform_setup
         root_box = result[:box_manager].boxes[result[:resolver].root.name]
+
+        # Install the root package's dependency resolver on Ruby::Box.root.
+        # Gems loaded via Bundler.require run in the root box (where their
+        # methods were defined). When those gems call load() (e.g. rake
+        # loading a Rakefile), the loaded files execute in the root box too.
+        # Without this, const_missing wouldn't fire for package constants.
+        install_resolver_on_ruby_root(result)
 
         # If it looks like a Ruby script, load it directly
         if command.end_with?('.rb') || File.exist?(command)
@@ -168,12 +174,13 @@ module Boxwerk
           gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
           next unless gemfile
 
-          puts "Installing gems for #{pkg.name}..."
+          label = pkg.root? ? '.' : pkg.name
+          puts "Installing gems for #{label}..."
           Dir.chdir(pkg_dir) do
             success = system({ 'BUNDLE_GEMFILE' => File.join(pkg_dir, gemfile) },
                              'bundle', 'install', '--quiet')
             unless success
-              $stderr.puts "  Error: bundle install failed in #{pkg.name}"
+              $stderr.puts "  Error: bundle install failed in #{label}"
               exit 1
             end
           end
@@ -181,9 +188,9 @@ module Boxwerk
         end
 
         if installed == 0
-          puts 'No packs with Gemfiles found.'
+          puts 'No packages with gems.rb found.'
         else
-          puts "Installed gems for #{installed} pack#{'s' unless installed == 1}."
+          puts "Installed gems for #{installed} package#{'s' unless installed == 1}."
         end
       end
 
@@ -198,10 +205,38 @@ module Boxwerk
         expanded = File.expand_path(script_path)
         box.eval("ARGV.replace(#{script_args.inspect})")
         if use_load
-          box.eval("load #{expanded.inspect}")
+          # Eval file content directly rather than using load, because
+          # load creates a new file scope where inherited DSL methods
+          # (e.g. Rake's task) may not be visible in Ruby::Box.
+          content = File.read(expanded)
+          box.eval(content)
         else
           box.require(expanded)
         end
+      end
+
+      # Installs the root package's dependency resolver on Ruby::Box.root.
+      # Gems are loaded into Ruby::Box.root via Bundler.require, so their
+      # methods execute in the root box context. When those gem methods call
+      # load() (e.g. rake loading a Rakefile), the loaded files also run in
+      # the root box. This method ensures const_missing is available there
+      # so that package constants can be resolved.
+      def install_resolver_on_ruby_root(result)
+        root_pkg = result[:resolver].root
+        root_box = result[:box_manager].boxes[root_pkg.name]
+        resolver_const = root_box.const_get(:BOXWERK_DEPENDENCY_RESOLVER)
+        return unless resolver_const
+
+        ruby_root = Ruby::Box.root
+        ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER) if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, resolver_const)
+        ruby_root.eval(<<~RUBY)
+          class Object
+            def self.const_missing(const_name)
+              BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
+            end
+          end
+        RUBY
       end
 
       # Resolves a command name to its gem binstub path.

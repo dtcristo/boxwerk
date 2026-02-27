@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Boxwerk Example
-# Run with: bundle exec boxwerk run app.rb
+# Run with: boxwerk run app.rb
 
 puts '=' * 60
 puts 'Boxwerk Example'

@@ -51,9 +51,11 @@ it uses `Module.constants` which doesn't reflect box-scoped constants.
 - This would allow re-enabling autocomplete with box-aware completions
 
 **Phase 3: Per-package console**
-- `boxwerk console packs/billing` — drop into a specific package's box
+- `boxwerk console --package packs/billing` — drop into a specific package's box
 - Shows only that package's constants and its declared dependencies
 - Useful for testing package isolation interactively
+- Default (no args) opens the root package box as it does today
+- Short form: `boxwerk console -p packs/billing`
 
 ## Constant Reloading
 
@@ -100,8 +102,9 @@ boxes via `$LOAD_PATH` manipulation. There are several ways to improve this:
 ### Approach 1: Root Box Inheritance (Current)
 
 Gems loaded in the root box are available in all boxes because `Ruby::Box.new`
-creates a copy of the ROOT box (the bootstrap box), not the main box. This
-means:
+creates a copy of the root box. The `boxwerk` executable runs `Bundler.setup`
+and `Bundler.require` inside the root box before creating any child boxes.
+This means:
 
 - Gems required before box creation are available everywhere
 - The root `gems.rb` acts as a "global" gem set
@@ -134,11 +137,47 @@ packages depend on:
 - A package with no gem dependencies gets a truly clean box
 - Easier to reason about gem visibility
 
+**Rails consideration:** Rails and its dependencies are large and typically
+needed across all packages. In the shared gem box approach, Rails would be
+loaded into the shared gem box. Each package would inherit Rails through its
+dependency on the shared gem box. Monkey patches applied by Rails gems (e.g.
+ActiveSupport core extensions) would be isolated to the shared gem box and
+inherited by child boxes — consistent with how root box inheritance works
+today.
+
+### Global vs Package Gem Conflicts
+
+When a global gem (root `gems.rb`) and a package gem (`packs/x/gems.rb`)
+specify the same gem at different versions, the package's `$LOAD_PATH`
+entries take precedence because they're prepended. However, this can cause
+subtle issues if the global version was already required.
+
+**Planned resolution:**
+- `boxwerk install` should detect conflicts between global and package gems
+- If the same gem appears in both root and a package at different versions,
+  emit a warning or error
+- Explicitly prevent packages from overriding a global gem — if you need a
+  different version, remove it from the global gems.rb
+- Consider a `--strict` flag that errors on any overlap
+
+### Package Gem Transitive Dependencies
+
+Per-package gems should not be transitively accessible. If `packs/billing`
+depends on `stripe` via its `gems.rb`, packages that depend on `packs/billing`
+should not automatically get access to `stripe`.
+
+**Current behaviour:** `$LOAD_PATH` manipulation means any package that
+includes `packs/billing` as a dependency could potentially `require 'stripe'`
+because the load paths are inherited via the box.
+
+**Planned fix:**
+- Only add per-package gem load paths to that package's box, not to boxes
+  that depend on it
+- If a dependent package also needs `stripe`, it should declare it in its
+  own `gems.rb`
+
 ### Considerations
 
-- **Gem conflicts:** When two packages depend on different versions of the
-  same gem, `$LOAD_PATH` isolation handles this naturally. But if a shared gem
-  layer includes one version, packages can't override it.
 - **Native extensions:** Work per-box but may have global state (C-level
   globals) that leaks across boxes. This needs investigation.
 - **Bundler integration:** Currently we parse lockfiles with

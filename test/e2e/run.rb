@@ -217,7 +217,7 @@ class E2ERunner
       create_package(dir, 'a')
       out, status = run_boxwerk(dir, 'install')
       assert_equal 0, status.exitstatus, "install_no_gemfiles: exit status"
-      assert_match /No packs with Gemfiles found/, out, "install_no_gemfiles: output"
+      assert_match /No packages with gems\.rb found/, out, "install_no_gemfiles: output"
     end
   end
 
