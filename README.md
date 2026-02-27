@@ -106,7 +106,7 @@ Calculator.add(1, 2)
 ### 5. Install and run
 
 ```bash
-boxwerk install                   # Bundle install for all packages
+boxwerk install                  # Bundle install for all packages
 RUBY_BOX=1 boxwerk run app.rb    # Run with package isolation
 ```
 

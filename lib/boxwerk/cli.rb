@@ -125,6 +125,7 @@ module Boxwerk
 
         result = perform_setup
         root_box = result[:box_manager].boxes[result[:resolver].root.name]
+        install_resolver_on_ruby_root(result)
         execute_in_box(root_box, script_path, args[1..] || [])
       end
 
@@ -132,6 +133,7 @@ module Boxwerk
         require 'irb'
         result = perform_setup
         root_box = result[:box_manager].boxes[result[:resolver].root.name]
+        install_resolver_on_ruby_root(result)
         start_console_in_box(root_box, args)
       end
 
