@@ -219,7 +219,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full implementation details including
 
 - `Ruby::Box` is experimental in Ruby 4.0
 - No constant reloading (restart required for code changes)
-- Boxwerk uses `autoload` directly (not Zeitwerk) inside boxes
+- Zeitwerk is used for file scanning and inflection only (reloading and eager loading not yet supported)
 - IRB autocomplete disabled in console (box-scoped constants not visible to completer)
 
 See [TODO.md](TODO.md) for plans to address these limitations.

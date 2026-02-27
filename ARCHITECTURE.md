@@ -83,10 +83,13 @@ For each package, in dependency order:
 1. Create Ruby::Box.new (copied from root box, inherits global gems)
 2. Setup per-package gem load paths (if Gemfile exists)
    → Prepend gem load paths to the box's $LOAD_PATH
-3. Build file index — scan lib/ and public/ for .rb files
-   → Map file paths to constant names using Ruby naming conventions
-4. Register autoload entries in the box
-   → autoload :Invoice, "/path/to/public/invoice.rb"
+3. Scan directories with Zeitwerk (file discovery + inflection)
+   → Uses Zeitwerk::Loader::FileSystem for scanning
+   → Uses Zeitwerk::Inflector for snake_case → CamelCase conversion
+4. Register autoload entries in the box via box.eval
+   → Implicit namespaces: create Module.new
+   → Explicit namespaces: autoload + eager trigger
+   → Files: autoload :Invoice, "/path/to/public/invoice.rb"
 5. Wire dependency constants via const_missing
    → Install a resolver that searches direct dependency boxes
 ```
@@ -182,7 +185,7 @@ Since each box has its own `$LOAD_PATH`, `require 'faker'` in two different boxe
 
 ## File-to-Constant Mapping
 
-Boxwerk maps file paths to constant names using Ruby naming conventions:
+Boxwerk uses Zeitwerk's inflector for file-to-constant name mapping:
 
 ```
 lib/calculator.rb      → Calculator
@@ -191,7 +194,7 @@ public/invoice.rb      → Invoice
 lib/api/v2/client.rb   → Api::V2::Client
 ```
 
-The `Boxwerk.camelize` method converts snake_case to CamelCase. For nested constants, parent modules are created as empty `Module.new` instances, and `autoload` is registered on the innermost parent.
+Zeitwerk cannot register autoloads directly inside `Ruby::Box` because autoload calls execute in the box where the code was defined (root box for Zeitwerk). Boxwerk works around this by using Zeitwerk only for file scanning and inflection, then registering autoloads via `box.eval`. For nested constants, implicit namespaces are created as `Module.new` instances, and explicit namespaces (with a matching `.rb` file) are eagerly loaded before child autoloads are registered.
 
 ## CLI Commands
 
@@ -229,9 +232,9 @@ Boxwerk
 ├── Setup            # Boot orchestration (find root, create resolver + manager)
 ├── PackageResolver  # Discover packages, validate deps, topological sort
 ├── Package          # Data class for a single package
-├── BoxManager       # Create boxes, build file indexes, wire constants
+├── BoxManager       # Create boxes, scan with Zeitwerk, wire constants
 ├── ConstantResolver # Install const_missing handlers per-box
 ├── PrivacyChecker   # Check public/private constant access
 ├── GemResolver      # Resolve per-package gem load paths
-└── .camelize        # File path → constant name conversion
+└── ZeitwerkScanner  # Zeitwerk-based file scanning and autoload registration
 ```

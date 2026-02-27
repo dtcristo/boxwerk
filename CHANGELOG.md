@@ -29,13 +29,14 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - Per-package gem isolation via `Gemfile`/`gems.rb` per package.
 - Privacy enforcement: `enforce_privacy`, `public_path`,
   `private_constants`, `pack_public: true` sigil.
-- `irb` gem dependency for `boxwerk console`.
+- Zeitwerk-based file scanning and inflection (`ZeitwerkScanner`).
+- `irb` and `zeitwerk` gem dependencies.
 - `ARCHITECTURE.md`, `TODO.md`, `AGENTS.md`.
-- E2E test suite (57 tests) alongside unit/integration tests (58 tests).
+- E2E test suite (57 tests) alongside unit/integration tests (69 tests).
 
 ### Removed
 
-- Zeitwerk runtime dependency.
+- Custom file-to-constant mapping (`Boxwerk.camelize`), replaced by Zeitwerk.
 - Namespace wrapping.
 
 ## [v0.2.0] - 2026-01-06

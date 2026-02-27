@@ -6,7 +6,7 @@ Planned improvements and design considerations for Boxwerk.
 
 | Item | Priority | Complexity |
 |------|----------|------------|
-| Zeitwerk autoloading inside boxes | High | Hard |
+| Zeitwerk full integration (reloading, eager loading) | Medium | Hard |
 | Constant reloading (dev workflow) | High | Hard |
 | Bundler inside package boxes | High | Medium |
 | Gem group support (`:test`, `:development`) | High | Medium |
@@ -25,29 +25,32 @@ Planned improvements and design considerations for Boxwerk.
 | IDE / language server support | Low | Hard |
 | Rails integration | High | Hard |
 
-## Zeitwerk Autoloading Inside Boxes
+## Zeitwerk Full Integration
 
-**Current limitation:** Zeitwerk does not work inside `Ruby::Box` because
-Zeitwerk registers `const_missing` hooks on `Module` in the main box. Inside
-a user box, `Module` is the box's copy — hooks from other boxes don't fire.
+**Current state:** Boxwerk uses Zeitwerk for file scanning and inflection. The
+`ZeitwerkScanner` module creates a temporary `Zeitwerk::Loader` to scan
+directories, then registers autoloads directly in each box via `box.eval`.
 
-Boxwerk works around this by scanning files at boot and registering `autoload`
-entries directly. This means Zeitwerk features (reloading, eager loading,
-custom inflections) are unavailable.
+This gives us Zeitwerk's file discovery conventions and inflection rules, but
+not Zeitwerk's runtime features (reloading, eager loading, callbacks).
 
-### Plan
+**Why not full Zeitwerk?** Zeitwerk's `autoload` calls execute in the root box
+context (where Zeitwerk was loaded), not the target package box. Ruby::Box
+scopes autoloads per-box, so autoloads registered by Zeitwerk are invisible
+in child boxes. The `const_added` callback has the same problem.
 
-**Short term:** Extend Boxwerk's file scanner:
-- Custom inflections via `boxwerk.yml`
-- Collapse directories (Zeitwerk's `collapse` equivalent)
-- Ignore paths (Zeitwerk's `ignore` equivalent)
+### Remaining Work
 
-**Medium term:** If `Ruby::Box` gains shared `const_missing` inheritance
-(e.g. `Ruby::Box.new(inherit_const_missing: true)`), Zeitwerk could work
-natively. This requires Ruby core changes.
+- **Custom inflections** — Forward custom inflection config to the Zeitwerk
+  inflector (e.g. acronyms like `HTML`, `API`)
+- **Collapse directories** — Support Zeitwerk's `collapse` equivalent
+- **Ignore paths** — Support Zeitwerk's `ignore` equivalent
+- **Eager loading** — Implement `box.eval(File.read(file))` for all files
+  to support production eager loading
+- **Reloading** — Would require recreating boxes (see Constant Reloading below)
 
-**Long term:** Contribute upstream to make `Ruby::Box` Zeitwerk-compatible,
-enabling full Rails autoloading inside boxes.
+**Long term:** If `Ruby::Box` gains the ability to specify the box context for
+autoload registration, full Zeitwerk integration becomes possible.
 
 ## Constant Reloading
 
