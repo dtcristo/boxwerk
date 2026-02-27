@@ -58,7 +58,7 @@ gem 'rake'
 ```
 my_app/
 ├── Gemfile
-├── package.yml              # Main package
+├── package.yml              # Root package
 ├── app.rb
 └── packs/
     ├── finance/
@@ -73,7 +73,7 @@ my_app/
             └── calculator.rb
 ```
 
-**Main `package.yml`:**
+**Root `package.yml`:**
 ```yaml
 enforce_dependencies: true
 dependencies:
@@ -125,10 +125,15 @@ boxwerk help                         Show usage
 ### Options
 
 ```
--p, --package <name>         Run in a specific package box (default: main)
+-p, --package <name>         Run in a specific package box (default: root)
     --all                    Run exec for all packages sequentially
-    --root                   Run in the root box (no package context)
+    --root-box, -r           Run in the root box (no package context)
 ```
+
+> **Root package vs root box:** The root package (`.`) is your top-level
+> `package.yml` — it gets its own box like any other package. The root box
+> (`Ruby::Box.root`) is where global gems are loaded; it has no package
+> constants. Use `--root-box` for debugging gem loading.
 
 ### Examples
 
@@ -139,7 +144,7 @@ boxwerk exec -p packs/util rake test        # Run tests for a specific package
 boxwerk exec --all rake test                # Run tests for all packages
 boxwerk console                             # Interactive IRB (root package)
 boxwerk console -p packs/finance            # IRB in a specific package
-boxwerk console --root                      # IRB in the root box (debugging)
+boxwerk console --root-box                  # IRB in the root box (debugging)
 boxwerk info                                # Show package graph
 ```
 
@@ -187,16 +192,11 @@ class SpecialService
 end
 ```
 
-## Gem Loading Architecture
+## Architecture
 
-Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once:
+Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once — in the root box — and inherited by all package boxes.
 
-1. The `boxwerk` executable runs `Bundler.setup` and `Bundler.require` inside the **root box**.
-2. All gems from the project's `Gemfile` are loaded into the root box.
-3. `Ruby::Box.new` creates child boxes copied from the root box — they inherit all root gems.
-4. Per-package `Gemfile` gems get additional `$LOAD_PATH` entries in their box only.
-
-This avoids double-loading gems that would occur if `bundle exec` loaded gems into the main box and then Boxwerk loaded them again into the root box.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full implementation details including the boot sequence, constant resolution, and Ruby::Box internals.
 
 ## Limitations
 
@@ -205,7 +205,7 @@ This avoids double-loading gems that would occur if `bundle exec` loaded gems in
 - Boxwerk uses `autoload` directly (not Zeitwerk) inside boxes
 - IRB autocomplete disabled in console (box-scoped constants not visible to completer)
 
-See [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) for plans to address these limitations.
+See [TODO.md](TODO.md) for plans to address these limitations.
 
 ## Examples
 

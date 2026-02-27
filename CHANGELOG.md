@@ -37,7 +37,7 @@ CLI designed to feel Ruby-native.
   and `console` commands (e.g. `boxwerk exec -p packs/util rake test`).
 - **`--all` flag**: Run `exec` commands across all packages sequentially,
   each in its own subprocess for clean isolation.
-- **`--root` flag**: Run `run`, `exec`, or `console` in the root box
+- **`--root-box`/`-r` flag**: Run `run`, `exec`, or `console` in the root box
   (bypassing package resolution, for debugging).
 - **Per-package gem version isolation**: Packages can have their own
   `Gemfile` with different gem versions. Each box gets isolated
@@ -51,12 +51,11 @@ CLI designed to feel Ruby-native.
 - **Transitive dependency blocking**: Only direct dependencies are accessible.
 - **Goals section** in README inspired by Packwerk.
 - **Ruby::Box section** in README summarising relevant Box behaviours.
-- **Gem loading architecture** section in README explaining the root box
-  inheritance model.
+- **Architecture section** in README with link to `ARCHITECTURE.md`.
 - `examples/simple/`: Multi-package example with faker version isolation,
   per-package unit tests, and per-package gems.
 - `examples/rails/README.md`: Comprehensive Rails integration plan.
-- `FUTURE_IMPROVEMENTS.md`: Plans for IRB console, constant reloading,
+- `TODO.md`: Plans for IRB console, constant reloading,
   global gems, gem conflicts, Bundler-inspired commands, and more.
 
 ### Changed
