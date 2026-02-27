@@ -161,7 +161,7 @@ manipulation rather than running Bundler inside each box.
 **Future:** Requires Ruby::Box changes to support Bundler running in child
 box context, or a fundamentally different approach to gem loading.
 
-### Automatic Version Switching
+## Automatic Version Switching
 
 When `boxwerk` is installed globally (or via a different version than the
 project's Gemfile specifies), auto-detect the mismatch and re-exec with the
