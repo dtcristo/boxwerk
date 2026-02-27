@@ -15,7 +15,7 @@ module Boxwerk
         @resolver = resolver
         @booted = true
 
-        { resolver: resolver, box_manager: @box_manager }
+        { resolver: resolver, box_manager: @box_manager, root_path: root_path }
       end
 
       def resolver

@@ -77,7 +77,8 @@ module Boxwerk
         puts 'Setup:'
         puts '  # Add gem \'boxwerk\' to your Gemfile, then:'
         puts '  bundle install                  Install gems (including boxwerk)'
-        puts '  boxwerk install                 Install gems for all packages'
+        puts '  bundle binstubs boxwerk         Create bin/boxwerk binstub'
+        puts '  bin/boxwerk install             Install gems for all packages'
         puts ''
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
       end
@@ -237,25 +238,17 @@ module Boxwerk
       def info_command
         result = perform_setup
         resolver = result[:resolver]
+        root_path = result[:root_path]
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
-        puts "Root: #{resolver.root.name}"
-        puts "Packages: #{resolver.packages.size}"
-
+        puts 'Dependency Graph'
         puts ''
-        resolver.topological_order.each do |pkg|
-          flags = []
-          flags << 'private' if pkg.config['enforce_privacy']
-
-          flag_str = flags.any? ? " [#{flags.join(', ')}]" : ''
-          puts "  #{pkg.name}#{flag_str}"
-
-          deps = pkg.dependencies
-          if deps.any?
-            puts "    dependencies: #{deps.join(', ')}"
-          end
-        end
+        print_dependency_tree(resolver)
+        puts ''
+        puts 'Packages'
+        puts ''
+        print_package_details(resolver, root_path)
       end
 
       def install_command
@@ -401,6 +394,57 @@ module Boxwerk
           ARGV.replace(#{(['--noautocomplete'] + irb_args).inspect})
           IRB.start
         RUBY
+      end
+
+      # Renders a dependency tree like:
+      #   .
+      #   ├── packs/finance
+      #   │   └── packs/util
+      #   └── packs/greeting
+      def print_dependency_tree(resolver)
+        root = resolver.root
+        puts root.name
+        print_tree_children(root.dependencies, resolver, '')
+      end
+
+      def print_tree_children(dep_names, resolver, prefix)
+        dep_names.each_with_index do |dep_name, i|
+          last = (i == dep_names.length - 1)
+          connector = last ? '└── ' : '├── '
+          puts "#{prefix}#{connector}#{dep_name}"
+
+          pkg = resolver.packages[dep_name]
+          if pkg && pkg.dependencies.any?
+            child_prefix = prefix + (last ? '    ' : '│   ')
+            print_tree_children(pkg.dependencies, resolver, child_prefix)
+          end
+        end
+      end
+
+      def print_package_details(resolver, root_path)
+        resolver.topological_order.each do |pkg|
+          label = pkg.root? ? '.' : pkg.name
+          puts "  #{label}"
+
+          flags = []
+          flags << 'enforce_dependencies' if pkg.enforce_dependencies?
+          flags << 'enforce_privacy' if pkg.config['enforce_privacy']
+          puts "    enforcements: #{flags.any? ? flags.join(', ') : 'none'}"
+
+          deps = pkg.dependencies
+          puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
+
+          pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
+          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
+          puts "    gems: #{gemfile || 'none'}" if !pkg.root? && gemfile
+
+          if pkg.config['enforce_privacy']
+            public_path = pkg.config['public_path'] || 'public/'
+            puts "    public_path: #{public_path}"
+          end
+
+          puts ''
+        end
       end
     end
   end

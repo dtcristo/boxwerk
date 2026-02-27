@@ -206,8 +206,9 @@ class E2ERunner
 
       out, status = run_boxwerk(dir, 'info')
       assert_equal 0, status.exitstatus, "info: exit status"
-      assert_match /Root:/, out, "info: shows root"
-      assert_match /Packages:/, out, "info: shows count"
+      assert_match /Dependency Graph/, out, "info: shows dependency graph"
+      assert_match /└── packs\/core/, out, "info: shows tree"
+      assert_match /Packages/, out, "info: shows packages section"
     end
   end
 
@@ -437,8 +438,14 @@ class E2ERunner
         puts Greeter.hello
       RUBY
 
-      # Simulate `bundle exec` by setting BUNDLE_BIN_PATH
-      env = { 'RUBY_BOX' => '1', 'BUNDLE_BIN_PATH' => '/fake/path' }
+      # Simulate Bundler being loaded (as with bundle exec or binstub)
+      # by pre-requiring bundler via RUBYOPT. The re-exec should strip this.
+      gemfile = File.expand_path('../../gems.rb', __dir__)
+      env = {
+        'RUBY_BOX' => '1',
+        'RUBYOPT' => '-rbundler/setup',
+        'BUNDLE_GEMFILE' => gemfile
+      }
       cmd = ['ruby', @boxwerk_bin, 'run', 'app.rb']
       stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
       out = stdout + stderr

@@ -115,12 +115,14 @@ Calculator.add(1, 2)
 ### 5. Run
 
 ```bash
-boxwerk install                  # Bundle install for all packages with gems
-RUBY_BOX=1 boxwerk run app.rb   # Run with package isolation
+bundle binstubs boxwerk             # Create bin/boxwerk binstub
+bin/boxwerk install                  # Install gems for all packages with gems
+RUBY_BOX=1 bin/boxwerk run app.rb   # Run with package isolation
 ```
 
-> If `boxwerk` is not on your `PATH`, use `bundle exec boxwerk` — Boxwerk
-> automatically re-execs into a clean Ruby process to avoid double gem loading.
+> The binstub ensures the correct gem version runs without `bundle exec`.
+> `bundle exec boxwerk` also works — Boxwerk re-execs into a clean process
+> automatically.
 
 ## CLI
 
@@ -176,7 +178,17 @@ private_constants:
   - "::InternalHelper"
 ```
 
-### Per-Package Gems
+### `pack_public: true` Sigil
+
+Files outside the public path can be individually marked public:
+
+```ruby
+# pack_public: true
+class SpecialService
+end
+```
+
+## Per-Package Gems
 
 Packages can have their own `Gemfile` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
 
@@ -191,17 +203,7 @@ packs/billing/
 
 Gems in the root `Gemfile` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
 
-Run `boxwerk install` to install gems for all packages.
-
-### `pack_public: true` Sigil
-
-Files outside the public path can be individually marked public:
-
-```ruby
-# pack_public: true
-class SpecialService
-end
-```
+Run `bin/boxwerk install` to install gems for all packages.
 
 ## Architecture
 

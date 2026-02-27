@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# If running under `bundle exec`, re-exec in a clean Ruby process so Boxwerk
-# controls gem loading from scratch. This prevents gems being loaded twice
-# (once by Bundler in the main box, once by Boxwerk in the root box).
-if ENV['BUNDLE_BIN_PATH']
-  require 'bundler'
+# If Bundler has already been set up (via `bundle exec` or a Bundler binstub),
+# re-exec in a clean Ruby process so Boxwerk controls gem loading from scratch.
+# This prevents gems being loaded twice (once by Bundler in the main box, once
+# by Boxwerk in the root box).
+if defined?(Bundler)
   Bundler.with_unbundled_env do
     exec(RbConfig.ruby, __FILE__, *ARGV)
   end
@@ -36,7 +36,6 @@ Ruby::Box.root.eval(<<~RUBY)
   # Load project gems via Bundler if a Gemfile/gems.rb exists.
   gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
   if gemfile
-    ENV['BUNDLE_GEMFILE'] ||= File.expand_path(gemfile)
     require 'bundler/setup'
     Bundler.require
   end

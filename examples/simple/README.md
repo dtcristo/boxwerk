@@ -36,7 +36,13 @@ simple/
 ## Dependency Graph
 
 ```
-. (root)
+$ boxwerk info
+
+boxwerk 0.3.0
+
+Dependency Graph
+
+.
 ├── packs/finance
 │   └── packs/util
 └── packs/greeting
@@ -44,15 +50,17 @@ simple/
 
 ## Running
 
+From the `examples/simple/` directory:
+
 ```bash
-bundle install                                    # Install gems (including boxwerk)
-boxwerk install                                   # Install gems for all packages
-RUBY_BOX=1 boxwerk run app.rb                     # Run the example app
-RUBY_BOX=1 boxwerk console                        # Interactive console (root package)
-RUBY_BOX=1 boxwerk exec rake test                 # Run root package integration tests
-RUBY_BOX=1 boxwerk exec -p packs/util rake test   # Run specific package unit tests
-RUBY_BOX=1 boxwerk exec --all rake test           # Run all package tests
-RUBY_BOX=1 boxwerk info                           # Show package structure
+bundle install                                             # Install global gems
+../../exe/boxwerk install                                  # Install per-package gems
+RUBY_BOX=1 ../../exe/boxwerk run app.rb                    # Run the example app
+RUBY_BOX=1 ../../exe/boxwerk console                       # Interactive console (root package)
+RUBY_BOX=1 ../../exe/boxwerk exec rake test                # Run root integration tests
+RUBY_BOX=1 ../../exe/boxwerk exec -p packs/util rake test  # Run specific package tests
+RUBY_BOX=1 ../../exe/boxwerk exec --all rake test          # Run all package tests
+RUBY_BOX=1 ../../exe/boxwerk info                          # Show package structure
 ```
 
 ## What It Demonstrates
