@@ -44,6 +44,8 @@ class E2ERunner
     test_package_flag_run
     test_package_flag_exec
     test_package_flag_unknown
+    test_root_flag
+    test_help_shows_root_flag
 
     puts ""
     puts "=" * 60
@@ -200,7 +202,7 @@ class E2ERunner
 
       out, status = run_boxwerk(dir, 'info')
       assert_equal 0, status.exitstatus, "info: exit status"
-      assert_match /Root:/, out, "info: shows root"
+      assert_match /Main:/, out, "info: shows main"
       assert_match /Packages:/, out, "info: shows count"
     end
   end
@@ -321,6 +323,37 @@ class E2ERunner
       assert_equal 1, status.exitstatus, "package_flag_unknown: exit status"
       assert_match /Unknown package/, out, "package_flag_unknown: error message"
     end
+  end
+
+  def test_root_flag
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello!'
+        end
+      RUBY
+      write_file(dir, 'script.rb', <<~RUBY)
+        begin
+          _ = Greeter
+          puts "FAIL: Greeter should not be accessible in root box"
+          exit 1
+        rescue NameError
+          puts "PASS: root box has no package constants"
+          exit 0
+        end
+      RUBY
+
+      out, status = run_boxwerk(dir, 'run', '--root', 'script.rb')
+      assert_equal 0, status.exitstatus, "root_flag: exit status"
+      assert_match /PASS/, out, "root_flag: no package constants in root box"
+    end
+  end
+
+  def test_help_shows_root_flag
+    out, status = run_boxwerk(Dir.pwd, 'help')
+    assert_match /--root/, out, "help_root_flag: shows --root option"
   end
 
   # --- Helpers ---

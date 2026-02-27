@@ -63,7 +63,8 @@ module Boxwerk
         puts ''
         puts 'Options:'
         puts '  -p, --package <name>         Run in a specific package box (default: main)'
-        puts '      --all                    Run command for all packages sequentially'
+        puts '      --all                    Run exec for all packages sequentially'
+        puts '      --root                   Run in the root box (no package context)'
         puts ''
         puts 'Examples:'
         puts '  boxwerk run app.rb'
@@ -72,6 +73,7 @@ module Boxwerk
         puts '  boxwerk exec --all rake test'
         puts '  boxwerk console'
         puts '  boxwerk console -p packs/finance'
+        puts '  boxwerk console --root'
         puts ''
         puts 'Setup:'
         puts '  gem install boxwerk             Install boxwerk'
@@ -80,11 +82,12 @@ module Boxwerk
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
       end
 
-      # Parses --package/-p and --all flags from args, returning
-      # { package: name_or_nil, all: bool, remaining: [...] }.
+      # Parses --package/-p, --all, and --root flags from args, returning
+      # { package: name_or_nil, all: bool, root: bool, remaining: [...] }.
       def parse_package_flag(args)
         package_name = nil
         all = false
+        root = false
         remaining = []
         i = 0
 
@@ -100,14 +103,16 @@ module Boxwerk
           when '--all'
             all = true
             i += 1
+          when '--root'
+            root = true
+            i += 1
           else
-            # Once we hit a non-flag, the rest are the command/args
             remaining = args[i..]
             break
           end
         end
 
-        { package: package_name, all: all, remaining: remaining }
+        { package: package_name, all: all, root: root, remaining: remaining }
       end
 
       # Resolves the target box for a command given parsed flags.
@@ -168,14 +173,18 @@ module Boxwerk
             exit 1
           end
         else
-          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
-          box = resolve_target_box(result, parsed[:package])
-          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          if parsed[:root]
+            box = Ruby::Box.root
+          else
+            target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+            box = resolve_target_box(result, parsed[:package])
+            install_resolver_on_ruby_root(result, target_package: target_pkg)
 
-          if parsed[:package] && parsed[:package] != '.'
-            root_path = Setup.send(:find_root, Dir.pwd)
-            pkg_dir = File.join(root_path, parsed[:package])
-            Dir.chdir(pkg_dir)
+            if parsed[:package] && parsed[:package] != '.'
+              root_path = Setup.send(:find_root, Dir.pwd)
+              pkg_dir = File.join(root_path, parsed[:package])
+              Dir.chdir(pkg_dir)
+            end
           end
           run_command_in_box(result, box, command, command_args)
         end
@@ -198,9 +207,13 @@ module Boxwerk
         end
 
         result = perform_setup
-        target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
-        box = resolve_target_box(result, parsed[:package])
-        install_resolver_on_ruby_root(result, target_package: target_pkg)
+        if parsed[:root]
+          box = Ruby::Box.root
+        else
+          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+          box = resolve_target_box(result, parsed[:package])
+          install_resolver_on_ruby_root(result, target_package: target_pkg)
+        end
         execute_in_box(box, script_path, parsed[:remaining][1..] || [])
       end
 
@@ -209,11 +222,15 @@ module Boxwerk
         parsed = parse_package_flag(args)
 
         result = perform_setup
-        target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
-        box = resolve_target_box(result, parsed[:package])
-        install_resolver_on_ruby_root(result, target_package: target_pkg)
-
-        pkg_label = parsed[:package] || 'main'
+        if parsed[:root]
+          box = Ruby::Box.root
+          pkg_label = 'root box'
+        else
+          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+          box = resolve_target_box(result, parsed[:package])
+          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          pkg_label = parsed[:package] || 'main'
+        end
         start_console_in_box(box, parsed[:remaining], pkg_label)
       end
 
