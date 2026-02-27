@@ -156,7 +156,6 @@ boxwerk exec -p packs/util rake test        # Run tests for a specific package
 boxwerk exec --all rake test                # Run tests for all packages
 boxwerk console                             # Interactive IRB (root package)
 boxwerk console -p packs/finance            # IRB in a specific package
-boxwerk console --root-box                  # IRB in the root box (debugging)
 boxwerk info                                # Show package graph
 ```
 
