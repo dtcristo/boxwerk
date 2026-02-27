@@ -46,6 +46,28 @@ Dependency Graph
 ├── packs/finance
 │   └── packs/util
 └── packs/greeting
+
+Packages
+
+  packs/util
+    enforcements: enforce_dependencies
+    dependencies: none
+    gems: concurrent-ruby (1.3.6), faker (3.5.1), i18n (1.14.8)
+
+  packs/finance
+    enforcements: enforce_dependencies, enforce_privacy
+    dependencies: packs/util
+    public_path: public/
+
+  packs/greeting
+    enforcements: enforce_dependencies
+    dependencies: none
+    gems: concurrent-ruby (1.3.6), faker (3.6.0), i18n (1.14.8)
+
+  .
+    enforcements: enforce_dependencies
+    dependencies: packs/finance, packs/greeting
+    gems: ...
 ```
 
 ## Running

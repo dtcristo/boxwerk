@@ -160,22 +160,34 @@ packages must declare their own gem dependencies.
 
 ### Bundler Inside Package Boxes
 
-Currently per-package gems are resolved via lockfile parsing and `$LOAD_PATH`
-manipulation. Gems must be manually `require`'d.
+**Status:** Blocked (Ruby::Box limitation)
 
-**Goal:** Run Bundler inside each package box for proper gem lifecycle:
-- `require: false` in Gemfile works naturally
-- Gem groups (`:test`, `:development`) respected
-- `Bundler.require` per package for automatic requiring
-- Per-package test/dev gems
+Currently per-package gems are resolved via lockfile parsing and manual
+`$LOAD_PATH` manipulation. This approach works but has limitations.
 
-**Approach:**
-1. After creating a package box, check for a Gemfile
-2. Run `Bundler.setup` inside the box with that package's Gemfile
-3. Optionally `Bundler.require` for relevant groups
+**Investigation findings:**
+- `Bundler.setup` inside a child box modifies the ROOT box's `$LOAD_PATH`
+  (not the child's) because Bundler's code is defined in the root box
+- `require 'bundler/setup'` inside `box.eval` has no effect on `$LOAD_PATH`
+- `require 'bundler'; Bundler.setup` partially works (modifies root LP) but
+  doesn't help the child box
+- `Bundler::Definition.build` can extract gem paths from root context but
+  that's equivalent to our current lockfile parsing approach
 
-**Challenge:** Multiple Bundler instances in different boxes may conflict.
-Need to test whether `Bundler.setup` works correctly inside `Ruby::Box`.
+**Current approach (working):**
+1. Parse lockfile with `Bundler::LockfileParser`
+2. Resolve gem specs via `Gem::Specification`
+3. Add load paths to child box's `$LOAD_PATH` directly
+4. Detect global-vs-package version conflicts at boot time
+
+**What this means:**
+- `require: false` in per-package Gemfile does NOT prevent auto-loading
+  (all lockfile gems are added to `$LOAD_PATH`)
+- Gem groups (`:test`, `:development`) are not respected
+- `Bundler.require` per package is not possible
+
+**Future:** Requires Ruby::Box changes to support Bundler running in child
+box context, or a fundamentally different approach to gem loading.
 
 ### Automatic Version Switching
 
@@ -189,14 +201,14 @@ using the correct gem path.
 
 ## Gem Group Support
 
-**Current limitation:** `Bundler.require` in the root box only requires the
-default group. Gems in `:test` or `:development` groups are available on
-`$LOAD_PATH` (via `Bundler.setup`) but not auto-required. This means gems
-like `rake` must be in the default group because rake's DSL (`task`) needs
-to be loaded in the root box for Rakefiles to work.
+**Current limitation:** All gems in a package's lockfile are added to
+`$LOAD_PATH` regardless of groups. `Bundler.require` cannot run inside
+child boxes (see "Bundler Inside Package Boxes" above).
 
-**Blocked by:** Bundler Inside Package Boxes. Once Bundler runs per-box,
-`Bundler.require(:default, :test)` can be called in the appropriate context.
+Global gems in the root Gemfile work with groups normally (Bundler runs in
+the root box). Per-package gems are always available once resolved.
+
+**Blocked by:** Bundler Inside Package Boxes.
 
 ## Per-Package Testing
 

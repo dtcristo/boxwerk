@@ -205,7 +205,14 @@ packs/billing/
     └── payment.rb        # require 'stripe' → gets v5
 ```
 
-Gems in the root `Gemfile` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
+### Gem Isolation Model
+
+- **Global gems** (root `Gemfile`) are loaded in the root box and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
+- **Per-package gems** are resolved from lockfiles and added to each box's `$LOAD_PATH` independently
+- **Gems do NOT leak** across package boundaries — package A cannot see package B's gems, even if A depends on B
+- **Cross-package version differences** are safe — each box is fully isolated
+- **Global override warning:** If a package defines a gem that's also in the root `Gemfile` at a different version, both versions load into memory (functionally correct but wastes memory). Boxwerk warns about this at boot time
+- **Shared global gems:** To share a gem across all packages with a single copy in memory, add it to the root `Gemfile` without `require: false`
 
 Run `boxwerk install` to install gems for all packages.
 
