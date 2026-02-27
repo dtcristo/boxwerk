@@ -103,7 +103,7 @@ Users and products have no dependencies on each other. Orders depends on both.
    # Boot Boxwerk after Rails has initialized
    Rails.application.config.after_initialize do
      if defined?(Ruby::Box) && Ruby::Box.enabled?
-       Boxwerk::Setup.run!
+       Boxwerk::Setup.run
      end
    end
    ```

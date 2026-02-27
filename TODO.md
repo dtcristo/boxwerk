@@ -272,7 +272,7 @@ A proof-of-concept *did* work for packages without per-package gems:
 
 ```ruby
 # const_missing on main's Object delegates to root package box
-Ruby::Box.root.eval("require 'boxwerk'; Boxwerk::Setup.run!(...)")
+Ruby::Box.root.eval("require 'boxwerk'; Boxwerk::Setup.run(...)")
 $BOXWERK_ROOT_PKG_BOX = Ruby::Box.root.eval("Boxwerk::Setup.root_box")
 class Object
   def self.const_missing(name)

@@ -325,7 +325,7 @@ module Boxwerk
       end
 
       def perform_setup
-        Boxwerk::Setup.run!(start_dir: Dir.pwd)
+        Boxwerk::Setup.run(start_dir: Dir.pwd)
       rescue => e
         $stderr.puts "Error: #{e.message}"
         exit 1

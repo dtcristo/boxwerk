@@ -63,10 +63,10 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 8. Run Bundler.setup + Bundler.require in root box
    → All global gems now available in root box
 9. Call Boxwerk::CLI.run(ARGV)
-   → CLI delegates to Setup.run! for package boot
+   → CLI delegates to Setup.run for package boot
 ```
 
-### Setup.run!
+### Setup.run
 
 ```
 1. Find root package.yml (walk up from current directory)

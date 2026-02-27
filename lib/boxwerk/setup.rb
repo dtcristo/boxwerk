@@ -4,7 +4,7 @@ module Boxwerk
   # Finds the root package.yml directory and boots all packages.
   module Setup
     class << self
-      def run!(start_dir: Dir.pwd)
+      def run(start_dir: Dir.pwd)
         root_path = find_root(start_dir)
         unless root_path
           raise 'Cannot find package.yml in current directory or ancestors'
