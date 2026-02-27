@@ -53,15 +53,18 @@ Dependency Graph
 From the `examples/simple/` directory:
 
 ```bash
-bundle install                                                       # Install global gems (including boxwerk)
-bundle exec boxwerk install                                          # Install per-package gems
-RUBY_BOX=1 bundle exec boxwerk run app.rb                            # Run the example app
-RUBY_BOX=1 bundle exec boxwerk console                               # Interactive console (root package)
-RUBY_BOX=1 bundle exec boxwerk exec rake test                        # Run root integration tests
-RUBY_BOX=1 bundle exec boxwerk exec -p packs/util rake test          # Run specific package tests
-RUBY_BOX=1 bundle exec boxwerk exec --all rake test                  # Run all package tests
-bundle exec boxwerk info                                             # Show package structure
+bundle install                                        # Install global gems (including boxwerk)
+bin/boxwerk install                                   # Install per-package gems
+RUBY_BOX=1 bin/boxwerk run app.rb                     # Run the example app
+RUBY_BOX=1 bin/boxwerk console                        # Interactive console (root package)
+RUBY_BOX=1 bin/boxwerk exec rake test                 # Run root integration tests
+RUBY_BOX=1 bin/boxwerk exec -p packs/util rake test   # Run specific package tests
+RUBY_BOX=1 bin/boxwerk exec --all rake test           # Run all package tests
+bin/boxwerk info                                      # Show package structure
 ```
+
+> **Note:** The `bin/boxwerk` binstub is pre-configured for this example's `path:`
+> gem reference. In your own projects, generate it with `bundle binstubs boxwerk`.
 
 ## What It Demonstrates
 

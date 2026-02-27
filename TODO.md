@@ -18,6 +18,7 @@ Planned improvements and design considerations for Boxwerk.
 | `boxwerk init` (scaffold packages) | Low | Easy |
 | `boxwerk list` / `boxwerk outdated` / `boxwerk update` | Low | Easy |
 | `boxwerk clean` | Low | Easy |
+| Automatic version switching | Low | Easy |
 | Configurable violation handling (warn/strict) | Low | Easy |
 | package_todo.yml support | Low | Medium |
 | IDE / language server support | Low | Hard |
@@ -171,6 +172,16 @@ manipulation. Gems must be manually `require`'d.
 
 **Challenge:** Multiple Bundler instances in different boxes may conflict.
 Need to test whether `Bundler.setup` works correctly inside `Ruby::Box`.
+
+### Automatic Version Switching
+
+When `boxwerk` is installed globally (or via a different version than the
+project's Gemfile specifies), auto-detect the mismatch and re-exec with the
+correct version. Similar to how `rbenv`/`mise` handle Ruby version switching.
+
+**Approach:** Check `Gem.loaded_specs["boxwerk"]` against the project's
+lockfile version. If they differ, re-exec via `Bundler.with_unbundled_env`
+using the correct gem path.
 
 ## Gem Group Support
 

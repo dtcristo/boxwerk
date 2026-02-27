@@ -62,6 +62,11 @@ Global gems in `Gemfile` are accessible to all packages:
 gem 'dotenv', require: 'dotenv/load'
 ```
 
+> **Note:** Gems with `require: false` are on `$LOAD_PATH` but not auto-required.
+> Any package can `require` them, but the constants are scoped to that package's
+> box. For shared gems, omit `require: false` so they are auto-required once in
+> the root box and inherited by all packages.
+
 ### 3. Create packages
 
 ```
@@ -115,13 +120,13 @@ Calculator.add(1, 2)
 ### 5. Run
 
 ```bash
-bundle exec boxwerk install          # Install gems for all packages
-RUBY_BOX=1 bundle exec boxwerk run app.rb   # Run with package isolation
+bundle binstubs boxwerk              # Create bin/boxwerk binstub
+bin/boxwerk install                  # Install per-package gems
+RUBY_BOX=1 bin/boxwerk run app.rb    # Run with package isolation
 ```
 
-> Boxwerk re-execs into a clean Ruby process when launched via `bundle exec`,
-> so gems aren't loaded twice. Alternatively, create a binstub with
-> `bundle binstubs boxwerk` and use `bin/boxwerk` directly.
+> `bundle exec boxwerk` also works — Boxwerk re-execs into a clean process
+> automatically so gems aren't loaded twice.
 
 ## CLI
 
@@ -237,9 +242,9 @@ To run the simple example:
 ```bash
 cd examples/simple
 bundle install
-bundle exec boxwerk install
-RUBY_BOX=1 bundle exec boxwerk run app.rb
-RUBY_BOX=1 bundle exec boxwerk exec --all rake test
+bin/boxwerk install
+RUBY_BOX=1 bin/boxwerk run app.rb
+RUBY_BOX=1 bin/boxwerk exec --all rake test
 ```
 
 ## License

@@ -9,7 +9,7 @@ Guidelines for AI agents working on this codebase.
 - Commit as you go with descriptive messages
 - Don't over-engineer — keep it simple
 - Run `RUBY_BOX=1 bundle exec rake test` and `RUBY_BOX=1 bundle exec rake e2e` to verify
-- Run `cd examples/simple/ && RUBY_BOX=1 bundle exec boxwerk run app.rb` and `cd examples/simple/ && RUBY_BOX=1 bundle exec boxwerk exec --all rake test` to verify example
+- Run `cd examples/simple/ && RUBY_BOX=1 bin/boxwerk run app.rb` and `cd examples/simple/ && RUBY_BOX=1 bin/boxwerk exec --all rake test` to verify example
 - Fix any warnings
 - Use sub-agents where appropriate
 - Never bump version or publish gem

@@ -76,9 +76,10 @@ module Boxwerk
         puts ''
         puts 'Setup:'
         puts '  # Add gem \'boxwerk\' to your Gemfile, then:'
-        puts '  bundle install                            Install gems (including boxwerk)'
-        puts '  bundle exec boxwerk install               Install per-package gems'
-        puts '  RUBY_BOX=1 bundle exec boxwerk run app.rb Run your app'
+        puts '  bundle install                       Install gems (including boxwerk)'
+        puts '  bundle binstubs boxwerk              Create bin/boxwerk binstub'
+        puts '  bin/boxwerk install                  Install per-package gems'
+        puts '  RUBY_BOX=1 bin/boxwerk run app.rb    Run your app'
         puts ''
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
       end
