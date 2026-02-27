@@ -62,7 +62,7 @@ module Boxwerk
         puts '  version                      Show version'
         puts ''
         puts 'Options:'
-        puts '  -p, --package <name>         Run in a specific package box (default: root)'
+        puts '  -p, --package <name>         Run in a specific package box (default: .)'
         puts '      --all                    Run exec for all packages sequentially'
         puts '  -r, --root-box               Run in the root box (no package context)'
         puts ''
@@ -73,10 +73,10 @@ module Boxwerk
         puts '  boxwerk exec --all rake test'
         puts '  boxwerk console'
         puts '  boxwerk console -p packs/finance'
-        puts '  boxwerk console --root-box'
         puts ''
         puts 'Setup:'
-        puts '  gem install boxwerk             Install boxwerk'
+        puts '  # Add gem \'boxwerk\' to your Gemfile, then:'
+        puts '  bundle install                  Install gems (including boxwerk)'
         puts '  boxwerk install                 Install gems for all packages'
         puts ''
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
@@ -226,11 +226,11 @@ module Boxwerk
         else
           target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
           install_resolver_on_ruby_root(result, target_package: target_pkg)
-          pkg_label = parsed[:package] || 'root'
+          pkg_label = parsed[:package] || '.'
         end
-        # Always run IRB in Ruby::Box.root. The composite resolver installed
-        # above provides access to the target package's constants. Running in
-        # a child box triggers a Ruby::Box GC crash on exit (Ruby 4.0.1 bug).
+        # IRB runs in Ruby::Box.root with a composite resolver that provides
+        # the target package's constants. This works around a Ruby 4.0.1 GC
+        # crash when running IRB directly in child boxes.
         start_console_in_box(Ruby::Box.root, parsed[:remaining], pkg_label)
       end
 
@@ -392,7 +392,7 @@ module Boxwerk
         nil
       end
 
-      def start_console_in_box(box, irb_args = [], pkg_label = 'root')
+      def start_console_in_box(box, irb_args = [], pkg_label = '.')
         puts "boxwerk #{Boxwerk::VERSION} console (#{pkg_label})"
         puts ''
 

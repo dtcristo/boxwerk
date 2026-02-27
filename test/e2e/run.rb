@@ -49,6 +49,7 @@ class E2ERunner
     test_console_root_package
     test_console_child_package
     test_console_root_box
+    test_bundle_exec_reexec
 
     puts ""
     puts "=" * 60
@@ -377,6 +378,7 @@ class E2ERunner
       out, status = run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console')
       assert_equal 0, status.exitstatus, "console_root_package: exit status"
       assert_match /Console Hello!/, out, "console_root_package: resolves dependency constant"
+      assert_match /console \(\.\)/, out, "console_root_package: shows (.) label"
     end
   end
 
@@ -419,6 +421,29 @@ class E2ERunner
       out, status = run_boxwerk_with_stdin(dir, script, 'console', '--root-box')
       assert_equal 0, status.exitstatus, "console_root_box: exit status"
       assert_match /PASS/, out, "console_root_box: no package constants in root box"
+    end
+  end
+
+  def test_bundle_exec_reexec
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello via bundle exec!'
+        end
+      RUBY
+      write_file(dir, 'app.rb', <<~RUBY)
+        puts Greeter.hello
+      RUBY
+
+      # Simulate `bundle exec` by setting BUNDLE_BIN_PATH
+      env = { 'RUBY_BOX' => '1', 'BUNDLE_BIN_PATH' => '/fake/path' }
+      cmd = ['ruby', @boxwerk_bin, 'run', 'app.rb']
+      stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
+      out = stdout + stderr
+      assert_equal 0, status.exitstatus, "bundle_exec_reexec: exit status"
+      assert_match /Hello via bundle exec!/, out, "bundle_exec_reexec: output"
     end
   end
 

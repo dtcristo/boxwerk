@@ -39,19 +39,26 @@ See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Rub
 
 ### 1. Install Boxwerk
 
-```bash
-gem install boxwerk
-```
-
-### 2. Add a `Gemfile` for global gems
-
-Global gems are accessible to all packages. Include `boxwerk` itself to make its dependencies (like IRB for `boxwerk console`) available:
+Add `boxwerk` to your project's `Gemfile`:
 
 ```ruby
 # Gemfile
 source 'https://rubygems.org'
 
 gem 'boxwerk'
+```
+
+Then install:
+
+```bash
+bundle install
+```
+
+### 2. Add global gems
+
+Global gems in `Gemfile` are accessible to all packages:
+
+```ruby
 gem 'dotenv', require: 'dotenv/load'
 ```
 
@@ -105,12 +112,15 @@ Invoice.new
 Calculator.add(1, 2)
 ```
 
-### 5. Install and run
+### 5. Run
 
 ```bash
-boxwerk install                  # Bundle install for all packages
-RUBY_BOX=1 boxwerk run app.rb    # Run with package isolation
+boxwerk install                  # Bundle install for all packages with gems
+RUBY_BOX=1 boxwerk run app.rb   # Run with package isolation
 ```
+
+> If `boxwerk` is not on your `PATH`, use `bundle exec boxwerk` — Boxwerk
+> automatically re-execs into a clean Ruby process to avoid double gem loading.
 
 ## CLI
 
@@ -127,7 +137,7 @@ boxwerk help                         Show usage
 ### Options
 
 ```
--p, --package <name>         Run in a specific package box (default: root)
+-p, --package <name>         Run in a specific package box (default: .)
     --all                    Run exec for all packages sequentially
 -r, --root-box               Run in the root box (no package context)
 ```
@@ -196,7 +206,7 @@ end
 
 ## Architecture
 
-Install Boxwerk globally (`gem install boxwerk`) so the CLI runs outside Bundler. Add `gem 'boxwerk'` to your project's `Gemfile` to pin the version and make its dependencies (IRB, etc.) available to your packages. Avoid `bundle exec boxwerk` — that loads global gems before Boxwerk has a chance to set up the root box.
+Add `gem 'boxwerk'` to your project's `Gemfile`. If invoked via `bundle exec`, Boxwerk automatically re-execs into a clean Ruby process so it controls gem loading from scratch — no double loading.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for full implementation details including the boot sequence, constant resolution, and Ruby::Box internals.
 

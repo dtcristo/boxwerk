@@ -19,9 +19,9 @@ CLI designed to feel Ruby-native.
   uses `package.yml` files only.
 - **Executable changed**: Checks `defined?(Ruby::Box)` and
   `Ruby::Box.enabled?` instead of `ENV['RUBY_BOX']`.
-- **Install method**: Boxwerk is designed to be installed via
-  `gem install boxwerk` rather than through Bundler, avoiding double gem
-  loading.
+- **Install method**: Add `gem 'boxwerk'` to your `Gemfile`. If invoked via
+  `bundle exec`, Boxwerk re-execs into a clean Ruby process to avoid double
+  gem loading.
 - **Removed zeitwerk dependency**: File-to-constant mapping now uses an
   inline `Boxwerk.camelize` method instead of Zeitwerk's inflector.
 

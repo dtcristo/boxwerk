@@ -53,13 +53,15 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 
 ```
 1. exe/boxwerk starts in the main box
-2. Check Ruby::Box availability and enabled status
-3. Switch to root box via Ruby::Box.root.eval(...)
-4. Load boxwerk gem into root box ($LOAD_PATH.unshift)
-5. Discover project Gemfile (gems.rb preferred, then Gemfile)
-6. Run Bundler.setup + Bundler.require in root box
+2. If running under `bundle exec`, re-exec into a clean Ruby process
+   using Bundler.unbundled_env (prevents double gem loading)
+3. Check Ruby::Box availability and enabled status
+4. Switch to root box via Ruby::Box.root.eval(...)
+5. Load boxwerk gem into root box ($LOAD_PATH.unshift)
+6. Discover project Gemfile (gems.rb preferred, then Gemfile)
+7. Run Bundler.setup + Bundler.require in root box
    → All global gems now available in root box
-7. Call Boxwerk::CLI.run(ARGV)
+8. Call Boxwerk::CLI.run(ARGV)
    → CLI delegates to Setup.run! for package boot
 ```
 
