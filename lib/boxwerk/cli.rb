@@ -64,7 +64,7 @@ module Boxwerk
         puts 'Options:'
         puts '  -p, --package <name>         Run in a specific package box (default: root)'
         puts '      --all                    Run exec for all packages sequentially'
-        puts '      --root-box, -r             Run in the root box (no package context)'
+        puts '  -r, --root-box               Run in the root box (no package context)'
         puts ''
         puts 'Examples:'
         puts '  boxwerk run app.rb'

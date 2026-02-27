@@ -127,7 +127,7 @@ boxwerk help                         Show usage
 ```
 -p, --package <name>         Run in a specific package box (default: root)
     --all                    Run exec for all packages sequentially
-    --root-box, -r           Run in the root box (no package context)
+-r, --root-box               Run in the root box (no package context)
 ```
 
 > **Root package vs root box:** The root package (`.`) is your top-level

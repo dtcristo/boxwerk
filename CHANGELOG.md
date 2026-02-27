@@ -52,6 +52,8 @@ CLI designed to feel Ruby-native.
 - **Goals section** in README inspired by Packwerk.
 - **Ruby::Box section** in README summarising relevant Box behaviours.
 - **Architecture section** in README with link to `ARCHITECTURE.md`.
+- `ARCHITECTURE.md`: Detailed implementation documentation covering boot
+  sequence, constant resolution, Ruby::Box internals, and module structure.
 - `examples/simple/`: Multi-package example with faker version isolation,
   per-package unit tests, and per-package gems.
 - `examples/rails/README.md`: Comprehensive Rails integration plan.
