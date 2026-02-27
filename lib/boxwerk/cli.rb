@@ -94,7 +94,8 @@ module Boxwerk
           exit 1
         end
 
-        execute_in_box(root_box, bin_path, command_args)
+        # Gem binstubs are scripts, not libraries — use load instead of require
+        execute_in_box(root_box, bin_path, command_args, use_load: true)
       end
 
       def run_command(args)
@@ -188,9 +189,14 @@ module Boxwerk
         exit 1
       end
 
-      def execute_in_box(box, script_path, script_args)
+      def execute_in_box(box, script_path, script_args, use_load: false)
+        expanded = File.expand_path(script_path)
         box.eval("ARGV.replace(#{script_args.inspect})")
-        box.require(File.expand_path(script_path))
+        if use_load
+          box.eval("load #{expanded.inspect}")
+        else
+          box.require(expanded)
+        end
       end
 
       # Resolves a command name to its gem binstub path.
