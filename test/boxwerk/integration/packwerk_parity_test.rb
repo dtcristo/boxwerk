@@ -25,7 +25,8 @@ module Boxwerk
 
       resolver = result[:resolver]
       a_pkg = resolver.packages['packs/a']
-      refute_includes a_pkg.dependencies, 'packs/b',
+      refute_includes a_pkg.dependencies,
+                      'packs/b',
                       'Packwerk: A should not declare B as dependency'
 
       a_box = result[:box_manager].boxes['packs/a']
@@ -51,11 +52,13 @@ module Boxwerk
 
       resolver = result[:resolver]
       a_pkg = resolver.packages['packs/a']
-      assert_includes a_pkg.dependencies, 'packs/b',
+      assert_includes a_pkg.dependencies,
+                      'packs/b',
                       'Packwerk: A should declare B as dependency'
 
       a_box = result[:box_manager].boxes['packs/a']
-      assert_equal 'allowed', a_box.eval('ClassB.value'),
+      assert_equal 'allowed',
+                   a_box.eval('ClassB.value'),
                    'Boxwerk: A should access ClassB'
     end
 
@@ -84,12 +87,16 @@ module Boxwerk
              'Packwerk: B should enforce privacy'
 
       a_box = result[:box_manager].boxes['packs/a']
-      assert_equal 'public', a_box.eval('Api.call'),
+      assert_equal 'public',
+                   a_box.eval('Api.call'),
                    'Boxwerk: public constant should be accessible'
 
       error = assert_raises(NameError) { a_box.eval('_ = Secret') }
-      assert_match(/Privacy violation/, error.message,
-                   'Boxwerk: private constant should raise privacy error')
+      assert_match(
+        /Privacy violation/,
+        error.message,
+        'Boxwerk: private constant should raise privacy error',
+      )
     end
 
     def test_transitive_dependency_matches_packwerk_violation
@@ -116,7 +123,10 @@ module Boxwerk
       refute_includes root_pkg.dependencies, 'packs/b'
 
       root_box = result[:box_manager].boxes['.']
-      assert root_box.eval('begin; _ = Surface; true; rescue NameError; false; end'), 'Root should see Surface'
+      assert root_box.eval(
+               'begin; _ = Surface; true; rescue NameError; false; end',
+             ),
+             'Root should see Surface'
       assert_raises(NameError) { root_box.eval('_ = Deep') }
 
       # But A CAN access Deep (direct dependency)

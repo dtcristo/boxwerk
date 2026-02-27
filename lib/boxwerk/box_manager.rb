@@ -29,9 +29,7 @@ module Boxwerk
     def boot_all(resolver)
       order = resolver.topological_order
 
-      order.each do |package|
-        boot(package, resolver)
-      end
+      order.each { |package| boot(package, resolver) }
     end
 
     # Boot a single package: create box, set up gems, scan with Zeitwerk,
@@ -59,9 +57,7 @@ module Boxwerk
       gem_paths = @gem_resolver.resolve_for(package)
       return unless gem_paths&.any?
 
-      gem_paths.each do |path|
-        box.eval("$LOAD_PATH.unshift(#{path.inspect})")
-      end
+      gem_paths.each { |path| box.eval("$LOAD_PATH.unshift(#{path.inspect})") }
     end
 
     # Scans package directories with ZeitwerkScanner and registers autoloads
@@ -69,16 +65,20 @@ module Boxwerk
     def scan_and_register(box, package)
       all_entries = []
 
-      pub_path = if PrivacyChecker.enforces_privacy?(package)
-                   PrivacyChecker.public_path_for(package, @root_path)
-                 end
+      pub_path =
+        if PrivacyChecker.enforces_privacy?(package)
+          PrivacyChecker.public_path_for(package, @root_path)
+        end
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)
         entries = ZeitwerkScanner.scan(lib_path)
         # Exclude constants under public_path (scanned separately)
         if pub_path && pub_path.start_with?(lib_path)
-          entries = entries.reject { |e| e.file&.start_with?(pub_path) || e.dir&.start_with?(pub_path) }
+          entries =
+            entries.reject do |e|
+              e.file&.start_with?(pub_path) || e.dir&.start_with?(pub_path)
+            end
         end
         all_entries.concat(entries)
       end
@@ -100,24 +100,32 @@ module Boxwerk
     def wire_dependency_constants(box, package, package_resolver)
       deps_config = []
 
-      package_resolver.direct_dependencies(package).each do |dep|
-        dep_box = @boxes[dep.name]
-        next unless dep_box
+      package_resolver
+        .direct_dependencies(package)
+        .each do |dep|
+          dep_box = @boxes[dep.name]
+          next unless dep_box
 
-        dep_file_index = @file_indexes[dep.name] || {}
+          dep_file_index = @file_indexes[dep.name] || {}
 
-        pub_consts = PrivacyChecker.public_constants(dep, @root_path)
-        priv_consts = PrivacyChecker.enforces_privacy?(dep) ?
-          PrivacyChecker.private_constants_list(dep) : nil
+          pub_consts = PrivacyChecker.public_constants(dep, @root_path)
+          priv_consts =
+            (
+              if PrivacyChecker.enforces_privacy?(dep)
+                PrivacyChecker.private_constants_list(dep)
+              else
+                nil
+              end
+            )
 
-        deps_config << {
-          box: dep_box,
-          file_index: dep_file_index,
-          public_constants: pub_consts,
-          private_constants: priv_consts,
-          package_name: dep.name,
-        }
-      end
+          deps_config << {
+            box: dep_box,
+            file_index: dep_file_index,
+            public_constants: pub_consts,
+            private_constants: priv_consts,
+            package_name: dep.name,
+          }
+        end
 
       return if deps_config.empty?
 

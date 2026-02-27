@@ -52,18 +52,18 @@ module Boxwerk
       ymls << root_yml if File.exist?(root_yml)
 
       # Glob for all package.yml files in subdirectories
-      Dir.glob(File.join(@root_path, '**', 'package.yml')).each do |path|
-        next if path == root_yml
-        ymls << path
-      end
+      Dir
+        .glob(File.join(@root_path, '**', 'package.yml'))
+        .each do |path|
+          next if path == root_yml
+          ymls << path
+        end
 
       ymls.uniq
     end
 
     def validate_no_cycles
-      @packages.each_value do |pkg|
-        detect_cycle(pkg, [])
-      end
+      @packages.each_value { |pkg| detect_cycle(pkg, []) }
     end
 
     def detect_cycle(package, path)

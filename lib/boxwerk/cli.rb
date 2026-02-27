@@ -114,7 +114,12 @@ module Boxwerk
           end
         end
 
-        { package: package_name, all: all, root_box: root_box, remaining: remaining }
+        {
+          package: package_name,
+          all: all,
+          root_box: root_box,
+          remaining: remaining,
+        }
       end
 
       # Resolves the target box for a command given parsed flags.
@@ -161,11 +166,18 @@ module Boxwerk
             puts "==> #{label}"
             # Clear BUNDLE_GEMFILE so the subprocess discovers it fresh
             env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => nil }
-            success = system(
-              env,
-              RbConfig.ruby, @exe_path, 'exec', '-p', pkg_name, command, *command_args,
-              chdir: root_path
-            )
+            success =
+              system(
+                env,
+                RbConfig.ruby,
+                @exe_path,
+                'exec',
+                '-p',
+                pkg_name,
+                command,
+                *command_args,
+                chdir: root_path,
+              )
             failed << label unless success
             puts ''
           end
@@ -178,7 +190,14 @@ module Boxwerk
           if parsed[:root_box]
             box = Ruby::Box.root
           else
-            target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+            target_pkg =
+              (
+                if parsed[:package]
+                  result[:resolver].packages[parsed[:package]]
+                else
+                  nil
+                end
+              )
             box = resolve_target_box(result, parsed[:package])
             install_resolver_on_ruby_root(result, target_package: target_pkg)
 
@@ -212,7 +231,14 @@ module Boxwerk
         if parsed[:root_box]
           box = Ruby::Box.root
         else
-          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+          target_pkg =
+            (
+              if parsed[:package]
+                result[:resolver].packages[parsed[:package]]
+              else
+                nil
+              end
+            )
           box = resolve_target_box(result, parsed[:package])
           install_resolver_on_ruby_root(result, target_package: target_pkg)
         end
@@ -226,7 +252,14 @@ module Boxwerk
         if parsed[:root_box]
           pkg_label = 'root box'
         else
-          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
+          target_pkg =
+            (
+              if parsed[:package]
+                result[:resolver].packages[parsed[:package]]
+              else
+                nil
+              end
+            )
           install_resolver_on_ruby_root(result, target_package: target_pkg)
           pkg_label = parsed[:package] || '.'
         end
@@ -268,7 +301,8 @@ module Boxwerk
 
         resolver.topological_order.each do |pkg|
           pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
-          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
+          gemfile =
+            %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
           next unless gemfile
 
           label = pkg.root? ? '.' : pkg.name
@@ -344,30 +378,34 @@ module Boxwerk
         # Build a composite resolver: first check the target box's own
         # constants, then fall through to the target box's dependency resolver.
         own_box = target_box
-        dep_resolver = begin
-          target_box.const_get(:BOXWERK_DEPENDENCY_RESOLVER)
-        rescue NameError
-          nil
-        end
-
-        composite = proc do |const_name|
-          name_str = const_name.to_s
-          # Try own box first (for the pack's internal constants).
-          # Use eval to trigger autoload within the box's context.
+        dep_resolver =
           begin
-            own_box.eval("_ = ::#{name_str}")
+            target_box.const_get(:BOXWERK_DEPENDENCY_RESOLVER)
           rescue NameError
-            # Fall through to dependency resolver
-            if dep_resolver
-              dep_resolver.call(const_name)
-            else
-              raise NameError, "uninitialized constant #{name_str}"
+            nil
+          end
+
+        composite =
+          proc do |const_name|
+            name_str = const_name.to_s
+            # Try own box first (for the pack's internal constants).
+            # Use eval to trigger autoload within the box's context.
+            begin
+              own_box.eval("_ = ::#{name_str}")
+            rescue NameError
+              # Fall through to dependency resolver
+              if dep_resolver
+                dep_resolver.call(const_name)
+              else
+                raise NameError, "uninitialized constant #{name_str}"
+              end
             end
           end
-        end
 
         ruby_root = Ruby::Box.root
-        ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER) if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        end
         ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
         ruby_root.eval(<<~RUBY)
           class Object
@@ -462,7 +500,7 @@ module Boxwerk
           puts ''
           conflicts.each do |c|
             puts "  ⚠ #{c[:gem_name]}: #{c[:package_version]} in #{c[:package]} " \
-              "vs #{c[:global_version]} in root (both loaded into memory)"
+                   "vs #{c[:global_version]} in root (both loaded into memory)"
           end
           puts ''
         end

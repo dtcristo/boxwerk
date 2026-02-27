@@ -24,17 +24,20 @@ class IntegrationTest < Minitest::Test
   def test_faker_version_isolation
     finance_version = Invoice.faker_version
     greeting_version = Greeting.faker_version
-    refute_equal finance_version, greeting_version,
-      'Expected different faker versions in different packs'
+    refute_equal finance_version,
+                 greeting_version,
+                 'Expected different faker versions in different packs'
   end
 
   def test_greeting_includes_prefix
     greeting = Greeting.hello
-    assert greeting.start_with?('Hello, '), "Expected greeting to start with GREETING_PREFIX from .env"
+    assert greeting.start_with?('Hello, '),
+           'Expected greeting to start with GREETING_PREFIX from .env'
   end
 
   def test_dotenv_accessible_as_global_gem
-    assert defined?(Dotenv), 'Global gem dotenv should be accessible in root package'
+    assert defined?(Dotenv),
+           'Global gem dotenv should be accessible in root package'
   end
 
   def test_private_class_instance_from_public_method

@@ -45,18 +45,20 @@ module Boxwerk
     def self.from_yml(yml_path, root_path:)
       config = YAML.safe_load_file(yml_path) || {}
       pkg_dir = File.dirname(yml_path)
-      name = if File.expand_path(pkg_dir) == File.expand_path(root_path)
-               '.'
-             else
-               relative_path(pkg_dir, root_path)
-             end
+      name =
+        if File.expand_path(pkg_dir) == File.expand_path(root_path)
+          '.'
+        else
+          relative_path(pkg_dir, root_path)
+        end
       new(name: name, config: config)
     end
 
     def self.relative_path(path, base)
-      Pathname.new(File.expand_path(path))
-              .relative_path_from(Pathname.new(File.expand_path(base)))
-              .to_s
+      Pathname
+        .new(File.expand_path(path))
+        .relative_path_from(Pathname.new(File.expand_path(base)))
+        .to_s
     end
   end
 end

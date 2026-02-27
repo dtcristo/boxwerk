@@ -67,16 +67,13 @@ module Boxwerk
     def test_cross_package_method_call
       util_dir = create_package_dir('util')
       create_package(util_dir)
-      File.write(
-        File.join(util_dir, 'lib', 'formatter.rb'),
-        <<~RUBY,
+      File.write(File.join(util_dir, 'lib', 'formatter.rb'), <<~RUBY)
           class Formatter
             def self.format(val)
               "[" + val.to_s + "]"
             end
           end
         RUBY
-      )
 
       app_dir = create_package_dir('app')
       create_package(app_dir, dependencies: ['packs/util'])

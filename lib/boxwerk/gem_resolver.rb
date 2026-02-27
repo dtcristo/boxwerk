@@ -145,7 +145,7 @@ module Boxwerk
         gems << GemInfo.new(
           name: spec.name,
           version: spec.version.to_s,
-          load_paths: paths
+          load_paths: paths,
         )
       end
 
@@ -156,7 +156,9 @@ module Boxwerk
     def resolve_gem_paths(name, version)
       spec = find_gem_spec(name, version)
       unless spec
-        warn "Boxwerk: gem '#{name}' (#{version}) not installed, skipping" unless name == 'boxwerk'
+        unless name == 'boxwerk'
+          warn "Boxwerk: gem '#{name}' (#{version}) not installed, skipping"
+        end
         return nil
       end
       collect_paths(spec)
@@ -171,10 +173,14 @@ module Boxwerk
     # Loads all gem specifications from all gem directories.
     # Cached for the lifetime of this resolver.
     def all_gem_specs
-      @all_specs ||= begin
-        dirs = Gem.path.flat_map { |p| Dir.glob(File.join(p, 'specifications', '*.gemspec')) }
-        dirs.map { |path| Gem::Specification.load(path) }.compact
-      end
+      @all_specs ||=
+        begin
+          dirs =
+            Gem.path.flat_map do |p|
+              Dir.glob(File.join(p, 'specifications', '*.gemspec'))
+            end
+          dirs.map { |path| Gem::Specification.load(path) }.compact
+        end
     end
 
     # Recursively collects load paths for a gem and its runtime dependencies.
@@ -187,9 +193,7 @@ module Boxwerk
       spec.runtime_dependencies.each do |dep|
         dep_spec = find_gem_spec(dep.name, dep.requirement.to_s.delete('= '))
         dep_spec ||= all_gem_specs.find { |s| s.name == dep.name }
-        if dep_spec
-          paths.concat(collect_paths(dep_spec, resolved))
-        end
+        paths.concat(collect_paths(dep_spec, resolved)) if dep_spec
       end
 
       paths

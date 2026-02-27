@@ -20,11 +20,12 @@ module Boxwerk
       # Returns the public path for a package (absolute).
       def public_path_for(package, root_path)
         user_path = package.config['public_path']
-        relative = if user_path
-                     user_path.end_with?('/') ? user_path : "#{user_path}/"
-                   else
-                     DEFAULT_PUBLIC_PATH
-                   end
+        relative =
+          if user_path
+            user_path.end_with?('/') ? user_path : "#{user_path}/"
+          else
+            DEFAULT_PUBLIC_PATH
+          end
 
         if package.root?
           File.join(root_path, relative)
@@ -42,21 +43,25 @@ module Boxwerk
         constants = Set.new
 
         if File.directory?(pub_path)
-          Dir.glob(File.join(pub_path, '**', '*.rb')).each do |file|
-            const_name = constant_name_from_path(file, pub_path)
-            constants.add(const_name) if const_name
-          end
+          Dir
+            .glob(File.join(pub_path, '**', '*.rb'))
+            .each do |file|
+              const_name = constant_name_from_path(file, pub_path)
+              constants.add(const_name) if const_name
+            end
         end
 
         # Also scan all package files for pack_public: true sigil
         package_lib = package_lib_path(package, root_path)
         if package_lib && File.directory?(package_lib)
-          Dir.glob(File.join(package_lib, '**', '*.rb')).each do |file|
-            if publicized_file?(file)
-              const_name = constant_name_from_path(file, package_lib)
-              constants.add(const_name) if const_name
+          Dir
+            .glob(File.join(package_lib, '**', '*.rb'))
+            .each do |file|
+              if publicized_file?(file)
+                const_name = constant_name_from_path(file, package_lib)
+                constants.add(const_name) if const_name
+              end
             end
-          end
         end
 
         constants
@@ -65,23 +70,31 @@ module Boxwerk
       # Returns the set of explicitly private constant names.
       # Strips leading :: prefix.
       def private_constants_list(package)
-        (package.config['private_constants'] || []).map do |name|
-          name.start_with?('::') ? name[2..] : name
-        end.to_set
+        (package.config['private_constants'] || [])
+          .map { |name| name.start_with?('::') ? name[2..] : name }
+          .to_set
       end
 
       # Checks if a constant is accessible from outside the package.
       # Returns true if accessible, false if blocked by privacy.
-      def accessible?(const_name, package, root_path, public_constants_cache: nil)
+      def accessible?(
+        const_name,
+        package,
+        root_path,
+        public_constants_cache: nil
+      )
         return true unless enforces_privacy?(package)
 
         # Check explicitly private constants
         privates = private_constants_list(package)
         return false if privates.include?(const_name.to_s)
-        return false if privates.any? { |pc| const_name.to_s.start_with?("#{pc}::") }
+        if privates.any? { |pc| const_name.to_s.start_with?("#{pc}::") }
+          return false
+        end
 
         # Check if constant is in the public set
-        pub_consts = public_constants_cache || public_constants(package, root_path)
+        pub_consts =
+          public_constants_cache || public_constants(package, root_path)
         return true if pub_consts.nil? # privacy not enforced
 
         # If public_path has files, check against them
@@ -100,12 +113,18 @@ module Boxwerk
         return nil if relative.empty?
 
         inflector = Zeitwerk::Inflector.new
-        relative.split('/').map { |part| inflector.camelize(part, base_path) }.join('::')
+        relative
+          .split('/')
+          .map { |part| inflector.camelize(part, base_path) }
+          .join('::')
       end
 
       # Checks if a file contains the pack_public: true sigil in first 5 lines.
       def publicized_file?(file_path)
-        File.foreach(file_path).first(5).any? { |line| line.match?(PUBLICIZED_SIGIL_REGEX) }
+        File
+          .foreach(file_path)
+          .first(5)
+          .any? { |line| line.match?(PUBLICIZED_SIGIL_REGEX) }
       rescue Errno::ENOENT
         false
       end

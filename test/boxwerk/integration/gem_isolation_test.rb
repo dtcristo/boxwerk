@@ -12,7 +12,10 @@ module Boxwerk
       create_package(a_dir)
 
       json_spec = Gem::Specification.find_by_name('json')
-      File.write(File.join(a_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(a_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(a_dir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
@@ -53,11 +56,17 @@ module Boxwerk
 
       a_gem_dir = File.join(@tmpdir, 'gems_v1', 'lib')
       FileUtils.mkdir_p(a_gem_dir)
-      File.write(File.join(a_gem_dir, 'my_lib.rb'), "module MyLib\n  VERSION = '1.0'\nend\n")
+      File.write(
+        File.join(a_gem_dir, 'my_lib.rb'),
+        "module MyLib\n  VERSION = '1.0'\nend\n",
+      )
 
       b_gem_dir = File.join(@tmpdir, 'gems_v2', 'lib')
       FileUtils.mkdir_p(b_gem_dir)
-      File.write(File.join(b_gem_dir, 'my_lib.rb'), "module MyLib\n  VERSION = '2.0'\nend\n")
+      File.write(
+        File.join(b_gem_dir, 'my_lib.rb'),
+        "module MyLib\n  VERSION = '2.0'\nend\n",
+      )
 
       File.write(
         File.join(a_dir, 'lib', 'a_service.rb'),
@@ -88,10 +97,16 @@ module Boxwerk
 
       gem_dir = File.join(@tmpdir, 'only_a_gem', 'lib')
       FileUtils.mkdir_p(gem_dir)
-      File.write(File.join(gem_dir, 'exclusive.rb'), "module Exclusive\n  VALUE = 'only_a'\nend\n")
+      File.write(
+        File.join(gem_dir, 'exclusive.rb'),
+        "module Exclusive\n  VALUE = 'only_a'\nend\n",
+      )
 
       json_spec = Gem::Specification.find_by_name('json')
-      File.write(File.join(a_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(a_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(a_dir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
@@ -128,7 +143,9 @@ module Boxwerk
       # A has gem load paths added, B does not — their $LOAD_PATHs should differ
       a_count = a_box.eval('$LOAD_PATH.size')
       b_count = b_box.eval('$LOAD_PATH.size')
-      assert_operator a_count, :>, b_count,
+      assert_operator a_count,
+                      :>,
+                      b_count,
                       'Package A should have more load paths than B (gem paths added)'
     end
 
@@ -154,7 +171,10 @@ module Boxwerk
 
       # Use gems.rb/gems.locked naming convention
       json_spec = Gem::Specification.find_by_name('json')
-      File.write(File.join(a_dir, 'gems.rb'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(a_dir, 'gems.rb'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(a_dir, 'gems.locked'), <<~LOCK)
         GEM
           remote: https://rubygems.org/

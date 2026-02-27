@@ -10,6 +10,20 @@ task :e2e do
   sh 'ruby test/e2e/run.rb'
 end
 
+STREE_FILES =
+  'lib/**/*.rb exe/**/* test/**/*.rb Rakefile ' \
+    'examples/**/*.rb examples/**/Rakefile'
+
+desc 'Check formatting with syntax_tree'
+task :fmt_check do
+  sh "bundle exec stree check #{STREE_FILES}"
+end
+
+desc 'Format code with syntax_tree'
+task :fmt do
+  sh "bundle exec stree write #{STREE_FILES}"
+end
+
 desc 'Run all tests (unit, integration, e2e)'
 task all: %i[test e2e]
 

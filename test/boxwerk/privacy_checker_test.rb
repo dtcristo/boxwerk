@@ -77,10 +77,14 @@ module Boxwerk
       lib_dir = File.join(pkg_dir, 'lib')
       FileUtils.mkdir_p(lib_dir)
 
-      File.write(File.join(lib_dir, 'publicized.rb'),
-        "# pack_public: true\nclass Publicized\nend\n")
-      File.write(File.join(lib_dir, 'private_thing.rb'),
-        "class PrivateThing\nend\n")
+      File.write(
+        File.join(lib_dir, 'publicized.rb'),
+        "# pack_public: true\nclass Publicized\nend\n",
+      )
+      File.write(
+        File.join(lib_dir, 'private_thing.rb'),
+        "class PrivateThing\nend\n",
+      )
 
       pkg = create_package('packs/a', 'enforce_privacy' => true)
       consts = PrivacyChecker.public_constants(pkg, @tmpdir)
@@ -90,9 +94,12 @@ module Boxwerk
     end
 
     def test_private_constants_list
-      pkg = create_package('packs/a',
-        'enforce_privacy' => true,
-        'private_constants' => ['::Bar', '::Baz'])
+      pkg =
+        create_package(
+          'packs/a',
+          'enforce_privacy' => true,
+          'private_constants' => %w[::Bar ::Baz],
+        )
 
       privates = PrivacyChecker.private_constants_list(pkg)
       assert_includes privates, 'Bar'
@@ -100,9 +107,12 @@ module Boxwerk
     end
 
     def test_accessible_blocks_private_constant
-      pkg = create_package('packs/a',
-        'enforce_privacy' => true,
-        'private_constants' => ['::Secret'])
+      pkg =
+        create_package(
+          'packs/a',
+          'enforce_privacy' => true,
+          'private_constants' => ['::Secret'],
+        )
 
       refute PrivacyChecker.accessible?('Secret', pkg, @tmpdir)
     end

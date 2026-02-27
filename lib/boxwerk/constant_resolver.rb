@@ -42,44 +42,51 @@ module Boxwerk
           pkg_name = dep[:package_name]
 
           # Check if this dependency has the constant
-          has_constant = file_index.key?(name_str) ||
-            (begin; dep_box.const_get(const_name); true; rescue NameError; false; end)
+          has_constant =
+            file_index.key?(name_str) ||
+              (
+                begin
+                  dep_box.const_get(const_name)
+                  true
+                rescue NameError
+                  false
+                end
+              )
 
           next unless has_constant
 
           # Check explicitly private constants
           if private_constants && !private_constants.empty?
             if private_constants.include?(name_str) ||
-                private_constants.any? { |pc| name_str.start_with?("#{pc}::") }
-              raise NameError, "Privacy violation: '#{name_str}' is private to '#{pkg_name}'"
+                 private_constants.any? { |pc| name_str.start_with?("#{pc}::") }
+              raise NameError,
+                    "Privacy violation: '#{name_str}' is private to '#{pkg_name}'"
             end
           end
 
           # Check public constants whitelist (privacy enforcement)
           if public_constants && !public_constants.include?(name_str)
-            raise NameError, "Privacy violation: '#{name_str}' is private to '#{pkg_name}'. " \
-              "Only constants in the public path are accessible."
+            raise NameError,
+                  "Privacy violation: '#{name_str}' is private to '#{pkg_name}'. " \
+                    'Only constants in the public path are accessible.'
           end
 
           # Resolve the constant from the dependency box
-          value = begin
-            dep_box.const_get(const_name)
-          rescue NameError
-            file = file_index[name_str]
-            unless file
-              raise NameError, "uninitialized constant #{name_str}"
+          value =
+            begin
+              dep_box.const_get(const_name)
+            rescue NameError
+              file = file_index[name_str]
+              raise NameError, "uninitialized constant #{name_str}" unless file
+              dep_box.require(file)
+              dep_box.const_get(const_name)
             end
-            dep_box.require(file)
-            dep_box.const_get(const_name)
-          end
 
           found = true
           break
         end
 
-        unless found
-          raise NameError, "uninitialized constant #{name_str}"
-        end
+        raise NameError, "uninitialized constant #{name_str}" unless found
 
         value
       end

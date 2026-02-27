@@ -25,7 +25,7 @@ module Boxwerk
       fs = Zeitwerk::Loader::FileSystem.new(loader)
 
       entries = []
-      scan_dir(fs, inflector, dir, "", entries)
+      scan_dir(fs, inflector, dir, '', entries)
       entries
     end
 
@@ -48,23 +48,17 @@ module Boxwerk
       end
 
       # Phase 2: Eagerly trigger explicit namespaces so children can attach
-      namespaces.each do |ns|
-        box.eval(ns.full_path) if ns.file
-      end
+      namespaces.each { |ns| box.eval(ns.full_path) if ns.file }
 
       # Phase 3: Register file autoloads
-      files.each do |f|
-        register_autoload(box, f.parent, f.cname, f.file)
-      end
+      files.each { |f| register_autoload(box, f.parent, f.cname, f.file) }
     end
 
     # Builds a file index (const_name → file_path) from scan entries.
     # Used by ConstantResolver for dependency wiring.
     def self.build_file_index(entries)
       index = {}
-      entries.each do |e|
-        index[e.full_path] = e.file if e.file
-      end
+      entries.each { |e| index[e.full_path] = e.file if e.file }
       index
     end
 
@@ -74,11 +68,15 @@ module Boxwerk
       def scan_dir(fs, inflector, dir, parent_path, entries)
         fs.ls(dir) do |basename, abspath, ftype|
           if ftype == :file
-            cname = inflector.camelize(basename.delete_suffix(".rb"), dir)
+            cname = inflector.camelize(basename.delete_suffix('.rb'), dir)
             full_path = parent_path.empty? ? cname : "#{parent_path}::#{cname}"
             entries << Entry.new(
-              type: :file, cname: cname, full_path: full_path,
-              file: abspath, parent: parent_path, dir: nil
+              type: :file,
+              cname: cname,
+              full_path: full_path,
+              file: abspath,
+              parent: parent_path,
+              dir: nil,
             )
           elsif ftype == :directory
             cname = inflector.camelize(basename, dir)
@@ -86,8 +84,12 @@ module Boxwerk
             rb_file = "#{abspath}.rb"
             has_rb = File.exist?(rb_file)
             entries << Entry.new(
-              type: :namespace, cname: cname, full_path: full_path,
-              file: has_rb ? rb_file : nil, parent: parent_path, dir: abspath
+              type: :namespace,
+              cname: cname,
+              full_path: full_path,
+              file: has_rb ? rb_file : nil,
+              parent: parent_path,
+              dir: abspath,
             )
             scan_dir(fs, inflector, abspath, full_path, entries)
           end
@@ -106,7 +108,9 @@ module Boxwerk
         if parent.empty?
           box.eval("#{cname} = Module.new unless defined?(#{cname})")
         else
-          box.eval("#{parent}.const_set(:#{cname}, Module.new) unless defined?(#{full_path})")
+          box.eval(
+            "#{parent}.const_set(:#{cname}, Module.new) unless defined?(#{full_path})",
+          )
         end
       end
     end

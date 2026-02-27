@@ -105,9 +105,18 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('begin; _ = ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
-      refute a_box.eval('begin; _ = ClassC; true; rescue NameError; false; end'), 'A should not have ClassC'
-      refute a_box.eval('begin; _ = ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
+      assert a_box.eval(
+               'begin; _ = ClassB; true; rescue NameError; false; end',
+             ),
+             'A should have ClassB'
+      refute a_box.eval(
+               'begin; _ = ClassC; true; rescue NameError; false; end',
+             ),
+             'A should not have ClassC'
+      refute a_box.eval(
+               'begin; _ = ClassD; true; rescue NameError; false; end',
+             ),
+             'A should not have ClassD'
     end
 
     def test_diamond_dependency_isolation
@@ -141,9 +150,18 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('begin; _ = ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
-      assert a_box.eval('begin; _ = ClassC; true; rescue NameError; false; end'), 'A should have ClassC'
-      refute a_box.eval('begin; _ = ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
+      assert a_box.eval(
+               'begin; _ = ClassB; true; rescue NameError; false; end',
+             ),
+             'A should have ClassB'
+      assert a_box.eval(
+               'begin; _ = ClassC; true; rescue NameError; false; end',
+             ),
+             'A should have ClassC'
+      refute a_box.eval(
+               'begin; _ = ClassD; true; rescue NameError; false; end',
+             ),
+             'A should not have ClassD'
     end
 
     def test_constant_caching
@@ -166,9 +184,18 @@ module Boxwerk
     def test_multiple_constants_from_same_package
       a_dir = create_package_dir('a')
       create_package(a_dir)
-      File.write(File.join(a_dir, 'lib', 'foo.rb'), "class Foo\n  def self.name = 'foo'\nend\n")
-      File.write(File.join(a_dir, 'lib', 'bar.rb'), "class Bar\n  def self.name = 'bar'\nend\n")
-      File.write(File.join(a_dir, 'lib', 'baz.rb'), "class Baz\n  def self.name = 'baz'\nend\n")
+      File.write(
+        File.join(a_dir, 'lib', 'foo.rb'),
+        "class Foo\n  def self.name = 'foo'\nend\n",
+      )
+      File.write(
+        File.join(a_dir, 'lib', 'bar.rb'),
+        "class Bar\n  def self.name = 'bar'\nend\n",
+      )
+      File.write(
+        File.join(a_dir, 'lib', 'baz.rb'),
+        "class Baz\n  def self.name = 'baz'\nend\n",
+      )
 
       create_package(@tmpdir, dependencies: ['packs/a'])
 

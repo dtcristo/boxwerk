@@ -26,8 +26,13 @@ module Boxwerk
       dir
     end
 
-    def create_package(path, dependencies: nil, enforce_privacy: nil, public_path: nil,
-                       private_constants: nil)
+    def create_package(
+      path,
+      dependencies: nil,
+      enforce_privacy: nil,
+      public_path: nil,
+      private_constants: nil
+    )
       content = { 'enforce_dependencies' => true }
       content['dependencies'] = dependencies if dependencies
       content['enforce_privacy'] = enforce_privacy unless enforce_privacy.nil?

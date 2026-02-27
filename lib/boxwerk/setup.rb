@@ -6,7 +6,9 @@ module Boxwerk
     class << self
       def run!(start_dir: Dir.pwd)
         root_path = find_root(start_dir)
-        raise 'Cannot find package.yml in current directory or ancestors' unless root_path
+        unless root_path
+          raise 'Cannot find package.yml in current directory or ancestors'
+        end
 
         resolver = Boxwerk::PackageResolver.new(root_path)
         @box_manager = Boxwerk::BoxManager.new(root_path)
@@ -63,7 +65,7 @@ module Boxwerk
         conflicts = gem_resolver.check_conflicts(package_resolver)
         conflicts.each do |c|
           warn "Boxwerk: gem '#{c[:gem_name]}' is #{c[:package_version]} in #{c[:package]} " \
-            "but #{c[:global_version]} in global gems — both versions will be loaded into memory"
+                 "but #{c[:global_version]} in global gems — both versions will be loaded into memory"
         end
       end
     end

@@ -1,0 +1,2 @@
+--print-width=80
+--plugins=plugin/single_quotes,plugin/trailing_comma,plugin/disable_auto_ternary

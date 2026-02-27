@@ -23,8 +23,8 @@ class E2ERunner
   end
 
   def run_all
-    puts "Boxwerk E2E Tests"
-    puts "=" * 60
+    puts 'Boxwerk E2E Tests'
+    puts '=' * 60
 
     test_basic_run
     test_dependency_access
@@ -51,8 +51,8 @@ class E2ERunner
     test_console_root_box
     test_bundle_exec_reexec
 
-    puts ""
-    puts "=" * 60
+    puts ''
+    puts '=' * 60
     puts "#{@pass_count + @fail_count} tests: #{@pass_count} passed, #{@fail_count} failed"
     exit(@fail_count > 0 ? 1 : 0)
   end
@@ -73,8 +73,8 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "basic_run: exit status"
-      assert_match /Hello from Boxwerk!/, out, "basic_run: output"
+      assert_equal 0, status.exitstatus, 'basic_run: exit status'
+      assert_match /Hello from Boxwerk!/, out, 'basic_run: output'
     end
   end
 
@@ -94,8 +94,8 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "dependency_access: exit status"
-      assert_match /Result: 7/, out, "dependency_access: output"
+      assert_equal 0, status.exitstatus, 'dependency_access: exit status'
+      assert_match /Result: 7/, out, 'dependency_access: output'
     end
   end
 
@@ -118,8 +118,8 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "transitive_blocked: exit status"
-      assert_match /PASS/, out, "transitive_blocked: output"
+      assert_equal 0, status.exitstatus, 'transitive_blocked: exit status'
+      assert_match /PASS/, out, 'transitive_blocked: output'
     end
   end
 
@@ -162,9 +162,9 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "privacy_enforcement: exit status"
-      assert_match /public api/, out, "privacy_enforcement: public access"
-      assert_match /PASS/, out, "privacy_enforcement: privacy block"
+      assert_equal 0, status.exitstatus, 'privacy_enforcement: exit status'
+      assert_match /public api/, out, 'privacy_enforcement: public access'
+      assert_match /PASS/, out, 'privacy_enforcement: privacy block'
     end
   end
 
@@ -182,21 +182,23 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'exec', 'app.rb')
-      assert_equal 0, status.exitstatus, "exec_ruby_script: exit status"
-      assert_match /Hello via exec!/, out, "exec_ruby_script: output"
+      assert_equal 0, status.exitstatus, 'exec_ruby_script: exit status'
+      assert_match /Hello via exec!/, out, 'exec_ruby_script: output'
     end
   end
 
   def test_exec_missing_command
     out, status = run_boxwerk(Dir.pwd, 'exec')
-    assert_equal 1, status.exitstatus, "exec_missing_command: exit status"
-    assert_match /No command specified/, out, "exec_missing_command: error message"
+    assert_equal 1, status.exitstatus, 'exec_missing_command: exit status'
+    assert_match /No command specified/,
+                 out,
+                 'exec_missing_command: error message'
   end
 
   def test_version_command
     out, status = run_boxwerk(Dir.pwd, 'version')
-    assert_equal 0, status.exitstatus, "version: exit status"
-    assert_match /boxwerk \d+\.\d+\.\d+/, out, "version: output format"
+    assert_equal 0, status.exitstatus, 'version: exit status'
+    assert_match /boxwerk \d+\.\d+\.\d+/, out, 'version: output format'
   end
 
   def test_info_command
@@ -205,21 +207,21 @@ class E2ERunner
       create_package(dir, 'core')
 
       out, status = run_boxwerk(dir, 'info')
-      assert_equal 0, status.exitstatus, "info: exit status"
-      assert_match /Dependency Graph/, out, "info: shows dependency graph"
-      assert_match /└── packs\/core/, out, "info: shows tree"
-      assert_match /Packages/, out, "info: shows packages section"
+      assert_equal 0, status.exitstatus, 'info: exit status'
+      assert_match /Dependency Graph/, out, 'info: shows dependency graph'
+      assert_match %r{└── packs/core}, out, 'info: shows tree'
+      assert_match /Packages/, out, 'info: shows packages section'
     end
   end
 
   def test_help_command
     out, status = run_boxwerk(Dir.pwd, 'help')
-    assert_equal 0, status.exitstatus, "help: exit status"
-    assert_match /Usage:/, out, "help: shows usage"
-    assert_match /Commands:/, out, "help: shows commands"
-    assert_match /install/, out, "help: shows install command"
-    assert_match /exec/, out, "help: shows exec command"
-    assert_match /--package/, out, "help: shows package flag"
+    assert_equal 0, status.exitstatus, 'help: exit status'
+    assert_match /Usage:/, out, 'help: shows usage'
+    assert_match /Commands:/, out, 'help: shows commands'
+    assert_match /install/, out, 'help: shows install command'
+    assert_match /exec/, out, 'help: shows exec command'
+    assert_match /--package/, out, 'help: shows package flag'
   end
 
   def test_install_command
@@ -227,29 +229,33 @@ class E2ERunner
       create_root_package(dir, dependencies: ['packs/a'])
       create_package(dir, 'a')
       out, status = run_boxwerk(dir, 'install')
-      assert_equal 0, status.exitstatus, "install_no_gemfiles: exit status"
-      assert_match /No packages with a Gemfile or gems\.rb found/, out, "install_no_gemfiles: output"
+      assert_equal 0, status.exitstatus, 'install_no_gemfiles: exit status'
+      assert_match /No packages with a Gemfile or gems\.rb found/,
+                   out,
+                   'install_no_gemfiles: output'
     end
   end
 
   def test_missing_script_error
     out, status = run_boxwerk(Dir.pwd, 'run')
-    assert_equal 1, status.exitstatus, "missing_script: exit status"
-    assert_match /No script specified/, out, "missing_script: error message"
+    assert_equal 1, status.exitstatus, 'missing_script: exit status'
+    assert_match /No script specified/, out, 'missing_script: error message'
   end
 
   def test_nonexistent_script_error
     out, status = run_boxwerk(Dir.pwd, 'run', 'nonexistent.rb')
-    assert_equal 1, status.exitstatus, "nonexistent_script: exit status"
-    assert_match /Script not found/, out, "nonexistent_script: error message"
+    assert_equal 1, status.exitstatus, 'nonexistent_script: exit status'
+    assert_match /Script not found/, out, 'nonexistent_script: error message'
   end
 
   def test_missing_package_yml_error
     Dir.mktmpdir do |dir|
       write_file(dir, 'app.rb', "puts 'hello'\n")
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 1, status.exitstatus, "missing_package_yml: exit status"
-      assert_match /package\.yml/, out, "missing_package_yml: mentions package.yml"
+      assert_equal 1, status.exitstatus, 'missing_package_yml: exit status'
+      assert_match /package\.yml/,
+                   out,
+                   'missing_package_yml: mentions package.yml'
     end
   end
 
@@ -270,15 +276,15 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 0, status.exitstatus, "nested_constants: exit status"
-      assert_match %r{/api/v2}, out, "nested_constants: output"
+      assert_equal 0, status.exitstatus, 'nested_constants: exit status'
+      assert_match %r{/api/v2}, out, 'nested_constants: output'
     end
   end
 
   def test_unknown_command_error
     out, status = run_boxwerk(Dir.pwd, 'foobar')
-    assert_equal 1, status.exitstatus, "unknown_command: exit status"
-    assert_match /Unknown command/, out, "unknown_command: error message"
+    assert_equal 1, status.exitstatus, 'unknown_command: exit status'
+    assert_match /Unknown command/, out, 'unknown_command: error message'
   end
 
   def test_package_flag_run
@@ -296,8 +302,8 @@ class E2ERunner
 
       # Run in root package (has access to greeter via dependency)
       out, status = run_boxwerk(dir, 'run', '-p', '.', 'script.rb')
-      assert_equal 0, status.exitstatus, "package_flag_run: exit status"
-      assert_match /Hello from greeter pack!/, out, "package_flag_run: output"
+      assert_equal 0, status.exitstatus, 'package_flag_run: exit status'
+      assert_match /Hello from greeter pack!/, out, 'package_flag_run: output'
     end
   end
 
@@ -315,8 +321,8 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'exec', '-p', '.', 'script.rb')
-      assert_equal 0, status.exitstatus, "package_flag_exec: exit status"
-      assert_match /Hello via exec!/, out, "package_flag_exec: output"
+      assert_equal 0, status.exitstatus, 'package_flag_exec: exit status'
+      assert_match /Hello via exec!/, out, 'package_flag_exec: output'
     end
   end
 
@@ -325,8 +331,8 @@ class E2ERunner
       create_root_package(dir)
       write_file(dir, 'app.rb', "puts 'hello'\n")
       out, status = run_boxwerk(dir, 'run', '-p', 'packs/nonexistent', 'app.rb')
-      assert_equal 1, status.exitstatus, "package_flag_unknown: exit status"
-      assert_match /Unknown package/, out, "package_flag_unknown: error message"
+      assert_equal 1, status.exitstatus, 'package_flag_unknown: exit status'
+      assert_match /Unknown package/, out, 'package_flag_unknown: error message'
     end
   end
 
@@ -351,19 +357,21 @@ class E2ERunner
       RUBY
 
       out, status = run_boxwerk(dir, 'run', '--root-box', 'script.rb')
-      assert_equal 0, status.exitstatus, "root_box_flag: exit status"
-      assert_match /PASS/, out, "root_box_flag: no package constants in root box"
+      assert_equal 0, status.exitstatus, 'root_box_flag: exit status'
+      assert_match /PASS/,
+                   out,
+                   'root_box_flag: no package constants in root box'
 
       # Also test -r alias
       out2, status2 = run_boxwerk(dir, 'run', '-r', 'script.rb')
-      assert_equal 0, status2.exitstatus, "root_box_flag: -r alias exit status"
-      assert_match /PASS/, out2, "root_box_flag: -r alias works"
+      assert_equal 0, status2.exitstatus, 'root_box_flag: -r alias exit status'
+      assert_match /PASS/, out2, 'root_box_flag: -r alias works'
     end
   end
 
   def test_help_shows_root_box_flag
     out, status = run_boxwerk(Dir.pwd, 'help')
-    assert_match /--root-box/, out, "help: shows --root-box option"
+    assert_match /--root-box/, out, 'help: shows --root-box option'
   end
 
   def test_console_root_package
@@ -376,10 +384,15 @@ class E2ERunner
         end
       RUBY
 
-      out, status = run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console')
-      assert_equal 0, status.exitstatus, "console_root_package: exit status"
-      assert_match /Console Hello!/, out, "console_root_package: resolves dependency constant"
-      assert_match /console \(\.\)/, out, "console_root_package: shows (.) label"
+      out, status =
+        run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console')
+      assert_equal 0, status.exitstatus, 'console_root_package: exit status'
+      assert_match /Console Hello!/,
+                   out,
+                   'console_root_package: resolves dependency constant'
+      assert_match /console \(\.\)/,
+                   out,
+                   'console_root_package: shows (.) label'
     end
   end
 
@@ -393,9 +406,18 @@ class E2ERunner
         end
       RUBY
 
-      out, status = run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console', '-p', 'packs/greeter')
-      assert_equal 0, status.exitstatus, "console_child_package: exit status"
-      assert_match /From greeter!/, out, "console_child_package: resolves own constant"
+      out, status =
+        run_boxwerk_with_stdin(
+          dir,
+          "puts Greeter.hello\nexit\n",
+          'console',
+          '-p',
+          'packs/greeter',
+        )
+      assert_equal 0, status.exitstatus, 'console_child_package: exit status'
+      assert_match /From greeter!/,
+                   out,
+                   'console_child_package: resolves own constant'
     end
   end
 
@@ -420,8 +442,10 @@ class E2ERunner
         exit
       STDIN
       out, status = run_boxwerk_with_stdin(dir, script, 'console', '--root-box')
-      assert_equal 0, status.exitstatus, "console_root_box: exit status"
-      assert_match /PASS/, out, "console_root_box: no package constants in root box"
+      assert_equal 0, status.exitstatus, 'console_root_box: exit status'
+      assert_match /PASS/,
+                   out,
+                   'console_root_box: no package constants in root box'
     end
   end
 
@@ -444,22 +468,20 @@ class E2ERunner
       env = {
         'RUBY_BOX' => '1',
         'RUBYOPT' => '-rbundler/setup',
-        'BUNDLE_GEMFILE' => gemfile
+        'BUNDLE_GEMFILE' => gemfile,
       }
       cmd = ['ruby', @boxwerk_bin, 'run', 'app.rb']
       stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
       out = stdout + stderr
-      assert_equal 0, status.exitstatus, "bundle_exec_reexec: exit status"
-      assert_match /Hello via bundle exec!/, out, "bundle_exec_reexec: output"
+      assert_equal 0, status.exitstatus, 'bundle_exec_reexec: exit status'
+      assert_match /Hello via bundle exec!/, out, 'bundle_exec_reexec: output'
     end
   end
 
   # --- Helpers ---
 
   def with_project
-    Dir.mktmpdir do |dir|
-      yield dir
-    end
+    Dir.mktmpdir { |dir| yield dir }
   end
 
   def run_boxwerk(dir, *args)
@@ -473,7 +495,8 @@ class E2ERunner
   def run_boxwerk_with_stdin(dir, input, *args)
     env = { 'RUBY_BOX' => '1' }
     cmd = ['ruby', @boxwerk_bin, *args]
-    stdout, stderr, status = Open3.capture3(env, *cmd, stdin_data: input, chdir: dir)
+    stdout, stderr, status =
+      Open3.capture3(env, *cmd, stdin_data: input, chdir: dir)
     [stdout + stderr, status]
   end
 

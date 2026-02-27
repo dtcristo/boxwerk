@@ -17,7 +17,10 @@ module Boxwerk
     def test_returns_nil_for_package_without_gemfile
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
+      File.write(
+        File.join(pkg_dir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
 
       pkg = Package.new(name: 'packs/a', config: {})
       resolver = GemResolver.new(@tmpdir)
@@ -28,7 +31,10 @@ module Boxwerk
     def test_detects_gemfile
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       resolver = GemResolver.new(@tmpdir)
       # No lockfile, so returns nil
@@ -39,7 +45,10 @@ module Boxwerk
     def test_detects_gems_rb
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'gems.rb'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'gems.rb'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       resolver = GemResolver.new(@tmpdir)
       # gems.rb detected but no gems.locked, so returns nil
@@ -51,7 +60,10 @@ module Boxwerk
       # Create a package with a real Gemfile.lock referencing an installed gem
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       # Get the actual installed json version
       json_spec = Gem::Specification.find_by_name('json')
@@ -84,7 +96,10 @@ module Boxwerk
     def test_gems_for_returns_gem_info_structs
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       json_spec = Gem::Specification.find_by_name('json')
       File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
@@ -117,7 +132,10 @@ module Boxwerk
     def test_gems_for_caches_results
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       json_spec = Gem::Specification.find_by_name('json')
       File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
@@ -146,12 +164,21 @@ module Boxwerk
 
     def test_check_conflicts_empty_when_no_global_gems
       # Root package has no Gemfile, child has gems — no conflicts
-      File.write(File.join(@tmpdir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
+      File.write(
+        File.join(@tmpdir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
 
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
 
       json_spec = Gem::Specification.find_by_name('json')
       File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
@@ -182,8 +209,14 @@ module Boxwerk
       json_spec = Gem::Specification.find_by_name('json')
 
       # Root Gemfile with json
-      File.write(File.join(@tmpdir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
-      File.write(File.join(@tmpdir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(@tmpdir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
+      File.write(
+        File.join(@tmpdir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(@tmpdir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
@@ -203,8 +236,14 @@ module Boxwerk
       # Child with a fake different version
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
@@ -240,8 +279,14 @@ module Boxwerk
       # Root and child both have json at the SAME version — no conflict
       json_spec = Gem::Specification.find_by_name('json')
 
-      File.write(File.join(@tmpdir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
-      File.write(File.join(@tmpdir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(@tmpdir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
+      File.write(
+        File.join(@tmpdir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(@tmpdir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
@@ -260,8 +305,14 @@ module Boxwerk
 
       pkg_dir = File.join(@tmpdir, 'packs', 'a')
       FileUtils.mkdir_p(pkg_dir)
-      File.write(File.join(pkg_dir, 'package.yml'), YAML.dump('enforce_dependencies' => true))
-      File.write(File.join(pkg_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'json'\n")
+      File.write(
+        File.join(pkg_dir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => true),
+      )
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
       File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
         GEM
           remote: https://rubygems.org/
