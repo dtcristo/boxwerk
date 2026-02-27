@@ -62,7 +62,7 @@ module Boxwerk
         puts '  version                      Show version'
         puts ''
         puts 'Options:'
-        puts '  -p, --package <name>         Run in a specific package box (default: root)'
+        puts '  -p, --package <name>         Run in a specific package box (default: main)'
         puts '      --all                    Run command for all packages sequentially'
         puts ''
         puts 'Examples:'
@@ -216,7 +216,7 @@ module Boxwerk
         box = resolve_target_box(result, parsed[:package])
         install_resolver_on_ruby_root(result, target_package: target_pkg)
 
-        pkg_label = parsed[:package] || 'root'
+        pkg_label = parsed[:package] || 'main'
         start_console_in_box(box, parsed[:remaining], pkg_label)
       end
 
@@ -226,7 +226,7 @@ module Boxwerk
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
-        puts "Root: #{resolver.root.name}"
+        puts "Main: #{resolver.root.name}"
         puts "Packages: #{resolver.packages.size}"
 
         puts ''
@@ -343,7 +343,7 @@ module Boxwerk
           # Try own box first (for the pack's internal constants).
           # Use eval to trigger autoload within the box's context.
           begin
-            own_box.eval(name_str)
+            own_box.eval("_ = ::#{name_str}")
           rescue NameError
             # Fall through to dependency resolver
             if dep_resolver
@@ -378,7 +378,7 @@ module Boxwerk
         nil
       end
 
-      def start_console_in_box(box, irb_args = [], pkg_label = 'root')
+      def start_console_in_box(box, irb_args = [], pkg_label = 'main')
         puts "boxwerk #{Boxwerk::VERSION} console (#{pkg_label})"
         puts ''
         puts 'All packages loaded and wired. Type "exit" or press Ctrl+D to quit.'

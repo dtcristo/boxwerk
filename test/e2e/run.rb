@@ -287,7 +287,7 @@ class E2ERunner
         puts Greeter.hello
       RUBY
 
-      # Run in root package (has access to greeter via dependency)
+      # Run in main package (has access to greeter via dependency)
       out, status = run_boxwerk(dir, 'run', '-p', '.', 'script.rb')
       assert_equal 0, status.exitstatus, "package_flag_run: exit status"
       assert_match /Hello from greeter pack!/, out, "package_flag_run: output"

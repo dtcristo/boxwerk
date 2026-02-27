@@ -87,7 +87,7 @@ module Boxwerk
       assert_equal 'public', a_box.eval('Api.call'),
                    'Boxwerk: public constant should be accessible'
 
-      error = assert_raises(NameError) { a_box.eval('Secret') }
+      error = assert_raises(NameError) { a_box.eval('_ = Secret') }
       assert_match(/Privacy violation/, error.message,
                    'Boxwerk: private constant should raise privacy error')
     end
@@ -116,8 +116,8 @@ module Boxwerk
       refute_includes root_pkg.dependencies, 'packs/b'
 
       root_box = result[:box_manager].boxes['.']
-      assert root_box.eval('begin; Surface; true; rescue NameError; false; end'), 'Root should see Surface'
-      assert_raises(NameError) { root_box.eval('Deep') }
+      assert root_box.eval('begin; _ = Surface; true; rescue NameError; false; end'), 'Root should see Surface'
+      assert_raises(NameError) { root_box.eval('_ = Deep') }
 
       # But A CAN access Deep (direct dependency)
       a_box = result[:box_manager].boxes['packs/a']

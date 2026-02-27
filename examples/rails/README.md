@@ -15,7 +15,7 @@ while application code is isolated into packages using `Ruby::Box`.
 rails/
 ├── gems.rb                          # Rails + shared gems
 ├── gems.locked
-├── package.yml                      # Root package
+├── package.yml                      # Main package
 ├── Rakefile
 ├── config/
 │   ├── application.rb               # Rails::Application (not boxed)

@@ -39,7 +39,7 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       assert_equal 'ClassA', root_box.eval('ClassA.name')
-      assert_raises(NameError) { root_box.eval('ClassB') }
+      assert_raises(NameError) { root_box.eval('_ = ClassB') }
     end
 
     def test_transitive_dependencies_not_accessible
@@ -60,7 +60,7 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       assert_equal 'ClassB', root_box.eval('ClassB.name')
-      assert_raises(NameError) { root_box.eval('ClassC') }
+      assert_raises(NameError) { root_box.eval('_ = ClassC') }
     end
 
     def test_sibling_packages_isolated
@@ -105,9 +105,9 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('begin; ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
-      refute a_box.eval('begin; ClassC; true; rescue NameError; false; end'), 'A should not have ClassC'
-      refute a_box.eval('begin; ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
+      assert a_box.eval('begin; _ = ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
+      refute a_box.eval('begin; _ = ClassC; true; rescue NameError; false; end'), 'A should not have ClassC'
+      refute a_box.eval('begin; _ = ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
     end
 
     def test_diamond_dependency_isolation
@@ -141,9 +141,9 @@ module Boxwerk
       result = boot_system
       a_box = result[:box_manager].boxes['packs/a']
 
-      assert a_box.eval('begin; ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
-      assert a_box.eval('begin; ClassC; true; rescue NameError; false; end'), 'A should have ClassC'
-      refute a_box.eval('begin; ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
+      assert a_box.eval('begin; _ = ClassB; true; rescue NameError; false; end'), 'A should have ClassB'
+      assert a_box.eval('begin; _ = ClassC; true; rescue NameError; false; end'), 'A should have ClassC'
+      refute a_box.eval('begin; _ = ClassD; true; rescue NameError; false; end'), 'A should not have ClassD'
     end
 
     def test_constant_caching

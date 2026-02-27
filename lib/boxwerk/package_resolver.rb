@@ -47,7 +47,7 @@ module Boxwerk
     def find_package_ymls
       ymls = []
 
-      # Always include root package.yml
+      # Always include main package.yml
       root_yml = File.join(@root_path, 'package.yml')
       ymls << root_yml if File.exist?(root_yml)
 

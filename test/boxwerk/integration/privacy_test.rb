@@ -23,7 +23,7 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       assert_equal 'public', root_box.eval('Invoice.value')
-      assert_raises(NameError) { root_box.eval('Secret') }
+      assert_raises(NameError) { root_box.eval('_ = Secret') }
     end
 
     def test_privacy_allows_all_when_not_enforced
@@ -61,7 +61,7 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       assert_equal 'sigil', root_box.eval('Publicized.value')
-      assert_raises(NameError) { root_box.eval('PrivateThing') }
+      assert_raises(NameError) { root_box.eval('_ = PrivateThing') }
     end
 
     def test_privacy_explicit_private_constants
@@ -79,7 +79,7 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       assert_equal 'report', root_box.eval('Report.value')
-      assert_raises(NameError) { root_box.eval('Invoice') }
+      assert_raises(NameError) { root_box.eval('_ = Invoice') }
     end
 
     def test_descriptive_error_for_privacy_violation
@@ -92,7 +92,7 @@ module Boxwerk
       result = boot_system
       root_box = result[:box_manager].boxes['.']
 
-      error = assert_raises(NameError) { root_box.eval('Secret') }
+      error = assert_raises(NameError) { root_box.eval('_ = Secret') }
       assert_match(/Privacy violation/, error.message)
       assert_match(/packs\/a/, error.message)
     end

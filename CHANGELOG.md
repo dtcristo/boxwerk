@@ -28,8 +28,8 @@ CLI designed to feel Ruby-native.
 ### Added
 - **`boxwerk exec` command**: Execute any Ruby command in the boxed
   environment (e.g. `boxwerk exec rake test`, `boxwerk exec rails console`).
-- **`boxwerk run` command**: Run a Ruby script in the root package box.
-- **`boxwerk console` command**: Interactive IRB in the root package box.
+- **`boxwerk run` command**: Run a Ruby script in the main package box.
+- **`boxwerk console` command**: Interactive IRB in the main package box.
 - **`boxwerk install` command**: Bundle install for all packages with a
   `Gemfile`/`gems.rb`.
 - **`boxwerk info` command**: Show package structure, dependencies, and flags.

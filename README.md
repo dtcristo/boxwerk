@@ -58,7 +58,7 @@ gem 'rake'
 ```
 my_app/
 ├── gems.rb
-├── package.yml              # Root package
+├── package.yml              # Main package
 ├── app.rb
 └── packs/
     ├── finance/
@@ -73,7 +73,7 @@ my_app/
             └── calculator.rb
 ```
 
-**Root `package.yml`:**
+**Main `package.yml`:**
 ```yaml
 enforce_dependencies: true
 dependencies:
@@ -125,7 +125,7 @@ boxwerk help                         Show usage
 ### Options
 
 ```
--p, --package <name>         Run in a specific package box (default: root)
+-p, --package <name>         Run in a specific package box (default: main)
     --all                    Run command for all packages sequentially
 ```
 
@@ -133,10 +133,10 @@ boxwerk help                         Show usage
 
 ```bash
 boxwerk run app.rb                          # Run a script
-boxwerk exec rake test                      # Run tests (root package)
+boxwerk exec rake test                      # Run tests (main package)
 boxwerk exec -p packs/util rake test        # Run tests for a specific package
 boxwerk exec --all rake test                # Run tests for all packages
-boxwerk console                             # Interactive IRB (root package)
+boxwerk console                             # Interactive IRB (main package)
 boxwerk console -p packs/finance            # IRB in a specific package
 boxwerk info                                # Show package graph
 ```
