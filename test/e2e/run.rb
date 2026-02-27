@@ -41,6 +41,9 @@ class E2ERunner
     test_missing_package_yml_error
     test_nested_constants
     test_unknown_command_error
+    test_package_flag_run
+    test_package_flag_exec
+    test_package_flag_unknown
 
     puts ""
     puts "=" * 60
@@ -209,6 +212,7 @@ class E2ERunner
     assert_match /Commands:/, out, "help: shows commands"
     assert_match /install/, out, "help: shows install command"
     assert_match /exec/, out, "help: shows exec command"
+    assert_match /--package/, out, "help: shows package flag"
   end
 
   def test_install_command
@@ -217,7 +221,7 @@ class E2ERunner
       create_package(dir, 'a')
       out, status = run_boxwerk(dir, 'install')
       assert_equal 0, status.exitstatus, "install_no_gemfiles: exit status"
-      assert_match /No packages with gems\.rb found/, out, "install_no_gemfiles: output"
+      assert_match /No packages with a Gemfile or gems\.rb found/, out, "install_no_gemfiles: output"
     end
   end
 
@@ -270,6 +274,55 @@ class E2ERunner
     assert_match /Unknown command/, out, "unknown_command: error message"
   end
 
+  def test_package_flag_run
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello from greeter pack!'
+        end
+      RUBY
+      write_file(dir, 'script.rb', <<~RUBY)
+        puts Greeter.hello
+      RUBY
+
+      # Run in root package (has access to greeter via dependency)
+      out, status = run_boxwerk(dir, 'run', '-p', '.', 'script.rb')
+      assert_equal 0, status.exitstatus, "package_flag_run: exit status"
+      assert_match /Hello from greeter pack!/, out, "package_flag_run: output"
+    end
+  end
+
+  def test_package_flag_exec
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello via exec!'
+        end
+      RUBY
+      write_file(dir, 'script.rb', <<~RUBY)
+        puts Greeter.hello
+      RUBY
+
+      out, status = run_boxwerk(dir, 'exec', '-p', '.', 'script.rb')
+      assert_equal 0, status.exitstatus, "package_flag_exec: exit status"
+      assert_match /Hello via exec!/, out, "package_flag_exec: output"
+    end
+  end
+
+  def test_package_flag_unknown
+    with_project do |dir|
+      create_root_package(dir)
+      write_file(dir, 'app.rb', "puts 'hello'\n")
+      out, status = run_boxwerk(dir, 'run', '-p', 'packs/nonexistent', 'app.rb')
+      assert_equal 1, status.exitstatus, "package_flag_unknown: exit status"
+      assert_match /Unknown package/, out, "package_flag_unknown: error message"
+    end
+  end
+
   # --- Helpers ---
 
   def with_project
@@ -280,7 +333,7 @@ class E2ERunner
 
   def run_boxwerk(dir, *args)
     gemfile = File.expand_path('../../gems.rb', __dir__)
-    env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => gemfile }
+    env = { 'RUBY_BOX' => '1' }
     cmd = ['ruby', @boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
     [stdout + stderr, status]
