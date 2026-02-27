@@ -45,12 +45,13 @@ gem install boxwerk
 
 ### 2. Add a `Gemfile` for global gems
 
-Global gems are accessible to all packages:
+Global gems are accessible to all packages. Include `boxwerk` itself to make its dependencies (like IRB for `boxwerk console`) available:
 
 ```ruby
 # Gemfile
 source 'https://rubygems.org'
 
+gem 'boxwerk'
 gem 'dotenv', require: 'dotenv/load'
 ```
 
@@ -195,7 +196,7 @@ end
 
 ## Architecture
 
-Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once — in the root box — and inherited by all package boxes.
+Install Boxwerk globally (`gem install boxwerk`) so the CLI runs outside Bundler. Add `gem 'boxwerk'` to your project's `Gemfile` to pin the version and make its dependencies (IRB, etc.) available to your packages. Avoid `bundle exec boxwerk` — that loads global gems before Boxwerk has a chance to set up the root box.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for full implementation details including the boot sequence, constant resolution, and Ruby::Box internals.
 

@@ -202,6 +202,10 @@ The CLI (`Boxwerk::CLI`) provides:
 | `info`  | Show package structure and dependencies |
 | `install` | Bundle install for all packages |
 
+### console Implementation
+
+Console always runs IRB in `Ruby::Box.root` rather than the target package box. The composite resolver installed on root provides the same constant access. This avoids a Ruby 4.0.1 GC bug where running IRB in child boxes with `const_missing` overrides triggers a double-free crash during process exit.
+
 ### exec Implementation
 
 `exec` resolves the command to a gem binstub path, then evaluates the binstub's content in the target box using `box.eval(content)`. File content is evaluated directly (not via `load`) because `load` creates a new file scope where inherited DSL methods (e.g. Rake's `task`) may not be visible inside a `Ruby::Box`.

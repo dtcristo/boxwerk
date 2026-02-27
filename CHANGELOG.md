@@ -60,6 +60,8 @@ CLI designed to feel Ruby-native.
 - `examples/rails/README.md`: Comprehensive Rails integration plan.
 - `TODO.md`: Plans for IRB console, constant reloading,
   global gems, gem conflicts, Bundler-inspired commands, and more.
+- **IRB dependency**: `irb` gem included as a dependency so `boxwerk console`
+  works when boxwerk is in the project's `Gemfile`.
 
 ### Changed
 - Terminology uses Packwerk's "root package" consistently throughout.
@@ -69,6 +71,8 @@ CLI designed to feel Ruby-native.
 - `GemResolver` searches all gem directories (not just current bundle) for
   per-package gem isolation.
 - Example restructured from `example/` → `examples/simple/`.
+- Console runs IRB in `Ruby::Box.root` (with composite resolver) instead of
+  child boxes, working around a Ruby::Box GC crash on exit.
 
 ### Removed
 - `VisibilityChecker`, `FolderPrivacyChecker`, `LayerChecker` modules.

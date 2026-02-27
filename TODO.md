@@ -78,6 +78,12 @@ Start with Approach 1 behind an opt-in flag (`boxwerk run --watch`).
 IRB's completer uses `Module.constants` which doesn't reflect box-scoped
 constants.
 
+**Note:** Console runs IRB in `Ruby::Box.root` (with the composite resolver)
+instead of the target package box. This works around a Ruby 4.0.1 GC crash
+(`_box_entry_free` double-free during process exit) triggered by running IRB
+in child boxes with `const_missing` overrides. This should be revisited when
+Ruby::Box stabilizes.
+
 ### Plan
 
 1. Implement `Boxwerk.available_constants(box)` — returns own + dependency
