@@ -10,17 +10,10 @@ task :e2e do
   sh 'ruby test/e2e/run.rb'
 end
 
-STREE_FILES =
-  'lib/**/*.rb exe/**/* test/**/*.rb Rakefile ' \
-    'examples/**/*.rb examples/**/Rakefile'
-
-desc 'Check formatting with syntax_tree'
-task :fmt_check do
-  sh "bundle exec stree check #{STREE_FILES}"
-end
+STREE_FILES = '**/*.rb **/Rakefile'
 
 desc 'Format code with syntax_tree'
-task :fmt do
+task :format do
   sh "bundle exec stree write #{STREE_FILES}"
 end
 
