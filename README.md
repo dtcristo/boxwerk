@@ -43,14 +43,15 @@ See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Rub
 gem install boxwerk
 ```
 
-### 2. Add a `Gemfile` for your project
+### 2. Add a `Gemfile` for global gems
+
+Global gems are accessible to all packages:
 
 ```ruby
 # Gemfile
 source 'https://rubygems.org'
 
-gem 'minitest'
-gem 'rake'
+gem 'dotenv', require: 'dotenv/load'
 ```
 
 ### 3. Create packages

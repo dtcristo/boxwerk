@@ -9,13 +9,15 @@ Planned improvements and design considerations for Boxwerk.
 | Zeitwerk autoloading inside boxes | High | Hard |
 | Constant reloading (dev workflow) | High | Hard |
 | Bundler inside package boxes | High | Medium |
+| Gem group support (`:test`, `:development`) | High | Medium |
 | Per-package testing (`boxwerk test`) | Medium | Medium |
 | IRB console autocomplete | Medium | Medium |
 | Global vs package gem conflict detection | Medium | Easy |
 | Package gem transitive dependency isolation | Medium | Medium |
 | `boxwerk check` (static analysis) | Medium | Medium |
 | `boxwerk init` (scaffold packages) | Low | Easy |
-| `boxwerk list` / `boxwerk outdated` | Low | Easy |
+| `boxwerk list` / `boxwerk outdated` / `boxwerk update` | Low | Easy |
+| `boxwerk clean` | Low | Easy |
 | Configurable violation handling (warn/strict) | Low | Easy |
 | package_todo.yml support | Low | Medium |
 | IDE / language server support | Low | Hard |
@@ -163,6 +165,17 @@ manipulation. Gems must be manually `require`'d.
 
 **Challenge:** Multiple Bundler instances in different boxes may conflict.
 Need to test whether `Bundler.setup` works correctly inside `Ruby::Box`.
+
+## Gem Group Support
+
+**Current limitation:** `Bundler.require` in the root box only requires the
+default group. Gems in `:test` or `:development` groups are available on
+`$LOAD_PATH` (via `Bundler.setup`) but not auto-required. This means gems
+like `rake` must be in the default group because rake's DSL (`task`) needs
+to be loaded in the root box for Rakefiles to work.
+
+**Blocked by:** Bundler Inside Package Boxes. Once Bundler runs per-box,
+`Bundler.require(:default, :test)` can be called in the appropriate context.
 
 ## Per-Package Testing
 
