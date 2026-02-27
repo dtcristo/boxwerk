@@ -46,6 +46,9 @@ class E2ERunner
     test_package_flag_unknown
     test_root_box_flag
     test_help_shows_root_box_flag
+    test_console_root_package
+    test_console_child_package
+    test_console_root_box
 
     puts ""
     puts "=" * 60
@@ -361,6 +364,64 @@ class E2ERunner
     assert_match /--root-box/, out, "help: shows --root-box option"
   end
 
+  def test_console_root_package
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Console Hello!'
+        end
+      RUBY
+
+      out, status = run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console')
+      assert_equal 0, status.exitstatus, "console_root_package: exit status"
+      assert_match /Console Hello!/, out, "console_root_package: resolves dependency constant"
+    end
+  end
+
+  def test_console_child_package
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'From greeter!'
+        end
+      RUBY
+
+      out, status = run_boxwerk_with_stdin(dir, "puts Greeter.hello\nexit\n", 'console', '-p', 'packs/greeter')
+      assert_equal 0, status.exitstatus, "console_child_package: exit status"
+      assert_match /From greeter!/, out, "console_child_package: resolves own constant"
+    end
+  end
+
+  def test_console_root_box
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello!'
+        end
+      RUBY
+
+      # Root box should not have access to package constants
+      script = <<~STDIN
+        begin
+          _ = Greeter
+          puts "FAIL"
+        rescue NameError
+          puts "PASS: no package constants"
+        end
+        exit
+      STDIN
+      out, status = run_boxwerk_with_stdin(dir, script, 'console', '--root-box')
+      assert_equal 0, status.exitstatus, "console_root_box: exit status"
+      assert_match /PASS/, out, "console_root_box: no package constants in root box"
+    end
+  end
+
   # --- Helpers ---
 
   def with_project
@@ -374,6 +435,13 @@ class E2ERunner
     env = { 'RUBY_BOX' => '1' }
     cmd = ['ruby', @boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
+    [stdout + stderr, status]
+  end
+
+  def run_boxwerk_with_stdin(dir, input, *args)
+    env = { 'RUBY_BOX' => '1' }
+    cmd = ['ruby', @boxwerk_bin, *args]
+    stdout, stderr, status = Open3.capture3(env, *cmd, stdin_data: input, chdir: dir)
     [stdout + stderr, status]
   end
 

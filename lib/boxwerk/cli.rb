@@ -222,15 +222,16 @@ module Boxwerk
 
         result = perform_setup
         if parsed[:root_box]
-          box = Ruby::Box.root
           pkg_label = 'root box'
         else
           target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
-          box = resolve_target_box(result, parsed[:package])
           install_resolver_on_ruby_root(result, target_package: target_pkg)
           pkg_label = parsed[:package] || 'root'
         end
-        start_console_in_box(box, parsed[:remaining], pkg_label)
+        # Always run IRB in Ruby::Box.root. The composite resolver installed
+        # above provides access to the target package's constants. Running in
+        # a child box triggers a Ruby::Box GC crash on exit (Ruby 4.0.1 bug).
+        start_console_in_box(Ruby::Box.root, parsed[:remaining], pkg_label)
       end
 
       def info_command
@@ -400,10 +401,6 @@ module Boxwerk
           ARGV.replace(#{(['--noautocomplete'] + irb_args).inspect})
           IRB.start
         RUBY
-      rescue LoadError
-        $stderr.puts "Error: 'irb' gem is not available."
-        $stderr.puts "Install it with: gem install irb"
-        exit 1
       end
     end
   end
