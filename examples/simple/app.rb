@@ -70,6 +70,22 @@ else
 end
 puts ''
 
+# --- Private class instances from public methods ---
+puts '6. Private class instances from public methods'
+item = invoice.items.first
+puts "  item.to_s        → #{item.to_s}"
+puts "  item.class       → #{item.class}"
+puts "  item.class.name  → #{item.class.name}"
+puts '  ✓ Can use private LineItem instances returned by public Invoice methods'
+
+begin
+  LineItem
+  puts '  ✗ ERROR: private constant accessible!'
+rescue NameError
+  puts '  ✓ LineItem constant blocked (private to packs/finance)'
+end
+puts ''
+
 puts '=' * 60
 puts 'All checks passed!'
 puts '=' * 60

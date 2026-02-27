@@ -218,7 +218,6 @@ module Boxwerk
       end
 
       def console_command(args)
-        require 'irb'
         parsed = parse_package_flag(args)
 
         result = perform_setup
@@ -395,13 +394,16 @@ module Boxwerk
       def start_console_in_box(box, irb_args = [], pkg_label = 'root')
         puts "boxwerk #{Boxwerk::VERSION} console (#{pkg_label})"
         puts ''
-        puts 'All packages loaded and wired. Type "exit" or press Ctrl+D to quit.'
-        puts ''
 
         box.eval(<<~RUBY)
+          require 'irb'
           ARGV.replace(#{(['--noautocomplete'] + irb_args).inspect})
           IRB.start
         RUBY
+      rescue LoadError
+        $stderr.puts "Error: 'irb' gem is not available."
+        $stderr.puts "Install it with: gem install irb"
+        exit 1
       end
     end
   end

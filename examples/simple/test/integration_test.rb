@@ -36,4 +36,17 @@ class IntegrationTest < Minitest::Test
   def test_dotenv_accessible_as_global_gem
     assert defined?(Dotenv), 'Global gem dotenv should be accessible in root package'
   end
+
+  def test_private_class_instance_from_public_method
+    invoice = Invoice.new
+    invoice.add_item('Widget', 5_000)
+    item = invoice.items.first
+    assert_equal 'Widget', item.description
+    assert_equal 5_000, item.amount_cents
+    assert_equal 'LineItem', item.class.name
+  end
+
+  def test_private_line_item_constant_blocked
+    assert_raises(NameError) { LineItem }
+  end
 end

@@ -55,7 +55,8 @@ CLI designed to feel Ruby-native.
 - `ARCHITECTURE.md`: Detailed implementation documentation covering boot
   sequence, constant resolution, Ruby::Box internals, and module structure.
 - `examples/simple/`: Multi-package example with faker version isolation,
-  per-package unit tests, and per-package gems.
+  per-package unit tests, per-package gems, and private class instance
+  demonstration.
 - `examples/rails/README.md`: Comprehensive Rails integration plan.
 - `TODO.md`: Plans for IRB console, constant reloading,
   global gems, gem conflicts, Bundler-inspired commands, and more.

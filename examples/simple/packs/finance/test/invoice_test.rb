@@ -36,4 +36,14 @@ class InvoiceTest < Minitest::Test
     assert_equal 1_200, invoice.tax
     assert_equal 9_200, invoice.total
   end
+
+  def test_items_are_line_items
+    invoice = Invoice.new
+    invoice.add_item('Widget', 5_000)
+    item = invoice.items.first
+    assert_equal 'Widget', item.description
+    assert_equal 5_000, item.amount_cents
+    assert_equal 'Widget: 5000', item.to_s
+    assert_equal 'LineItem', item.class.name
+  end
 end

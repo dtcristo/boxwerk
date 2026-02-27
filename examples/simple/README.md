@@ -18,7 +18,8 @@ simple/
     │   ├── public/
     │   │   └── invoice.rb   # Public API
     │   └── lib/
-    │       └── tax_calculator.rb  # Private
+    │       ├── line_item.rb      # Private
+    │       └── tax_calculator.rb # Private
     ├── greeting/
     │   ├── package.yml
     │   ├── Gemfile          # faker 3.6.0
@@ -59,5 +60,6 @@ RUBY_BOX=1 boxwerk info                            # Show package structure
 2. **Transitive dependency blocking** — `Calculator` blocked (root → finance → util)
 3. **Privacy enforcement** — `TaxCalculator` blocked (private, not in `public/`)
 4. **Per-package gem version isolation** — faker 3.5.1 in util, 3.6.0 in greeting
-5. **Global gems** — dotenv accessible in all packages
-6. **Per-package testing** — each pack has its own unit tests run in its own box
+5. **Private class instances** — `Invoice#items` returns private `LineItem` objects; methods work but the constant is blocked
+6. **Global gems** — dotenv accessible in all packages
+7. **Per-package testing** — each pack has its own unit tests run in its own box

@@ -9,12 +9,12 @@ class Invoice
   end
 
   def add_item(description, amount_cents)
-    @items << { description: description, amount: amount_cents }
+    @items << LineItem.new(description, amount_cents)
     self
   end
 
   def subtotal
-    @items.sum { |item| item[:amount] }
+    @items.sum(&:amount_cents)
   end
 
   def tax
