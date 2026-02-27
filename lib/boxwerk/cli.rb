@@ -427,6 +427,8 @@ module Boxwerk
       end
 
       def print_package_details(resolver, root_path)
+        gem_resolver = GemResolver.new(root_path)
+
         resolver.topological_order.each do |pkg|
           label = pkg.root? ? '.' : pkg.name
           puts "  #{label}"
@@ -439,15 +441,29 @@ module Boxwerk
           deps = pkg.dependencies
           puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
 
-          pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
-          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
-          puts "    gems: #{gemfile || 'none'}" if !pkg.root? && gemfile
+          gems = gem_resolver.gems_for(pkg)
+          if gems&.any?
+            gem_list = gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
+            puts "    gems: #{gem_list}"
+          end
 
           if pkg.config['enforce_privacy']
             public_path = pkg.config['public_path'] || 'public/'
             puts "    public_path: #{public_path}"
           end
 
+          puts ''
+        end
+
+        # Show gem conflicts
+        conflicts = gem_resolver.check_conflicts(resolver)
+        if conflicts.any?
+          puts 'Gem Conflicts'
+          puts ''
+          conflicts.each do |c|
+            puts "  ⚠ #{c[:gem_name]}: #{c[:package_version]} in #{c[:package]} " \
+              "vs #{c[:global_version]} in root (both loaded into memory)"
+          end
           puts ''
         end
       end

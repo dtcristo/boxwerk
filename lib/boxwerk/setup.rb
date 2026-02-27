@@ -12,6 +12,8 @@ module Boxwerk
         @box_manager = Boxwerk::BoxManager.new(root_path)
         @box_manager.boot_all(resolver)
 
+        check_gem_conflicts(@box_manager.gem_resolver, resolver)
+
         @resolver = resolver
         @booted = true
 
@@ -55,6 +57,14 @@ module Boxwerk
           current = parent
         end
         nil
+      end
+
+      def check_gem_conflicts(gem_resolver, package_resolver)
+        conflicts = gem_resolver.check_conflicts(package_resolver)
+        conflicts.each do |c|
+          warn "Boxwerk: gem '#{c[:gem_name]}' is #{c[:package_version]} in #{c[:package]} " \
+            "but #{c[:global_version]} in global gems — both versions will be loaded into memory"
+        end
       end
     end
   end

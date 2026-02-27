@@ -4,29 +4,102 @@ require 'bundler'
 
 module Boxwerk
   # Resolves per-package gem dependencies from lockfiles.
-  # Parses lockfiles with Bundler::LockfileParser and resolves gem
-  # load paths for $LOAD_PATH isolation per box.
   #
-  # Unlike Bundler itself, this resolver can find gems outside the
-  # current bundle by searching all gem installation directories.
+  # Parses lockfiles with Bundler::LockfileParser and resolves gem load paths
+  # for $LOAD_PATH isolation per box. Unlike Bundler itself, this resolver can
+  # find gems outside the current bundle by searching all gem directories.
+  #
+  # Gems are fully isolated per box — they do not leak across package
+  # boundaries. Cross-package version conflicts are harmless because each box
+  # has its own $LOAD_PATH and $LOADED_FEATURES snapshot. The only situation
+  # worth flagging is when a package defines a gem that is also in the root
+  # Gemfile at a different version: both versions end up in memory (the global
+  # version inherited at box creation, the package version loaded on demand).
   class GemResolver
+    # Represents a resolved gem for a package: name, version, load paths.
+    GemInfo = Struct.new(:name, :version, :load_paths, keyword_init: true)
+
     attr_reader :root_path
 
     def initialize(root_path)
       @root_path = root_path
       @all_specs = nil
+      @package_gems = {} # package name -> [GemInfo]
     end
 
     # Returns an array of load paths for a package's gem dependencies.
     # Returns nil if the package has no gems.rb/Gemfile.
     def resolve_for(package)
+      gems = gems_for(package)
+      return nil unless gems&.any?
+
+      gems.flat_map(&:load_paths).uniq
+    end
+
+    # Returns [GemInfo] for a package, cached after first resolution.
+    def gems_for(package)
+      return @package_gems[package.name] if @package_gems.key?(package.name)
+
       gemfile_path = find_gemfile(package)
-      return nil unless gemfile_path
+      unless gemfile_path
+        @package_gems[package.name] = nil
+        return nil
+      end
 
       lockfile_path = find_lockfile(gemfile_path)
-      return nil unless lockfile_path && File.exist?(lockfile_path)
+      unless lockfile_path && File.exist?(lockfile_path)
+        @package_gems[package.name] = nil
+        return nil
+      end
 
-      resolve_from_lockfile(lockfile_path)
+      gems = resolve_gems_from_lockfile(lockfile_path)
+      @package_gems[package.name] = gems
+      gems
+    end
+
+    # Checks for gem version conflicts between global and per-package gems.
+    # Returns an array of conflict descriptions (empty if none).
+    #
+    # Cross-package conflicts are NOT checked because gems are fully isolated
+    # per box — each box has its own $LOAD_PATH and $LOADED_FEATURES snapshot.
+    # Package A can safely use gem Z v2 while package B uses gem Z v1, even if
+    # A depends on B.
+    #
+    # The only conflict worth flagging is a **global override**: a package
+    # defines a gem that is also in the root Gemfile at a different version.
+    # Both versions load into memory (global inherited at box creation,
+    # package version loaded on demand), which wastes memory but is
+    # functionally correct.
+    def check_conflicts(package_resolver)
+      conflicts = []
+
+      root_gems = gems_for(package_resolver.root)
+      return conflicts unless root_gems&.any?
+
+      root_gem_map = root_gems.each_with_object({}) { |g, h| h[g.name] = g }
+
+      package_resolver.packages.each_value do |pkg|
+        next if pkg.root?
+
+        pkg_gems = gems_for(pkg)
+        next unless pkg_gems
+
+        pkg_gems.each do |gem_info|
+          root_gem = root_gem_map[gem_info.name]
+          next unless root_gem
+          next if root_gem.version == gem_info.version
+
+          conflicts << {
+            type: :global_override,
+            gem_name: gem_info.name,
+            package: pkg.name,
+            package_version: gem_info.version,
+            global_version: root_gem.version,
+          }
+        end
+      end
+
+      conflicts
     end
 
     private
@@ -59,28 +132,30 @@ module Boxwerk
       end
     end
 
-    # Parses a lockfile and resolves gem load paths.
-    def resolve_from_lockfile(lockfile_path)
+    # Parses a lockfile and returns [GemInfo] with resolved load paths.
+    def resolve_gems_from_lockfile(lockfile_path)
       lockfile_content = File.read(lockfile_path)
       parser = Bundler::LockfileParser.new(lockfile_content)
 
-      paths = []
+      gems = []
       parser.specs.each do |spec|
-        gem_paths = resolve_gem_paths(spec.name, spec.version.to_s)
-        paths.concat(gem_paths) if gem_paths
+        paths = resolve_gem_paths(spec.name, spec.version.to_s)
+        next unless paths
+
+        gems << GemInfo.new(
+          name: spec.name,
+          version: spec.version.to_s,
+          load_paths: paths
+        )
       end
 
-      paths.uniq
+      gems
     end
 
     # Resolves load paths for a specific gem version.
-    # Searches all gem installation directories, bypassing Bundler's
-    # filtering so that per-package gems can be found even when they
-    # are not in the root bundle.
     def resolve_gem_paths(name, version)
       spec = find_gem_spec(name, version)
       unless spec
-        # Don't warn about boxwerk itself (loaded via path: in development)
         warn "Boxwerk: gem '#{name}' (#{version}) not installed, skipping" unless name == 'boxwerk'
         return nil
       end
@@ -88,8 +163,6 @@ module Boxwerk
     end
 
     # Finds a gem specification by searching all gem directories.
-    # This works even under Bundler, which normally filters specs
-    # to only those in the current bundle.
     def find_gem_spec(name, version)
       all_gem_specs.find { |s| s.name == name && s.version.to_s == version } ||
         all_gem_specs.find { |s| s.name == name }
