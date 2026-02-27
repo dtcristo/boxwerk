@@ -8,13 +8,11 @@ Planned improvements and design considerations for Boxwerk.
 |------|----------|------------|
 | Zeitwerk full integration (reloading, eager loading) | Medium | Hard |
 | Constant reloading (dev workflow) | High | Hard |
-| Bundler inside package boxes | High | Medium |
-| Gem group support (`:test`, `:development`) | High | Medium |
+| Auto-requiring per-package gems | High | Medium |
+| Bundler inside package boxes | High | Blocked (Ruby::Box) |
 | RUBYOPT bootstrap (`-rboxwerk/setup`) | High | Blocked (Ruby::Box) |
 | Per-package testing (`boxwerk test`) | Medium | Medium |
 | IRB console autocomplete | Medium | Medium |
-| Global vs package gem conflict detection | Medium | Easy |
-| Package gem transitive dependency isolation | Medium | Medium |
 | `boxwerk check` (static analysis) | Medium | Medium |
 | `boxwerk init` (scaffold packages) | Low | Easy |
 | `boxwerk list` / `boxwerk outdated` / `boxwerk update` | Low | Easy |
@@ -98,79 +96,59 @@ Ruby::Box stabilizes.
 
 ## Global Gems
 
-Currently gems in the root `Gemfile`/`gems.rb` are loaded into the root box
-via Bundler. All user boxes inherit them via copy-on-write.
+Root `Gemfile`/`gems.rb` gems are loaded into the root box via Bundler before
+any package boxes are created. All child boxes inherit them via
+`$LOADED_FEATURES` snapshot at creation time.
 
-### Current Approach: Root Box Inheritance
+**How it works:**
+- `exe/boxwerk` runs `Bundler.setup` and `Bundler.require` in the root box
+- Gems required before box creation are available everywhere (single copy)
+- Per-package `Gemfile`/`gems.rb` provides additional isolated gems per box
+- Gems added with `require: false` in root are on `$LOAD_PATH` but not loaded;
+  if first required in a child package, only that box (and later boxes) see it
 
-The `boxwerk` executable runs `Bundler.setup` and `Bundler.require` inside the
-root box before creating any package boxes. This means:
+**Global vs package version conflicts:**
+If a package defines a gem also in the root Gemfile at a different version,
+both load into memory (different paths → different `$LOADED_FEATURES` entries).
+Functionally correct but wastes memory. Boxwerk warns at boot time.
 
-- Gems required before box creation are available everywhere
-- The root `Gemfile`/`gems.rb` acts as a "global" gem set
-- Per-package `Gemfile`/`gems.rb` provides additional isolated gems
-- **Limitation:** Gems required *after* box creation are not shared
+**Transitive gem dependencies:**
+Per-package gems do NOT leak to dependent packages. If `packs/billing` has
+`stripe`, packages depending on `packs/billing` do NOT get `stripe`. Each box
+has its own `$LOAD_PATH`. This is safe and by design.
 
-### Alternative: Shared Gem Box
+### Auto-Requiring Per-Package Gems
 
-Create a dedicated "gems" box that all packages depend on:
+**Current limitation:** All gems in a package's lockfile are added to
+`$LOAD_PATH` but none are auto-required. Users must `require 'gem_name'`
+manually in their code. The `require: false` option in per-package Gemfiles
+has no effect — all lockfile gems are on `$LOAD_PATH` regardless.
 
-```
-              ┌──────────┐
-              │   gems   │  ← shared gems loaded here
-              └────┬─────┘
-                   │
-        ┌──────────┼──────────┐
-        │          │          │
-   ┌────┴───┐ ┌───┴────┐ ┌──┴─────┐
-   │ billing │ │  auth  │ │  util  │
-   └────────┘ └────────┘ └────────┘
-```
+**Goal:** Replicate Bundler's auto-require behaviour inside each package box:
+- Gems without `require: false` are auto-required after box creation
+- Gems with `require: false` are on `$LOAD_PATH` but not required
+- Gem groups (`:test`, `:development`) respected
 
-Benefits: explicit control over shared gems, packages can opt out entirely.
+**Approach:** Parse the package's `Gemfile` (not just lockfile) to determine
+which gems should be auto-required. After adding load paths to the box,
+call `box.eval("require '#{gem_name}'")` for each auto-require gem. For
+`require: false` gems, only add load paths (current behaviour).
 
-**Rails consideration:** Rails would be loaded into the shared gem box. Monkey
-patches (e.g. ActiveSupport core extensions) would be isolated to that box and
-inherited by child boxes — consistent with root box inheritance today.
-
-### Global vs Package Gem Conflicts
-
-When a global gem and a package gem specify different versions, the package's
-`$LOAD_PATH` entries take precedence (prepended). This can cause issues if the
-global version was already required.
-
-**Planned resolution:**
-- `boxwerk install` detects version conflicts between global and package gems
-- Error or warn when the same gem appears at different versions
-- Packages must not override global gems — use per-package gems only for
-  gems not in the global set
-- Consider `--strict` flag that errors on any overlap
-
-### Package Gem Transitive Dependencies
-
-Per-package gems should not leak to dependents. If `packs/billing` has `stripe`
-in its `Gemfile`, packages depending on `packs/billing` should not get `stripe`.
-
-**Current behaviour:** `$LOAD_PATH` manipulation is box-local, but constants
-from gems required in one box may leak between boxes (a Ruby::Box limitation
-with C-level global state).
-
-**Planned fix:** Only add gem load paths to the owning package's box. Dependent
-packages must declare their own gem dependencies.
+**Challenge:** `Bundler.require` cannot run inside child boxes (Bundler's code
+is defined in root box — see Bundler investigation below). Must implement
+auto-require logic ourselves by parsing `Gemfile` gem declarations.
 
 ### Bundler Inside Package Boxes
 
 **Status:** Blocked (Ruby::Box limitation)
 
-Currently per-package gems are resolved via lockfile parsing and manual
-`$LOAD_PATH` manipulation. This approach works but has limitations.
+Per-package gems are resolved via lockfile parsing and manual `$LOAD_PATH`
+manipulation rather than running Bundler inside each box.
 
 **Investigation findings:**
 - `Bundler.setup` inside a child box modifies the ROOT box's `$LOAD_PATH`
   (not the child's) because Bundler's code is defined in the root box
-- `require 'bundler/setup'` inside `box.eval` has no effect on `$LOAD_PATH`
-- `require 'bundler'; Bundler.setup` partially works (modifies root LP) but
-  doesn't help the child box
+- `require 'bundler/setup'` inside `box.eval` has no effect
 - `Bundler::Definition.build` can extract gem paths from root context but
   that's equivalent to our current lockfile parsing approach
 
@@ -179,12 +157,6 @@ Currently per-package gems are resolved via lockfile parsing and manual
 2. Resolve gem specs via `Gem::Specification`
 3. Add load paths to child box's `$LOAD_PATH` directly
 4. Detect global-vs-package version conflicts at boot time
-
-**What this means:**
-- `require: false` in per-package Gemfile does NOT prevent auto-loading
-  (all lockfile gems are added to `$LOAD_PATH`)
-- Gem groups (`:test`, `:development`) are not respected
-- `Bundler.require` per package is not possible
 
 **Future:** Requires Ruby::Box changes to support Bundler running in child
 box context, or a fundamentally different approach to gem loading.
@@ -198,17 +170,6 @@ correct version. Similar to how `rbenv`/`mise` handle Ruby version switching.
 **Approach:** Check `Gem.loaded_specs["boxwerk"]` against the project's
 lockfile version. If they differ, re-exec via `Bundler.with_unbundled_env`
 using the correct gem path.
-
-## Gem Group Support
-
-**Current limitation:** All gems in a package's lockfile are added to
-`$LOAD_PATH` regardless of groups. `Bundler.require` cannot run inside
-child boxes (see "Bundler Inside Package Boxes" above).
-
-Global gems in the root Gemfile work with groups normally (Bundler runs in
-the root box). Per-package gems are always available once resolved.
-
-**Blocked by:** Bundler Inside Package Boxes.
 
 ## Per-Package Testing
 
