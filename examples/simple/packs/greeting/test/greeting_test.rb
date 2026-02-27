@@ -10,4 +10,8 @@ class GreetingTest < Minitest::Test
   def test_hello_not_empty
     refute_empty Greeting.hello
   end
+
+  def test_dotenv_accessible
+    assert defined?(Dotenv), 'Global gem dotenv should be accessible'
+  end
 end

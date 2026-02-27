@@ -175,12 +175,9 @@ module Boxwerk
           if parsed[:package] && parsed[:package] != '.'
             root_path = Setup.send(:find_root, Dir.pwd)
             pkg_dir = File.join(root_path, parsed[:package])
-            Dir.chdir(pkg_dir) do
-              run_command_in_box(result, box, command, command_args)
-            end
-          else
-            run_command_in_box(result, box, command, command_args)
+            Dir.chdir(pkg_dir)
           end
+          run_command_in_box(result, box, command, command_args)
         end
       end
 
@@ -256,7 +253,7 @@ module Boxwerk
 
         resolver.topological_order.each do |pkg|
           pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
-          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
+          gemfile = %w[Gemfile gems.rb].find { |f| File.exist?(File.join(pkg_dir, f)) }
           next unless gemfile
 
           label = pkg.root? ? '.' : pkg.name

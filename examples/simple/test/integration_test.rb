@@ -27,4 +27,8 @@ class IntegrationTest < Minitest::Test
     refute_equal finance_version, greeting_version,
       'Expected different faker versions in different packs'
   end
+
+  def test_dotenv_accessible_as_global_gem
+    assert defined?(Dotenv), 'Global gem dotenv should be accessible in main package'
+  end
 end

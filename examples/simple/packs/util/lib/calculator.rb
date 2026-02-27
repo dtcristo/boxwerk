@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'faker'
+
 class Calculator
   def self.add(a, b)
     a + b
@@ -19,7 +21,6 @@ class Calculator
   end
 
   def self.faker_version
-    require 'faker'
     Faker::VERSION
   end
 end
