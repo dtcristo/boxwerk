@@ -14,7 +14,7 @@ Boxwerk shares Packwerk's goal of bringing modular boundaries to Ruby applicatio
 
 - **Enforce boundaries at runtime.** Ruby doesn't provide a built-in mechanism for constant-level boundaries between modules. Boxwerk fills this gap using `Ruby::Box` isolation, turning architectural guidelines into runtime guarantees.
 - **Enable gradual modularization.** Large applications can adopt packages incrementally. Add `package.yml` files around existing code, declare dependencies, and Boxwerk enforces them. No big-bang rewrite.
-- **Feel Ruby-native.** Boxwerk integrates with Bundler, gems.rb, and the standard Ruby toolchain. `bundle exec boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
+- **Feel Ruby-native.** Boxwerk integrates with Bundler, gems.rb, and the standard Ruby toolchain. `boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
 - **Work standalone.** Boxwerk reads `package.yml` files directly. Packwerk is optional for static analysis at CI time, but not required at runtime.
 
 ## Requirements
@@ -80,10 +80,13 @@ Invoice.new
 Calculator.add(1, 2)
 ```
 
-### 4. Run
+### 4. Install and run
 
 ```bash
-bundle exec boxwerk run app.rb
+bundle install                    # Install global gems
+bundle binstub boxwerk            # Create bin/boxwerk binstub
+bin/boxwerk install               # Install gems for all packs
+bin/boxwerk run app.rb            # Run with package isolation
 ```
 
 ## CLI
@@ -101,12 +104,14 @@ boxwerk help                         Show usage
 ### Examples
 
 ```bash
-bundle exec boxwerk run app.rb              # Run a script
-bundle exec boxwerk exec rake test          # Run tests with boundary enforcement
-bundle exec boxwerk exec rails console      # Start Rails console in boxed environment
-bundle exec boxwerk console                 # Interactive IRB in root box
-bundle exec boxwerk info                    # Show package graph
+boxwerk run app.rb              # Run a script
+boxwerk exec rake test          # Run tests with boundary enforcement
+boxwerk exec rails console      # Start Rails console in boxed environment
+boxwerk console                 # Interactive IRB in root box
+boxwerk info                    # Show package graph
 ```
+
+> **Tip:** Use `bundle binstub boxwerk` to create a `bin/boxwerk` binstub. Then use `bin/boxwerk` instead of `bundle exec boxwerk`.
 
 ## Package Configuration
 
@@ -178,8 +183,11 @@ See [examples/simple/](examples/simple/) for a working multi-package application
 ```bash
 cd examples/simple
 bundle install
-bundle exec boxwerk run app.rb           # Run the example app
-bundle exec boxwerk exec rake test       # Run integration tests
+bundle binstub boxwerk
+bin/boxwerk install
+bin/boxwerk run app.rb           # Run the example app
+bin/boxwerk exec rake test       # Run integration tests
+bin/boxwerk info                 # Show package structure
 ```
 
 See [examples/rails/](examples/rails/) for the Rails integration plan.

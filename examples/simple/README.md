@@ -45,10 +45,12 @@ root (.) → finance → util (faker 3.5.1)
 
 ```bash
 cd examples/simple
-bundle install
-bundle exec boxwerk run app.rb           # Run the example app
-bundle exec boxwerk exec rake test       # Run integration tests
-bundle exec boxwerk info                 # Show package structure
+bundle install                           # Install global gems
+bundle binstub boxwerk                   # Create bin/boxwerk binstub
+bin/boxwerk install                      # Install gems for all packs
+bin/boxwerk run app.rb                   # Run the example app
+bin/boxwerk exec rake test               # Run integration tests
+bin/boxwerk info                         # Show package structure
 ```
 
 ## What It Demonstrates
