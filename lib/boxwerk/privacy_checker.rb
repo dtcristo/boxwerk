@@ -97,7 +97,7 @@ module Boxwerk
         relative = file_path.delete_prefix(normalized_base).delete_suffix('.rb')
         return nil if relative.empty?
 
-        relative.split('/').map { |part| Boxwerk.inflector.camelize(part, nil) }.join('::')
+        relative.split('/').map { |part| Boxwerk.camelize(part) }.join('::')
       end
 
       # Checks if a file contains the pack_public: true sigil in first 5 lines.

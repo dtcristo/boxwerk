@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'rbconfig'
+
 module Boxwerk
   # Command-line interface. Delegates to Setup for package boot.
   #
@@ -9,7 +11,10 @@ module Boxwerk
   #   console — start an IRB console in a package box
   module CLI
     class << self
-      def run(argv)
+      attr_accessor :exe_path
+
+      def run(argv, exe_path: nil)
+        @exe_path = exe_path
         if argv.empty?
           print_usage
           exit 1
@@ -136,27 +141,46 @@ module Boxwerk
 
         result = perform_setup
 
-        # Install the root package's dependency resolver on Ruby::Box.root.
-        # Gems loaded via Bundler.require run in the root box (where their
-        # methods were defined). When those gems call load() (e.g. rake
-        # loading a Rakefile), the loaded files execute in the root box too.
-        # Without this, const_missing wouldn't fire for package constants.
-        install_resolver_on_ruby_root(result)
-
         if parsed[:all]
-          # Run command for all packages sequentially
-          result[:resolver].topological_order.each do |pkg|
-            box = result[:box_manager].boxes[pkg.name]
-            next unless box
+          # Run command for each package in a separate subprocess to
+          # ensure clean isolation (avoids at_exit conflicts from test
+          # frameworks like minitest registering tests globally).
+          root_path = Setup.send(:find_root, Dir.pwd)
+          failed = []
 
+          result[:resolver].topological_order.each do |pkg|
             label = pkg.root? ? '.' : pkg.name
+            pkg_name = pkg.root? ? '.' : pkg.name
             puts "==> #{label}"
-            run_command_in_box(result, box, command, command_args)
+            # Clear BUNDLE_GEMFILE so the subprocess discovers it fresh
+            env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => nil }
+            success = system(
+              env,
+              RbConfig.ruby, @exe_path, 'exec', '-p', pkg_name, command, *command_args,
+              chdir: root_path
+            )
+            failed << label unless success
             puts ''
           end
+
+          unless failed.empty?
+            $stderr.puts "Failed in: #{failed.join(', ')}"
+            exit 1
+          end
         else
+          target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
           box = resolve_target_box(result, parsed[:package])
-          run_command_in_box(result, box, command, command_args)
+          install_resolver_on_ruby_root(result, target_package: target_pkg)
+
+          if parsed[:package] && parsed[:package] != '.'
+            root_path = Setup.send(:find_root, Dir.pwd)
+            pkg_dir = File.join(root_path, parsed[:package])
+            Dir.chdir(pkg_dir) do
+              run_command_in_box(result, box, command, command_args)
+            end
+          else
+            run_command_in_box(result, box, command, command_args)
+          end
         end
       end
 
@@ -177,8 +201,9 @@ module Boxwerk
         end
 
         result = perform_setup
+        target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
         box = resolve_target_box(result, parsed[:package])
-        install_resolver_on_ruby_root(result)
+        install_resolver_on_ruby_root(result, target_package: target_pkg)
         execute_in_box(box, script_path, parsed[:remaining][1..] || [])
       end
 
@@ -187,8 +212,9 @@ module Boxwerk
         parsed = parse_package_flag(args)
 
         result = perform_setup
+        target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
         box = resolve_target_box(result, parsed[:package])
-        install_resolver_on_ruby_root(result)
+        install_resolver_on_ruby_root(result, target_package: target_pkg)
 
         pkg_label = parsed[:package] || 'root'
         start_console_in_box(box, parsed[:remaining], pkg_label)
@@ -288,21 +314,49 @@ module Boxwerk
         end
       end
 
-      # Installs the root package's dependency resolver on Ruby::Box.root.
-      # Gems are loaded into Ruby::Box.root via Bundler.require, so their
-      # methods execute in the root box context. When those gem methods call
-      # load() (e.g. rake loading a Rakefile), the loaded files also run in
-      # the root box. This method ensures const_missing is available there
-      # so that package constants can be resolved.
-      def install_resolver_on_ruby_root(result)
-        root_pkg = result[:resolver].root
-        root_box = result[:box_manager].boxes[root_pkg.name]
-        resolver_const = root_box.const_get(:BOXWERK_DEPENDENCY_RESOLVER)
-        return unless resolver_const
+      # Installs a dependency resolver on Ruby::Box.root for the given
+      # package. Gems loaded via Bundler.require run in the root box (where
+      # their methods were defined). When those gems call load() (e.g. rake
+      # loading a Rakefile), the loaded files execute in the root box too.
+      # This method ensures const_missing is available there so that package
+      # constants can be resolved.
+      #
+      # When target_package is specified, the resolver also searches the
+      # target package's own box for its internal constants. This enables
+      # per-package testing where test files (loaded by rake in Ruby::Box.root)
+      # need access to the pack's own constants.
+      def install_resolver_on_ruby_root(result, target_package: nil)
+        target_pkg = target_package || result[:resolver].root
+        target_box = result[:box_manager].boxes[target_pkg.name]
+
+        # Build a composite resolver: first check the target box's own
+        # constants, then fall through to the target box's dependency resolver.
+        own_box = target_box
+        dep_resolver = begin
+          target_box.const_get(:BOXWERK_DEPENDENCY_RESOLVER)
+        rescue NameError
+          nil
+        end
+
+        composite = proc do |const_name|
+          name_str = const_name.to_s
+          # Try own box first (for the pack's internal constants).
+          # Use eval to trigger autoload within the box's context.
+          begin
+            own_box.eval(name_str)
+          rescue NameError
+            # Fall through to dependency resolver
+            if dep_resolver
+              dep_resolver.call(const_name)
+            else
+              raise NameError, "uninitialized constant #{name_str}"
+            end
+          end
+        end
 
         ruby_root = Ruby::Box.root
         ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER) if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
-        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, resolver_const)
+        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
         ruby_root.eval(<<~RUBY)
           class Object
             def self.const_missing(const_name)

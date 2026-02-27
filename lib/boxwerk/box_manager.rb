@@ -95,7 +95,7 @@ module Boxwerk
         next if exclude && file.start_with?(exclude)
 
         relative = file.delete_prefix(base).delete_suffix('.rb')
-        const_name = relative.split('/').map { |part| Boxwerk.inflector.camelize(part, nil) }.join('::')
+        const_name = relative.split('/').map { |part| Boxwerk.camelize(part) }.join('::')
         index[const_name] = file
       end
     end

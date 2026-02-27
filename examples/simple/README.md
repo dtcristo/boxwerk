@@ -45,7 +45,7 @@ root (.) → finance → util (faker 3.5.1)
 
 ```bash
 cd examples/simple
-boxwerk install                              # Install gems for all packages
+RUBY_BOX=1 boxwerk install                  # Install gems for all packages
 RUBY_BOX=1 boxwerk run app.rb               # Run the example app
 RUBY_BOX=1 boxwerk exec rake test           # Run integration tests
 RUBY_BOX=1 boxwerk info                     # Show package structure
