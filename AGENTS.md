@@ -11,3 +11,4 @@ Guidelines for AI agents working on this codebase.
 - Run `RUBY_BOX=1 bundle exec rake test ` and `RUBY_BOX=1 bundle exec rake e2e` to verify
 - Run `RUBY_BOX=1 ../../exe/boxwerk run app.rb` and `cd examples/simple/ && RUBY_BOX=1 ../../exe/boxwerk exec --all rake test` to verify example
 - Fix any warnings
+- Use sub-agents where appropriate
