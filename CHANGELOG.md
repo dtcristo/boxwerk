@@ -31,14 +31,16 @@ CLI designed to feel Ruby-native.
 - **`boxwerk run` command**: Run a Ruby script in the main package box.
 - **`boxwerk console` command**: Interactive IRB in the main package box.
 - **`boxwerk install` command**: Bundle install for all packages with a
-  `Gemfile`/`gems.rb`.
+  `Gemfile`.
 - **`boxwerk info` command**: Show package structure, dependencies, and flags.
 - **`--package`/`-p` flag**: Target a specific package box for `run`, `exec`,
   and `console` commands (e.g. `boxwerk exec -p packs/util rake test`).
 - **`--all` flag**: Run `exec` commands across all packages sequentially,
   each in its own subprocess for clean isolation.
+- **`--root` flag**: Run `run`, `exec`, or `console` in the root box
+  (bypassing package resolution, for debugging).
 - **Per-package gem version isolation**: Packages can have their own
-  `Gemfile`/`gems.rb` with different gem versions. Each box gets isolated
+  `Gemfile` with different gem versions. Each box gets isolated
   `$LOAD_PATH` entries.
 - **Per-package testing**: Each package can have its own `test/` directory
   and `Rakefile`. Run with `boxwerk exec -p packs/name rake test`.
@@ -58,7 +60,7 @@ CLI designed to feel Ruby-native.
   global gems, gem conflicts, Bundler-inspired commands, and more.
 
 ### Changed
-- Renamed `Gemfile` → `gems.rb` throughout (both formats supported).
+- Renamed "root package" → "main package" in all user-facing text and docs.
 - `PackageResolver` no longer reads `packwerk.yml` or derives namespaces.
 - `ConstantResolver` installs a dependency resolver on `Object` within each
   box instead of namespace proxies.

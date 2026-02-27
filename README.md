@@ -43,10 +43,10 @@ See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Rub
 gem install boxwerk
 ```
 
-### 2. Add a `Gemfile` or `gems.rb` for your project
+### 2. Add a `Gemfile` for your project
 
 ```ruby
-# gems.rb
+# Gemfile
 source 'https://rubygems.org'
 
 gem 'minitest'
@@ -57,7 +57,7 @@ gem 'rake'
 
 ```
 my_app/
-├── gems.rb
+├── Gemfile
 ├── package.yml              # Main package
 ├── app.rb
 └── packs/
@@ -126,7 +126,8 @@ boxwerk help                         Show usage
 
 ```
 -p, --package <name>         Run in a specific package box (default: main)
-    --all                    Run command for all packages sequentially
+    --all                    Run exec for all packages sequentially
+    --root                   Run in the root box (no package context)
 ```
 
 ### Examples
@@ -138,6 +139,7 @@ boxwerk exec -p packs/util rake test        # Run tests for a specific package
 boxwerk exec --all rake test                # Run tests for all packages
 boxwerk console                             # Interactive IRB (main package)
 boxwerk console -p packs/finance            # IRB in a specific package
+boxwerk console --root                      # IRB in the root box (debugging)
 boxwerk info                                # Show package graph
 ```
 
@@ -160,18 +162,18 @@ private_constants:
 
 ### Per-Package Gems
 
-Packages can have their own `Gemfile`/`gems.rb` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
+Packages can have their own `Gemfile` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
 
 ```
 packs/billing/
 ├── package.yml
-├── gems.rb               # gem 'stripe', '~> 5.0'
-├── gems.locked
+├── Gemfile               # gem 'stripe', '~> 5.0'
+├── Gemfile.lock
 └── lib/
     └── payment.rb        # require 'stripe' → gets v5
 ```
 
-Gems in the root `Gemfile`/`gems.rb` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
+Gems in the root `Gemfile` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
 
 Run `boxwerk install` to install gems for all packages.
 
@@ -185,24 +187,14 @@ class SpecialService
 end
 ```
 
-## Naming Conventions
-
-File paths within packages follow standard Ruby naming conventions:
-
-- `lib/invoice.rb` → `Invoice`
-- `lib/services/billing.rb` → `Services::Billing`
-- `public/api.rb` → `Api`
-
-Constants from dependencies are accessible directly — no namespace wrapping.
-
 ## Gem Loading Architecture
 
 Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once:
 
 1. The `boxwerk` executable runs `Bundler.setup` and `Bundler.require` inside the **root box**.
-2. All gems from the project's `Gemfile`/`gems.rb` are loaded into the root box.
+2. All gems from the project's `Gemfile` are loaded into the root box.
 3. `Ruby::Box.new` creates child boxes copied from the root box — they inherit all root gems.
-4. Per-package `Gemfile`/`gems.rb` gems get additional `$LOAD_PATH` entries in their box only.
+4. Per-package `Gemfile` gems get additional `$LOAD_PATH` entries in their box only.
 
 This avoids double-loading gems that would occur if `bundle exec` loaded gems into the main box and then Boxwerk loaded them again into the root box.
 
@@ -211,7 +203,7 @@ This avoids double-loading gems that would occur if `bundle exec` loaded gems in
 - `Ruby::Box` is experimental in Ruby 4.0
 - No constant reloading (restart required for code changes)
 - Boxwerk uses `autoload` directly (not Zeitwerk) inside boxes
-- IRB console runs in root box context with autocomplete disabled
+- IRB autocomplete disabled in console (box-scoped constants not visible to completer)
 
 See [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) for plans to address these limitations.
 

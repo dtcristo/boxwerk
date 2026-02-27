@@ -177,6 +177,33 @@ because the load paths are inherited via the box.
   `Bundler::LockfileParser` at boot (no subprocess). For a shared gem approach,
   we'd need to resolve a combined lockfile or use the root lockfile.
 
+### Bundler Inside Package Boxes
+
+Currently, per-package gems are resolved via lockfile parsing and `$LOAD_PATH`
+manipulation. Gems must be manually `require`'d in pack code. This is a
+significant limitation compared to normal Bundler usage.
+
+**Goal:** Run Bundler inside each package box to properly require gems, just
+like a normal Ruby application booted with Bundler.
+
+**Benefits:**
+- `require: false` in `Gemfile` would work naturally
+- Gem groups (`:test`, `:development`) would be respected
+- Automatic requiring of gems (Bundler.require) per package
+- Per-package test/dev gems (e.g. a pack could have its own test gems)
+
+**Approach:**
+1. After creating a package's box, check for a `Gemfile`/`gems.rb`
+2. Inside the box, run `Bundler.setup` with the package's Gemfile
+3. Optionally `Bundler.require` for the relevant groups
+4. This replaces the current `$LOAD_PATH` manipulation
+
+**Challenges:**
+- Bundler's `setup` modifies `$LOAD_PATH` globally — in a box this would
+  only affect that box's `$LOAD_PATH` (desired behaviour)
+- Multiple Bundler instances running in different boxes may conflict
+- Need to test whether `Bundler.setup` works correctly inside `Ruby::Box`
+
 ## Alternative exec via RUBYOPT
 
 **Status: NOT RECOMMENDED**
