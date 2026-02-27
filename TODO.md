@@ -10,7 +10,7 @@ Planned improvements and design considerations for Boxwerk.
 | Constant reloading (dev workflow) | High | Hard |
 | Bundler inside package boxes | High | Medium |
 | Gem group support (`:test`, `:development`) | High | Medium |
-| RUBYOPT bootstrap (`-rboxwerk/setup`) | High | Hard |
+| RUBYOPT bootstrap (`-rboxwerk/setup`) | High | Blocked (Ruby::Box) |
 | Per-package testing (`boxwerk test`) | Medium | Medium |
 | IRB console autocomplete | Medium | Medium |
 | Global vs package gem conflict detection | Medium | Easy |
@@ -251,62 +251,87 @@ clean isolation.
 
 ## RUBYOPT Bootstrap
 
+**Status: Not feasible with Ruby 4.0.** Multiple Ruby::Box limitations prevent
+a reliable RUBYOPT-based bootstrap. Documented here for future reference.
+
 **Idea:** Set `RUBYOPT=-rboxwerk/setup` to automatically bootstrap the Boxwerk
-environment for any Ruby process. This would mean `ruby app.rb`, `rake test`,
-`bundle install` etc. all run inside the boxed environment without needing
-`boxwerk exec` as a wrapper.
+environment for any Ruby process. `ruby app.rb`, `rake test`, `rails console`
+would all run inside the boxed environment without `boxwerk exec`.
 
-### How It Would Work
+### Investigation Results
 
-1. `boxwerk/setup` is required early via RUBYOPT (before the script loads)
-2. It discovers `package.yml`, resolves packages, creates boxes
-3. The script then runs inside the root package box with full isolation
+Extensive prototyping revealed several interacting Ruby::Box limitations that
+make this approach unreliable:
 
-### Open Questions
+**1. `$LOAD_PATH` is per-box and isolated.**
+Changes to root box's `$LOAD_PATH` are invisible to main box and vice versa.
+`Bundler.setup` adds gem paths to the calling box only. This means setting up
+Bundler in root box doesn't help main box resolve gems.
 
-- **Which box does the script run in?** RUBYOPT runs in the main box (before
-  any box switching). `boxwerk/setup` would need to set up boxes in the root
-  box, then somehow redirect execution into the root package box. This is the
-  core challenge — we can set up the environment but the user's script still
-  runs in the main box unless we re-exec or use `Ruby::Box.root.eval`.
+**2. `require` in `Ruby::Box.root.eval` fails in RUBYOPT context.**
+The same `require 'zeitwerk'` call that works when run inline (not via `-r`)
+fails with `LoadError` when triggered from a RUBYOPT-loaded file, even with
+zeitwerk on root's `$LOAD_PATH`. The box loader (`Ruby::Box::Loader#require`)
+behaves differently in the RUBYOPT context. `Kernel.require` (bypassing the
+box loader) works, but `load` with full paths is the only reliable method.
 
-- **Process boundary.** `Ruby::Box` isolation is in-process only. Child
-  processes (e.g. `bundle install` spawning subprocesses) create fresh box
-  trees. However, if RUBYOPT persists, the child process would also bootstrap
-  Boxwerk — this might actually be what we want.
+**3. Zeitwerk's `Kernel.require` patch runs in root box context.**
+Zeitwerk patches `Kernel#require` globally. When a file loaded via
+`box.require(file)` calls `require 'some_gem'`, the call dispatches through
+zeitwerk's patch in root box context. If the gem isn't on root's `$LOAD_PATH`,
+it fails — even if it's on the child box's `$LOAD_PATH`.
 
-- **Compatibility with Bundler.** If `RUBYOPT=-rbundler/setup -rboxwerk/setup`,
-  load order matters. Bundler restricts `$LOAD_PATH` before Boxwerk can set up
-  boxes. We may need `boxwerk/setup` to be loaded _before_ Bundler, or handle
-  the case where Bundler is already active.
+**4. Global gems would load multiple times (memory bloat).**
+The `boxwerk exec` approach loads global gems once in root box before creating
+child boxes (which inherit via copy-on-write). With RUBYOPT, there's no way to
+ensure gems load in root box first. Each child box would `require` global gems
+independently, duplicating them in memory — defeating the purpose of the root
+box inheritance model.
 
-### Why This Matters
+**5. `Bundler.setup` introduces nil `$LOAD_PATH` entries.**
+In RUBYOPT context, `Bundler::SharedHelpers#clean_load_path` crashes on nil
+entries in `$LOAD_PATH` that Ruby::Box introduces. Workaround exists
+(`$LOAD_PATH.reject!(&:nil?)`) but indicates fragile interaction.
 
-If RUBYOPT bootstrap works, several things simplify dramatically:
+### Partial Success
 
-- **No `boxwerk exec` needed.** Plain `ruby app.rb` or `rake test` just works.
-  Boxwerk becomes invisible infrastructure, like Bundler itself.
+A proof-of-concept *did* work for packages without per-package gems:
 
-- **No `boxwerk install` command.** `bundle install` with RUBYOPT set would
-  run in each package's context automatically — or we could simply run
-  `bundle install` in each package directory and it works because RUBYOPT
-  bootstraps Boxwerk for the Bundler subprocess too.
+```ruby
+# const_missing on main's Object delegates to root package box
+Ruby::Box.root.eval("require 'boxwerk'; Boxwerk::Setup.run!(...)")
+$BOXWERK_ROOT_PKG_BOX = Ruby::Box.root.eval("Boxwerk::Setup.root_box")
+class Object
+  def self.const_missing(name)
+    $BOXWERK_ROOT_PKG_BOX.eval(name.to_s)
+  rescue NameError
+    raise NameError, "uninitialized constant #{name}"
+  end
+end
+```
 
-- **No re-implementing Bundler commands.** Instead of `boxwerk outdated`,
-  `boxwerk update` etc., just run the standard Bundler commands. Boxwerk
-  provides the isolation layer transparently.
+This resolved constants, enforced privacy, and blocked transitive access.
+It failed only when child box code called `require` for per-package gems.
 
-- **Composable with any tool.** `rails console`, `rspec`, `rubocop` — all
-  would run inside the boxed environment without boxwerk-specific wrappers.
+### Why This Matters (If Solved)
 
-### Prototype Path
+- **No `boxwerk exec` needed.** Plain `ruby app.rb` just works.
+- **Composable with any tool.** `rails console`, `rspec`, `rubocop` run
+  inside the boxed environment without wrappers.
+- **No re-implementing commands.** Standard Bundler/Rails commands work
+  directly with Boxwerk providing isolation transparently.
 
-1. Create `lib/boxwerk/setup.rb` that performs the full bootstrap
-2. Test with `RUBYOPT=-rboxwerk/setup ruby -e "puts Invoice"`
-3. Investigate whether the main box vs root box issue can be solved
-4. Test with `RUBYOPT=-rboxwerk/setup bundle install` in a package directory
-5. If the main box issue is a blocker, consider whether `Ruby::Box` will
-   eventually support redirecting the main box's execution context
+### What Would Make This Possible
+
+- **Ruby::Box API for shared `$LOAD_PATH`** — or a way to specify that
+  `require` calls should resolve against a specific box's load path.
+- **Ruby::Box API for main box redirection** — ability to redirect main
+  box execution into a child box.
+- **Zeitwerk box-awareness** — Zeitwerk's `Kernel.require` patch would need
+  to resolve against the calling box's `$LOAD_PATH`, not root's.
+
+Until Ruby::Box matures with these capabilities, `boxwerk exec` remains the
+correct approach for bootstrapping the boxed environment.
 
 ## Rails Integration
 
