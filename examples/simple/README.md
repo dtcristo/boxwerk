@@ -6,9 +6,9 @@ Multi-package application demonstrating runtime package isolation with per-packa
 
 ```
 simple/
-├── Gemfile                  # Global gems (dotenv, minitest, rake)
 ├── package.yml              # Root package (depends on finance, greeting)
 ├── app.rb                   # Entry point
+├── gems.rb                  # Global gems (dotenv, minitest, rake)
 ├── .env                     # Environment variables (loaded by dotenv)
 ├── test/
 │   └── integration_test.rb  # Integration tests
@@ -22,12 +22,12 @@ simple/
     │       └── tax_calculator.rb # Private
     ├── greeting/
     │   ├── package.yml
-    │   ├── Gemfile          # faker 3.6.0
+    │   ├── gems.rb          # faker 3.6.0
     │   └── lib/
     │       └── greeting.rb
     └── util/
         ├── package.yml
-        ├── Gemfile          # faker 3.5.1
+        ├── gems.rb          # faker 3.5.1
         └── lib/
             ├── calculator.rb
             └── geometry.rb
