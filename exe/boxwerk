@@ -11,34 +11,53 @@ if defined?(Bundler)
   end
 end
 
-unless defined?(Ruby::Box)
-  $stderr.puts "Error: Ruby::Box is not available."
-  $stderr.puts "Boxwerk requires Ruby 4.0 or later with Ruby::Box support."
-  exit 1
-end
-
-unless Ruby::Box.enabled?
-  $stderr.puts "Error: Ruby::Box is not enabled."
-  $stderr.puts "Set the RUBY_BOX=1 environment variable before starting Ruby."
-  exit 1
-end
-
 boxwerk_lib = File.expand_path('../lib', __dir__)
 boxwerk_exe = File.expand_path(__FILE__)
 
-# Load and run in the root box. Boxwerk is loaded first (before Bundler
-# restricts $LOAD_PATH), then project gems are loaded via Bundler. All
-# definitions end up in the root box, inherited by child boxes.
-Ruby::Box.root.eval(<<~RUBY)
-  $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
+# Commands that don't need Ruby::Box (no package boot required).
+NO_BOX_COMMANDS = %w[install info help --help -h version --version -v].freeze
+# Subset that don't need Bundler or project gems at all.
+STANDALONE_COMMANDS = %w[help --help -h version --version -v].freeze
+
+if NO_BOX_COMMANDS.include?(ARGV[0])
+  $LOAD_PATH.unshift(boxwerk_lib)
   require 'boxwerk'
 
-  # Load project gems via Bundler if a Gemfile/gems.rb exists.
-  gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
-  if gemfile
-    require 'bundler/setup'
-    Bundler.require
+  unless STANDALONE_COMMANDS.include?(ARGV[0])
+    gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
+    if gemfile
+      require 'bundler/setup'
+      Bundler.require
+    end
   end
 
-  Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
-RUBY
+  Boxwerk::CLI.run(ARGV, exe_path: boxwerk_exe)
+else
+  unless defined?(Ruby::Box)
+    $stderr.puts "Error: Ruby::Box is not available."
+    $stderr.puts "Boxwerk requires Ruby 4.0 or later with Ruby::Box support."
+    exit 1
+  end
+
+  unless Ruby::Box.enabled?
+    $stderr.puts "Error: Ruby::Box is not enabled."
+    $stderr.puts "Set the RUBY_BOX=1 environment variable before starting Ruby."
+    exit 1
+  end
+
+  # Load and run in the root box. Boxwerk is loaded first (before Bundler
+  # restricts $LOAD_PATH), then project gems are loaded via Bundler. All
+  # definitions end up in the root box, inherited by child boxes.
+  Ruby::Box.root.eval(<<~RUBY)
+    $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
+    require 'boxwerk'
+
+    gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
+    if gemfile
+      require 'bundler/setup'
+      Bundler.require
+    end
+
+    Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
+  RUBY
+end

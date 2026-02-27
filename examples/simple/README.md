@@ -53,14 +53,14 @@ Dependency Graph
 From the `examples/simple/` directory:
 
 ```bash
-bundle install                                             # Install global gems
-../../exe/boxwerk install                                  # Install per-package gems
-RUBY_BOX=1 ../../exe/boxwerk run app.rb                    # Run the example app
-RUBY_BOX=1 ../../exe/boxwerk console                       # Interactive console (root package)
-RUBY_BOX=1 ../../exe/boxwerk exec rake test                # Run root integration tests
-RUBY_BOX=1 ../../exe/boxwerk exec -p packs/util rake test  # Run specific package tests
-RUBY_BOX=1 ../../exe/boxwerk exec --all rake test          # Run all package tests
-RUBY_BOX=1 ../../exe/boxwerk info                          # Show package structure
+bundle install                                                       # Install global gems (including boxwerk)
+bundle exec boxwerk install                                          # Install per-package gems
+RUBY_BOX=1 bundle exec boxwerk run app.rb                            # Run the example app
+RUBY_BOX=1 bundle exec boxwerk console                               # Interactive console (root package)
+RUBY_BOX=1 bundle exec boxwerk exec rake test                        # Run root integration tests
+RUBY_BOX=1 bundle exec boxwerk exec -p packs/util rake test          # Run specific package tests
+RUBY_BOX=1 bundle exec boxwerk exec --all rake test                  # Run all package tests
+bundle exec boxwerk info                                             # Show package structure
 ```
 
 ## What It Demonstrates

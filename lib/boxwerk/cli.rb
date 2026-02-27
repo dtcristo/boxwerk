@@ -76,11 +76,11 @@ module Boxwerk
         puts ''
         puts 'Setup:'
         puts '  # Add gem \'boxwerk\' to your Gemfile, then:'
-        puts '  bundle install                  Install gems (including boxwerk)'
-        puts '  bundle binstubs boxwerk         Create bin/boxwerk binstub'
-        puts '  bin/boxwerk install             Install gems for all packages'
+        puts '  bundle install                            Install gems (including boxwerk)'
+        puts '  bundle exec boxwerk install               Install per-package gems'
+        puts '  RUBY_BOX=1 bundle exec boxwerk run app.rb Run your app'
         puts ''
-        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
+        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
       end
 
       # Parses --package/-p, --all, and --root-box/-r flags from args, returning
@@ -236,9 +236,13 @@ module Boxwerk
       end
 
       def info_command
-        result = perform_setup
-        resolver = result[:resolver]
-        root_path = result[:root_path]
+        root_path = Setup.send(:find_root, Dir.pwd)
+        unless root_path
+          $stderr.puts 'Error: Cannot find package.yml in current directory or ancestors'
+          exit 1
+        end
+
+        resolver = PackageResolver.new(root_path)
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''

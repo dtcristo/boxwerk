@@ -115,14 +115,13 @@ Calculator.add(1, 2)
 ### 5. Run
 
 ```bash
-bundle binstubs boxwerk             # Create bin/boxwerk binstub
-bin/boxwerk install                 # Install gems for all packages with gems
-RUBY_BOX=1 bin/boxwerk run app.rb   # Run with package isolation
+bundle exec boxwerk install          # Install gems for all packages
+RUBY_BOX=1 bundle exec boxwerk run app.rb   # Run with package isolation
 ```
 
-> The binstub ensures the correct gem version runs without `bundle exec`.
-> `bundle exec boxwerk` also works — Boxwerk re-execs into a clean process
-> automatically.
+> Boxwerk re-execs into a clean Ruby process when launched via `bundle exec`,
+> so gems aren't loaded twice. Alternatively, create a binstub with
+> `bundle binstubs boxwerk` and use `bin/boxwerk` directly.
 
 ## CLI
 
@@ -203,7 +202,7 @@ packs/billing/
 
 Gems in the root `Gemfile` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
 
-Run `bin/boxwerk install` to install gems for all packages.
+Run `boxwerk install` to install gems for all packages.
 
 ## Architecture
 
@@ -228,10 +227,19 @@ See [TODO.md](TODO.md) for plans to address these limitations.
 ## Development
 
 ```bash
+bundle install                                            # Install dependencies
+RUBY_BOX=1 bundle exec rake test                          # Unit + integration tests
+RUBY_BOX=1 bundle exec rake e2e                           # End-to-end tests
+```
+
+To run the simple example:
+
+```bash
+cd examples/simple
 bundle install
-rake install                              # Build and install boxwerk gem
-RUBY_BOX=1 bundle exec rake test          # Unit + integration tests
-RUBY_BOX=1 bundle exec rake e2e           # End-to-end tests
+bundle exec boxwerk install
+RUBY_BOX=1 bundle exec boxwerk run app.rb
+RUBY_BOX=1 bundle exec boxwerk exec --all rake test
 ```
 
 ## License
