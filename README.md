@@ -14,7 +14,7 @@ Boxwerk shares Packwerk's goal of bringing modular boundaries to Ruby applicatio
 
 - **Enforce boundaries at runtime.** Ruby doesn't provide a built-in mechanism for constant-level boundaries between modules. Boxwerk fills this gap using `Ruby::Box` isolation, turning architectural guidelines into runtime guarantees.
 - **Enable gradual modularization.** Large applications can adopt packages incrementally. Add `package.yml` files around existing code, declare dependencies, and Boxwerk enforces them. No big-bang rewrite.
-- **Feel Ruby-native.** Boxwerk integrates with Bundler, `gems.rb`, and the standard Ruby toolchain. `boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
+- **Feel Ruby-native.** Boxwerk integrates with Bundler, `Gemfile`/`gems.rb`, and the standard Ruby toolchain. `boxwerk exec rake test` feels like running any other Ruby tool. No custom DSLs or configuration formats.
 - **Work standalone.** Boxwerk reads `package.yml` files directly. Packwerk is optional for static analysis at CI time, but not required at runtime.
 
 ## Ruby::Box
@@ -43,7 +43,7 @@ See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Rub
 gem install boxwerk
 ```
 
-### 2. Add a `gems.rb` for your project
+### 2. Add a `Gemfile` or `gems.rb` for your project
 
 ```ruby
 # gems.rb
@@ -113,23 +113,32 @@ RUBY_BOX=1 boxwerk run app.rb    # Run with package isolation
 ## CLI
 
 ```
-boxwerk exec <command> [args...]     Execute a Ruby command in the boxed environment
-boxwerk run <script.rb> [args...]    Run a Ruby script in the root box
-boxwerk console [irb-args...]        Interactive console in the root box
+boxwerk exec <command> [args...]     Execute a command in the boxed environment
+boxwerk run <script.rb> [args...]    Run a Ruby script in a package box
+boxwerk console [irb-args...]        Interactive console in a package box
 boxwerk info                         Show package structure and dependencies
-boxwerk install                      Bundle install for all packages
+boxwerk install                      Install gems for all packages
 boxwerk version                      Show version
 boxwerk help                         Show usage
+```
+
+### Options
+
+```
+-p, --package <name>         Run in a specific package box (default: root)
+    --all                    Run command for all packages sequentially
 ```
 
 ### Examples
 
 ```bash
-boxwerk run app.rb              # Run a script
-boxwerk exec rake test          # Run tests with boundary enforcement
-boxwerk exec rails console      # Start Rails console in boxed environment
-boxwerk console                 # Interactive IRB in root box
-boxwerk info                    # Show package graph
+boxwerk run app.rb                          # Run a script
+boxwerk exec rake test                      # Run tests (root package)
+boxwerk exec -p packs/util rake test        # Run tests for a specific package
+boxwerk exec --all rake test                # Run tests for all packages
+boxwerk console                             # Interactive IRB (root package)
+boxwerk console -p packs/finance            # IRB in a specific package
+boxwerk info                                # Show package graph
 ```
 
 ## Package Configuration
@@ -151,7 +160,7 @@ private_constants:
 
 ### Per-Package Gems
 
-Packages can have their own `gems.rb` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
+Packages can have their own `Gemfile`/`gems.rb` for isolated gem dependencies. Different packages can use different versions of the same gem — each gets its own `$LOAD_PATH`:
 
 ```
 packs/billing/
@@ -162,7 +171,7 @@ packs/billing/
     └── payment.rb        # require 'stripe' → gets v5
 ```
 
-Gems in the root `gems.rb` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
+Gems in the root `Gemfile`/`gems.rb` are global — available in all boxes via root box inheritance. Per-package gems provide additional isolation on top.
 
 Run `boxwerk install` to install gems for all packages.
 
@@ -178,7 +187,7 @@ end
 
 ## Naming Conventions
 
-File paths within packages follow [Zeitwerk](https://github.com/fxn/zeitwerk) conventions:
+File paths within packages follow standard Ruby naming conventions:
 
 - `lib/invoice.rb` → `Invoice`
 - `lib/services/billing.rb` → `Services::Billing`
@@ -191,9 +200,9 @@ Constants from dependencies are accessible directly — no namespace wrapping.
 Boxwerk is designed to be installed globally (`gem install boxwerk`) rather than via Bundler. This ensures gems are loaded exactly once:
 
 1. The `boxwerk` executable runs `Bundler.setup` and `Bundler.require` inside the **root box**.
-2. All gems from the project's `gems.rb` are loaded into the root box.
+2. All gems from the project's `Gemfile`/`gems.rb` are loaded into the root box.
 3. `Ruby::Box.new` creates child boxes copied from the root box — they inherit all root gems.
-4. Per-package `gems.rb` gems get additional `$LOAD_PATH` entries in their box only.
+4. Per-package `Gemfile`/`gems.rb` gems get additional `$LOAD_PATH` entries in their box only.
 
 This avoids double-loading gems that would occur if `bundle exec` loaded gems into the main box and then Boxwerk loaded them again into the root box.
 
@@ -201,21 +210,23 @@ This avoids double-loading gems that would occur if `bundle exec` loaded gems in
 
 - `Ruby::Box` is experimental in Ruby 4.0
 - No constant reloading (restart required for code changes)
-- Zeitwerk autoloading doesn't work inside boxes (Boxwerk uses `autoload` directly)
+- Boxwerk uses `autoload` directly (not Zeitwerk) inside boxes
 - IRB console runs in root box context with autocomplete disabled
 
 See [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) for plans to address these limitations.
 
 ## Examples
 
-See [examples/simple/](examples/simple/) for a working multi-package application with tests.
+See [examples/simple/](examples/simple/) for a working multi-package application with per-package tests and gem version isolation.
 
 ```bash
 cd examples/simple
-boxwerk install                  # Install gems for all packages
-RUBY_BOX=1 boxwerk run app.rb   # Run the example app
-RUBY_BOX=1 boxwerk exec rake test  # Run integration tests
-RUBY_BOX=1 boxwerk info         # Show package structure
+boxwerk install                              # Install gems for all packages
+RUBY_BOX=1 boxwerk run app.rb               # Run the example app
+RUBY_BOX=1 boxwerk exec rake test           # Run root integration tests
+RUBY_BOX=1 boxwerk exec -p packs/util rake test   # Run util unit tests
+RUBY_BOX=1 boxwerk exec --all rake test     # Run all package tests
+RUBY_BOX=1 boxwerk info                     # Show package structure
 ```
 
 See [examples/rails/](examples/rails/) for the Rails integration plan.

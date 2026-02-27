@@ -32,7 +32,7 @@ module Boxwerk
       end
 
       # Returns the set of public constant names for a package.
-      # These are derived from files in the public_path using Zeitwerk naming.
+      # These are derived from files in the public_path using Ruby naming conventions.
       def public_constants(package, root_path)
         return nil unless enforces_privacy?(package)
 
@@ -91,7 +91,7 @@ module Boxwerk
       private
 
       # Derives a constant name from a file path relative to a base directory.
-      # Uses Zeitwerk naming conventions.
+      # Uses Ruby naming conventions.
       def constant_name_from_path(file_path, base_path)
         normalized_base = base_path.end_with?('/') ? base_path : "#{base_path}/"
         relative = file_path.delete_prefix(normalized_base).delete_suffix('.rb')

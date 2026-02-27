@@ -67,7 +67,7 @@ module Boxwerk
     end
 
     # Scans package directories and maps constant names to file paths
-    # using Zeitwerk naming conventions. Does not load any code.
+    # using Ruby naming conventions. Does not load any code.
     def build_file_index(package)
       index = {}
 

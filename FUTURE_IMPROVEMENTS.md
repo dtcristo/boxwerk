@@ -33,14 +33,14 @@ This would enable full Rails autoloading inside boxes with no workarounds.
 
 ## IRB Console Improvements
 
-**Current limitation:** The IRB console runs in the root box context with
+**Current limitation:** The IRB console runs in a package box context with
 autocomplete disabled (`--noautocomplete`). Autocomplete is disabled because
 it uses `Module.constants` which doesn't reflect box-scoped constants.
 
 ### Plan
 
 **Phase 1: Better constant discovery**
-- Implement a `constants` method on the root box that returns all accessible
+- Implement a `constants` method on each box that returns all accessible
   constants (own + dependency constants)
 - Expose this via a helper: `Boxwerk.available_constants`
 
@@ -49,13 +49,6 @@ it uses `Module.constants` which doesn't reflect box-scoped constants.
   instead of using `Module.constants`
 - Register it via `IRB::InputCompletor` or the newer `IRB::Completion` API
 - This would allow re-enabling autocomplete with box-aware completions
-
-**Phase 3: Per-package console**
-- `boxwerk console --package packs/billing` — drop into a specific package's box
-- Shows only that package's constants and its declared dependencies
-- Useful for testing package isolation interactively
-- Default (no args) opens the root package box as it does today
-- Short form: `boxwerk console -p packs/billing`
 
 ## Constant Reloading
 
@@ -95,9 +88,9 @@ acceptable for development workflows.
 
 ## Global Gems
 
-Currently, gems in the root `gems.rb` are loaded into the root box via
-Bundler and accessible globally. Per-package gems are loaded into individual
-boxes via `$LOAD_PATH` manipulation. There are several ways to improve this:
+Currently, gems in the root `Gemfile`/`gems.rb` are loaded into the root box
+via Bundler and accessible globally. Per-package gems are loaded into
+individual boxes via `$LOAD_PATH` manipulation.
 
 ### Approach 1: Root Box Inheritance (Current)
 
@@ -107,8 +100,8 @@ and `Bundler.require` inside the root box before creating any child boxes.
 This means:
 
 - Gems required before box creation are available everywhere
-- The root `gems.rb` acts as a "global" gem set
-- Per-package `gems.rb` provides additional isolated gems
+- The root `Gemfile`/`gems.rb` acts as a "global" gem set
+- Per-package `Gemfile`/`gems.rb` provides additional isolated gems
 
 **Limitation:** Gems required after box creation are NOT shared. The order of
 operations matters.
@@ -147,24 +140,24 @@ today.
 
 ### Global vs Package Gem Conflicts
 
-When a global gem (root `gems.rb`) and a package gem (`packs/x/gems.rb`)
-specify the same gem at different versions, the package's `$LOAD_PATH`
-entries take precedence because they're prepended. However, this can cause
-subtle issues if the global version was already required.
+When a global gem (root `Gemfile`/`gems.rb`) and a package gem specify the
+same gem at different versions, the package's `$LOAD_PATH` entries take
+precedence because they're prepended. However, this can cause subtle issues
+if the global version was already required.
 
 **Planned resolution:**
 - `boxwerk install` should detect conflicts between global and package gems
 - If the same gem appears in both root and a package at different versions,
   emit a warning or error
 - Explicitly prevent packages from overriding a global gem — if you need a
-  different version, remove it from the global gems.rb
+  different version, remove it from the global `Gemfile`/`gems.rb`
 - Consider a `--strict` flag that errors on any overlap
 
 ### Package Gem Transitive Dependencies
 
 Per-package gems should not be transitively accessible. If `packs/billing`
-depends on `stripe` via its `gems.rb`, packages that depend on `packs/billing`
-should not automatically get access to `stripe`.
+depends on `stripe` via its `Gemfile`/`gems.rb`, packages that depend on
+`packs/billing` should not automatically get access to `stripe`.
 
 **Current behaviour:** `$LOAD_PATH` manipulation means any package that
 includes `packs/billing` as a dependency could potentially `require 'stripe'`
@@ -174,7 +167,7 @@ because the load paths are inherited via the box.
 - Only add per-package gem load paths to that package's box, not to boxes
   that depend on it
 - If a dependent package also needs `stripe`, it should declare it in its
-  own `gems.rb`
+  own `Gemfile`/`gems.rb`
 
 ### Considerations
 
@@ -184,36 +177,68 @@ because the load paths are inherited via the box.
   `Bundler::LockfileParser` at boot (no subprocess). For a shared gem approach,
   we'd need to resolve a combined lockfile or use the root lockfile.
 
+## Alternative exec via RUBYOPT
+
+**Status: NOT RECOMMENDED**
+
+An alternative to the current in-process `box.eval()` approach for
+`boxwerk exec` would be to set `RUBYOPT=-rboxwerk` and spawn a subprocess.
+
+**Why it won't work:** Ruby::Box isolation exists entirely within a single
+process. Each `Ruby::Box.new` creates a separate constant namespace within
+that process. A spawned subprocess would create a new box tree with empty
+state — the wired dependency graph, file indices, and `const_missing`
+handlers cannot transfer across process boundaries. The current in-process
+approach is correct by design.
+
+## Bundler-Inspired Commands
+
+- **`boxwerk check`** — Verify that all cross-package constant accesses match
+  declared dependencies. Scan source files statically and report violations
+  without running code. Useful in CI.
+
+- **`boxwerk list`** — Display all packages, their dependencies, and their
+  isolated gem dependencies. Shows the full package graph with per-package gem
+  versions and highlights version differences.
+
+- **`boxwerk package init [path]`** — Scaffold a new package with
+  `package.yml`, `lib/`, `public/`, and `test/` directories. Prompts for
+  dependencies and privacy settings.
+
+- **`boxwerk outdated`** — Check for outdated gems in all package lockfiles.
+  Similar to `bundle outdated` but respects package isolation — shows which
+  versions each package can safely upgrade to independently.
+
+- **`boxwerk update [package]`** — Update lockfiles for one or all packages.
+  Without arguments, updates all lockfiles in topological order. With a
+  package argument, updates only that package's dependencies.
+
+- **`boxwerk clean`** — Remove unused lockfiles and empty package directories
+  after packages are deleted. Warn about packages with no public constants.
+
+## Packwerk-Inspired Features
+
+- **Runtime Violation Recording** — Track allowed violations with structured
+  metadata (violation type, constant, referencing file). Support
+  `package_todo.yml` to tolerate existing violations while preventing new ones.
+  Enables gradual enforcement for existing codebases.
+
+- **Configurable Violation Handling** — Support `warn`/`strict`/`log` modes
+  per package. `enforce_dependencies: warn` would log violations without
+  raising, supporting gradual adoption in legacy systems.
+
+- **Violation Context & Suggestions** — When a violation occurs, provide
+  actionable context in the NameError message — show the required dependency
+  declaration and suggest the `package.yml` change needed to fix it.
+
+- **Custom Runtime Checkers** — Allow plugins to define additional constraint
+  checks beyond dependencies and privacy (e.g. restrict cross-cutting
+  concerns, enforce max package size).
+
 ## Rails Integration
 
 See [examples/rails/README.md](examples/rails/README.md) for the comprehensive
 Rails integration plan.
-
-## Per-Package Testing
-
-Currently, integration tests run in the root box via `boxwerk exec rake test`.
-Each package could additionally have its own test suite running in its own box:
-
-```bash
-boxwerk test packs/billing     # Run billing tests in isolated box
-boxwerk test --all             # Run all package tests
-```
-
-### Current Approach
-
-Tests in `test/` run in the root box, verifying boundary enforcement:
-- Direct dependency constants are accessible
-- Transitive dependencies raise `NameError`
-- Private constants raise `NameError`
-
-### Future: Per-Pack Box Tests
-
-Each pack could have a `test/` directory with tests that run in that pack's
-box. This would verify that a pack works correctly with only its declared
-dependencies. The test runner would:
-1. Discover test files per pack (`packs/*/test/**/*_test.rb`)
-2. Run each pack's tests inside that pack's box
-3. Minitest (a global gem) would be available in all boxes via root box inheritance
 
 ## IDE Support
 

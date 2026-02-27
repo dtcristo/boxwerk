@@ -22,17 +22,26 @@ CLI designed to feel Ruby-native.
 - **Install method**: Boxwerk is designed to be installed via
   `gem install boxwerk` rather than through Bundler, avoiding double gem
   loading.
+- **Removed zeitwerk dependency**: File-to-constant mapping now uses an
+  inline `Boxwerk.camelize` method instead of Zeitwerk's inflector.
 
 ### Added
 - **`boxwerk exec` command**: Execute any Ruby command in the boxed
   environment (e.g. `boxwerk exec rake test`, `boxwerk exec rails console`).
-- **`boxwerk run` command**: Run a Ruby script in the root box.
-- **`boxwerk console` command**: Interactive IRB in the root box.
+- **`boxwerk run` command**: Run a Ruby script in the root package box.
+- **`boxwerk console` command**: Interactive IRB in the root package box.
 - **`boxwerk install` command**: Bundle install for all packages with a
-  `gems.rb`.
+  `Gemfile`/`gems.rb`.
 - **`boxwerk info` command**: Show package structure, dependencies, and flags.
-- **Per-package gem version isolation**: Packages can have their own `gems.rb`
-  with different gem versions. Each box gets isolated `$LOAD_PATH` entries.
+- **`--package`/`-p` flag**: Target a specific package box for `run`, `exec`,
+  and `console` commands (e.g. `boxwerk exec -p packs/util rake test`).
+- **`--all` flag**: Run `exec` commands across all packages sequentially,
+  each in its own subprocess for clean isolation.
+- **Per-package gem version isolation**: Packages can have their own
+  `Gemfile`/`gems.rb` with different gem versions. Each box gets isolated
+  `$LOAD_PATH` entries.
+- **Per-package testing**: Each package can have its own `test/` directory
+  and `Rakefile`. Run with `boxwerk exec -p packs/name rake test`.
 - **Lazy constant loading**: Constants loaded on first access via `autoload`
   and `const_missing`, then cached.
 - **Privacy enforcement**: `enforce_privacy`, `public_path`,
@@ -43,13 +52,13 @@ CLI designed to feel Ruby-native.
 - **Gem loading architecture** section in README explaining the root box
   inheritance model.
 - `examples/simple/`: Multi-package example with faker version isolation,
-  integration tests, and per-package gems.
+  per-package unit tests, and per-package gems.
 - `examples/rails/README.md`: Comprehensive Rails integration plan.
-- `FUTURE_IMPROVEMENTS.md`: Plans for Zeitwerk, IRB console, constant
-  reloading, global gems, per-package console, gem conflicts, and more.
+- `FUTURE_IMPROVEMENTS.md`: Plans for IRB console, constant reloading,
+  global gems, gem conflicts, Bundler-inspired commands, and more.
 
 ### Changed
-- Renamed `Gemfile` → `gems.rb` throughout.
+- Renamed `Gemfile` → `gems.rb` throughout (both formats supported).
 - `PackageResolver` no longer reads `packwerk.yml` or derives namespaces.
 - `ConstantResolver` installs a dependency resolver on `Object` within each
   box instead of namespace proxies.
@@ -62,6 +71,7 @@ CLI designed to feel Ruby-native.
 - `LayerViolationError` exception class.
 - `PackageResolver.namespace_for` method.
 - `packwerk.yml` support.
+- Zeitwerk runtime dependency.
 - Complementary Tools section from README.
 - Custom `exports`/`imports` YAML configuration.
 
