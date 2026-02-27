@@ -28,8 +28,8 @@ CLI designed to feel Ruby-native.
 ### Added
 - **`boxwerk exec` command**: Execute any Ruby command in the boxed
   environment (e.g. `boxwerk exec rake test`, `boxwerk exec rails console`).
-- **`boxwerk run` command**: Run a Ruby script in the main package box.
-- **`boxwerk console` command**: Interactive IRB in the main package box.
+- **`boxwerk run` command**: Run a Ruby script in the root package box.
+- **`boxwerk console` command**: Interactive IRB in the root package box.
 - **`boxwerk install` command**: Bundle install for all packages with a
   `Gemfile`.
 - **`boxwerk info` command**: Show package structure, dependencies, and flags.
@@ -60,7 +60,7 @@ CLI designed to feel Ruby-native.
   global gems, gem conflicts, Bundler-inspired commands, and more.
 
 ### Changed
-- Renamed "root package" → "main package" in all user-facing text and docs.
+- Terminology uses Packwerk's "root package" consistently throughout.
 - `PackageResolver` no longer reads `packwerk.yml` or derives namespaces.
 - `ConstantResolver` installs a dependency resolver on `Object` within each
   box instead of namespace proxies.

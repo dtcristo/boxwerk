@@ -42,10 +42,10 @@ module Boxwerk
     def find_gemfile(package)
       dir = package_dir(package)
 
-      gemfile = File.join(dir, 'Gemfile')
+      gemfile = File.join(dir, 'gems.rb')
       return gemfile if File.exist?(gemfile)
 
-      gemfile = File.join(dir, 'gems.rb')
+      gemfile = File.join(dir, 'Gemfile')
       return gemfile if File.exist?(gemfile)
 
       nil

@@ -22,4 +22,10 @@ class CalculatorTest < Minitest::Test
   def test_divide_by_zero
     assert_raises(ArgumentError) { Calculator.divide(1, 0) }
   end
+
+  def test_generated_number
+    num = Calculator.generated_number
+    assert_kind_of Integer, num
+    assert num >= 10_000 && num <= 99_999, "Expected 5-digit number, got #{num}"
+  end
 end

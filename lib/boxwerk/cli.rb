@@ -62,9 +62,9 @@ module Boxwerk
         puts '  version                      Show version'
         puts ''
         puts 'Options:'
-        puts '  -p, --package <name>         Run in a specific package box (default: main)'
+        puts '  -p, --package <name>         Run in a specific package box (default: root)'
         puts '      --all                    Run exec for all packages sequentially'
-        puts '      --root                   Run in the root box (no package context)'
+        puts '      --root-box, -r             Run in the root box (no package context)'
         puts ''
         puts 'Examples:'
         puts '  boxwerk run app.rb'
@@ -73,7 +73,7 @@ module Boxwerk
         puts '  boxwerk exec --all rake test'
         puts '  boxwerk console'
         puts '  boxwerk console -p packs/finance'
-        puts '  boxwerk console --root'
+        puts '  boxwerk console --root-box'
         puts ''
         puts 'Setup:'
         puts '  gem install boxwerk             Install boxwerk'
@@ -82,12 +82,12 @@ module Boxwerk
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 and package.yml files'
       end
 
-      # Parses --package/-p, --all, and --root flags from args, returning
-      # { package: name_or_nil, all: bool, root: bool, remaining: [...] }.
+      # Parses --package/-p, --all, and --root-box/-r flags from args, returning
+      # { package: name_or_nil, all: bool, root_box: bool, remaining: [...] }.
       def parse_package_flag(args)
         package_name = nil
         all = false
-        root = false
+        root_box = false
         remaining = []
         i = 0
 
@@ -103,8 +103,8 @@ module Boxwerk
           when '--all'
             all = true
             i += 1
-          when '--root'
-            root = true
+          when '--root-box', '-r'
+            root_box = true
             i += 1
           else
             remaining = args[i..]
@@ -112,7 +112,7 @@ module Boxwerk
           end
         end
 
-        { package: package_name, all: all, root: root, remaining: remaining }
+        { package: package_name, all: all, root_box: root_box, remaining: remaining }
       end
 
       # Resolves the target box for a command given parsed flags.
@@ -173,7 +173,7 @@ module Boxwerk
             exit 1
           end
         else
-          if parsed[:root]
+          if parsed[:root_box]
             box = Ruby::Box.root
           else
             target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
@@ -207,7 +207,7 @@ module Boxwerk
         end
 
         result = perform_setup
-        if parsed[:root]
+        if parsed[:root_box]
           box = Ruby::Box.root
         else
           target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
@@ -222,14 +222,14 @@ module Boxwerk
         parsed = parse_package_flag(args)
 
         result = perform_setup
-        if parsed[:root]
+        if parsed[:root_box]
           box = Ruby::Box.root
           pkg_label = 'root box'
         else
           target_pkg = parsed[:package] ? result[:resolver].packages[parsed[:package]] : nil
           box = resolve_target_box(result, parsed[:package])
           install_resolver_on_ruby_root(result, target_package: target_pkg)
-          pkg_label = parsed[:package] || 'main'
+          pkg_label = parsed[:package] || 'root'
         end
         start_console_in_box(box, parsed[:remaining], pkg_label)
       end
@@ -240,7 +240,7 @@ module Boxwerk
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
-        puts "Main: #{resolver.root.name}"
+        puts "Root: #{resolver.root.name}"
         puts "Packages: #{resolver.packages.size}"
 
         puts ''
@@ -270,7 +270,7 @@ module Boxwerk
 
         resolver.topological_order.each do |pkg|
           pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
-          gemfile = %w[Gemfile gems.rb].find { |f| File.exist?(File.join(pkg_dir, f)) }
+          gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
           next unless gemfile
 
           label = pkg.root? ? '.' : pkg.name
@@ -392,7 +392,7 @@ module Boxwerk
         nil
       end
 
-      def start_console_in_box(box, irb_args = [], pkg_label = 'main')
+      def start_console_in_box(box, irb_args = [], pkg_label = 'root')
         puts "boxwerk #{Boxwerk::VERSION} console (#{pkg_label})"
         puts ''
         puts 'All packages loaded and wired. Type "exit" or press Ctrl+D to quit.'

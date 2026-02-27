@@ -29,7 +29,7 @@ Ruby::Box.root.eval(<<~RUBY)
   require 'boxwerk'
 
   # Load project gems via Bundler if a Gemfile or gems.rb exists.
-  gemfile = %w[Gemfile gems.rb].find { |f| File.exist?(f) }
+  gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
   if gemfile
     ENV['BUNDLE_GEMFILE'] ||= File.expand_path(gemfile)
     require 'bundler/setup'

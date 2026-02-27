@@ -44,8 +44,8 @@ class E2ERunner
     test_package_flag_run
     test_package_flag_exec
     test_package_flag_unknown
-    test_root_flag
-    test_help_shows_root_flag
+    test_root_box_flag
+    test_help_shows_root_box_flag
 
     puts ""
     puts "=" * 60
@@ -202,7 +202,7 @@ class E2ERunner
 
       out, status = run_boxwerk(dir, 'info')
       assert_equal 0, status.exitstatus, "info: exit status"
-      assert_match /Main:/, out, "info: shows main"
+      assert_match /Root:/, out, "info: shows root"
       assert_match /Packages:/, out, "info: shows count"
     end
   end
@@ -289,7 +289,7 @@ class E2ERunner
         puts Greeter.hello
       RUBY
 
-      # Run in main package (has access to greeter via dependency)
+      # Run in root package (has access to greeter via dependency)
       out, status = run_boxwerk(dir, 'run', '-p', '.', 'script.rb')
       assert_equal 0, status.exitstatus, "package_flag_run: exit status"
       assert_match /Hello from greeter pack!/, out, "package_flag_run: output"
@@ -325,7 +325,7 @@ class E2ERunner
     end
   end
 
-  def test_root_flag
+  def test_root_box_flag
     with_project do |dir|
       create_root_package(dir, dependencies: ['packs/greeter'])
       create_package(dir, 'greeter')
@@ -345,15 +345,20 @@ class E2ERunner
         end
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', '--root', 'script.rb')
-      assert_equal 0, status.exitstatus, "root_flag: exit status"
-      assert_match /PASS/, out, "root_flag: no package constants in root box"
+      out, status = run_boxwerk(dir, 'run', '--root-box', 'script.rb')
+      assert_equal 0, status.exitstatus, "root_box_flag: exit status"
+      assert_match /PASS/, out, "root_box_flag: no package constants in root box"
+
+      # Also test -r alias
+      out2, status2 = run_boxwerk(dir, 'run', '-r', 'script.rb')
+      assert_equal 0, status2.exitstatus, "root_box_flag: -r alias exit status"
+      assert_match /PASS/, out2, "root_box_flag: -r alias works"
     end
   end
 
-  def test_help_shows_root_flag
+  def test_help_shows_root_box_flag
     out, status = run_boxwerk(Dir.pwd, 'help')
-    assert_match /--root/, out, "help_root_flag: shows --root option"
+    assert_match /--root-box/, out, "help: shows --root-box option"
   end
 
   # --- Helpers ---

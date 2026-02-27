@@ -7,7 +7,7 @@ class GreetingTest < Minitest::Test
     assert_kind_of String, Greeting.hello
   end
 
-  def test_hello_not_empty
+  def test_hello_includes_name
     refute_empty Greeting.hello
   end
 

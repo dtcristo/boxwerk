@@ -28,7 +28,12 @@ class IntegrationTest < Minitest::Test
       'Expected different faker versions in different packs'
   end
 
+  def test_greeting_includes_prefix
+    greeting = Greeting.hello
+    assert greeting.start_with?('Hello, '), "Expected greeting to start with GREETING_PREFIX from .env"
+  end
+
   def test_dotenv_accessible_as_global_gem
-    assert defined?(Dotenv), 'Global gem dotenv should be accessible in main package'
+    assert defined?(Dotenv), 'Global gem dotenv should be accessible in root package'
   end
 end

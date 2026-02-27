@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Finds the main package.yml directory and boots all packages.
+  # Finds the root package.yml directory and boots all packages.
   module Setup
     class << self
       def run!(start_dir: Dir.pwd)

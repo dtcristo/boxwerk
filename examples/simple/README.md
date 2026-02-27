@@ -6,50 +6,39 @@ Multi-package application demonstrating runtime package isolation with per-packa
 
 ```
 simple/
-├── Gemfile                  # Root dependencies (dotenv, minitest, rake)
-├── package.yml              # Main package (depends on finance, greeting)
+├── Gemfile                  # Global gems (dotenv, minitest, rake)
+├── package.yml              # Root package (depends on finance, greeting)
 ├── app.rb                   # Entry point
 ├── .env                     # Environment variables (loaded by dotenv)
-├── Rakefile                 # Main test runner
 ├── test/
-│   └── integration_test.rb  # Integration tests (run in main package box)
+│   └── integration_test.rb  # Integration tests
 └── packs/
     ├── finance/
     │   ├── package.yml      # enforce_privacy, depends on util
-    │   ├── Rakefile         # Finance test runner
     │   ├── public/
     │   │   └── invoice.rb   # Public API
-    │   ├── lib/
-    │   │   └── tax_calculator.rb  # Private (not in public/)
-    │   └── test/
-    │       └── invoice_test.rb    # Unit tests
+    │   └── lib/
+    │       └── tax_calculator.rb  # Private
     ├── greeting/
     │   ├── package.yml
-    │   ├── Rakefile         # Greeting test runner
     │   ├── Gemfile          # faker 3.6.0
-    │   ├── Gemfile.lock
-    │   ├── lib/
-    │   │   └── greeting.rb  # Uses Faker::Name
-    │   └── test/
-    │       └── greeting_test.rb   # Unit tests
+    │   └── lib/
+    │       └── greeting.rb
     └── util/
         ├── package.yml
-        ├── Rakefile         # Util test runner
         ├── Gemfile          # faker 3.5.1
-        ├── Gemfile.lock
-        ├── lib/
-        │   ├── calculator.rb    # Uses Faker (exposes version)
-        │   └── geometry.rb
-        └── test/
-            ├── calculator_test.rb  # Unit tests
-            └── geometry_test.rb
+        └── lib/
+            ├── calculator.rb
+            └── geometry.rb
 ```
 
 ## Dependency Graph
 
 ```
-main (.) → finance → util (faker 3.5.1)
-         → greeting (faker 3.6.0)
+. (root)
+├── packs/finance
+│   └── packs/util
+└── packs/greeting
 ```
 
 ## Running
@@ -58,7 +47,7 @@ main (.) → finance → util (faker 3.5.1)
 gem install boxwerk
 boxwerk install                                    # Install gems for all packages
 RUBY_BOX=1 boxwerk run app.rb                      # Run the example app
-RUBY_BOX=1 boxwerk exec rake test                  # Run main package integration tests
+RUBY_BOX=1 boxwerk exec rake test                  # Run root package integration tests
 RUBY_BOX=1 boxwerk exec -p packs/util rake test    # Run specific package unit tests
 RUBY_BOX=1 boxwerk exec --all rake test            # Run all package tests
 RUBY_BOX=1 boxwerk info                            # Show package structure
@@ -66,8 +55,8 @@ RUBY_BOX=1 boxwerk info                            # Show package structure
 
 ## What It Demonstrates
 
-1. **Direct constant access** — `Invoice` and `Greeting` accessible from main package
-2. **Transitive dependency blocking** — `Calculator` blocked (main → finance → util)
+1. **Direct constant access** — `Invoice` and `Greeting` accessible from root package
+2. **Transitive dependency blocking** — `Calculator` blocked (root → finance → util)
 3. **Privacy enforcement** — `TaxCalculator` blocked (private, not in `public/`)
 4. **Per-package gem version isolation** — faker 3.5.1 in util, 3.6.0 in greeting
 5. **Global gems** — dotenv accessible in all packages

@@ -20,6 +20,10 @@ class Calculator
     a.to_f / b
   end
 
+  def self.generated_number
+    Faker::Number.number(digits: 5)
+  end
+
   def self.faker_version
     Faker::VERSION
   end

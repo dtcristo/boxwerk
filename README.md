@@ -134,10 +134,10 @@ boxwerk help                         Show usage
 
 ```bash
 boxwerk run app.rb                          # Run a script
-boxwerk exec rake test                      # Run tests (main package)
+boxwerk exec rake test                      # Run tests (root package)
 boxwerk exec -p packs/util rake test        # Run tests for a specific package
 boxwerk exec --all rake test                # Run tests for all packages
-boxwerk console                             # Interactive IRB (main package)
+boxwerk console                             # Interactive IRB (root package)
 boxwerk console -p packs/finance            # IRB in a specific package
 boxwerk console --root                      # IRB in the root box (debugging)
 boxwerk info                                # Show package graph
