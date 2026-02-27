@@ -217,19 +217,8 @@ See [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) for plans to address these 
 
 ## Examples
 
-See [examples/simple/](examples/simple/) for a working multi-package application with per-package tests and gem version isolation.
-
-```bash
-cd examples/simple
-boxwerk install                              # Install gems for all packages
-RUBY_BOX=1 boxwerk run app.rb               # Run the example app
-RUBY_BOX=1 boxwerk exec rake test           # Run root integration tests
-RUBY_BOX=1 boxwerk exec -p packs/util rake test   # Run util unit tests
-RUBY_BOX=1 boxwerk exec --all rake test     # Run all package tests
-RUBY_BOX=1 boxwerk info                     # Show package structure
-```
-
-See [examples/rails/](examples/rails/) for the Rails integration plan.
+- See [examples/simple/](examples/simple/) for a working multi-package application with per-package tests and gem version isolation.
+- See [examples/rails/](examples/rails/) for the Rails integration plan.
 
 ## Development
 

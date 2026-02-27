@@ -54,14 +54,13 @@ root (.) → finance → util (faker 3.5.1)
 ## Running
 
 ```bash
-cd examples/simple
-boxwerk install                                    # Install gems for all packages
-RUBY_BOX=1 boxwerk run app.rb                     # Run the example app
-RUBY_BOX=1 boxwerk exec rake test                 # Run root integration tests
-RUBY_BOX=1 boxwerk exec -p packs/util rake test   # Run util unit tests
-RUBY_BOX=1 boxwerk exec -p packs/finance rake test # Run finance unit tests
-RUBY_BOX=1 boxwerk exec --all rake test           # Run all package tests
-RUBY_BOX=1 boxwerk info                           # Show package structure
+gem install boxwerk
+RUBY_BOX=1 boxwerk install                         # Install gems for all packages
+RUBY_BOX=1 boxwerk run app.rb                      # Run the example app
+RUBY_BOX=1 boxwerk exec rake test                  # Run root integration tests
+RUBY_BOX=1 boxwerk exec -p packs/util rake test    # Run specific package unit tests
+RUBY_BOX=1 boxwerk exec --all rake test            # Run all package tests
+RUBY_BOX=1 boxwerk info                            # Show package structure
 ```
 
 ## What It Demonstrates
