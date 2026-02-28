@@ -10,13 +10,14 @@ ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: db_path)
 
 # Run migrations
 ActiveRecord::MigrationContext.new(
-  File.join(__dir__, '..', 'db', 'migrate')
+  File.join(__dir__, '..', 'db', 'migrate'),
 ).migrate
 
 # Base test class that wraps each test in a rolled-back transaction
 class RailsTestCase < Minitest::Test
   def setup
-    @_test_txn = ActiveRecord::Base.connection.begin_transaction(joinable: false)
+    @_test_txn =
+      ActiveRecord::Base.connection.begin_transaction(joinable: false)
   end
 
   def teardown

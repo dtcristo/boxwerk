@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../gems.rb', __dir__)
+
+require 'rubygems'
+require 'bundler/setup'
+
+# Gem.bin_path resolves incorrectly under Ruby::Box for path: gems.
+# Use Gem.loaded_specs which has the correct full_gem_path.
+spec = Gem.loaded_specs['boxwerk']
+load File.join(spec.full_gem_path, spec.bindir, 'boxwerk')

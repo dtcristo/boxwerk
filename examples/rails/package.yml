@@ -1,0 +1,6 @@
+enforce_dependencies: true
+dependencies:
+  - packs/foundation
+  - packs/users
+  - packs/products
+  - packs/orders

@@ -65,10 +65,9 @@ module Boxwerk
     def scan_and_register(box, package)
       all_entries = []
 
-      pub_path =
-        if PrivacyChecker.enforces_privacy?(package)
-          PrivacyChecker.public_path_for(package, @root_path)
-        end
+      # Always compute public path for file scanning. Privacy enforcement
+      # controls access, not discovery — files in public/ are always scanned.
+      pub_path = PrivacyChecker.public_path_for(package, @root_path)
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)

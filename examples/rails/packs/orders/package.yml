@@ -1,0 +1,6 @@
+enforce_dependencies: true
+enforce_privacy: true
+dependencies:
+  - packs/foundation
+  - packs/users
+  - packs/products
