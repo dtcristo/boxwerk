@@ -2,12 +2,6 @@
 # pack_public: true
 
 module Orders
-  @orders ||= []
-
-  class << self
-    attr_reader :orders
-  end
-
   class Order
     attr_reader :items
 

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'colorize'
-
 module Stats
   class Summary
     def self.print

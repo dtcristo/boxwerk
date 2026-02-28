@@ -3,12 +3,6 @@
 require 'faker'
 
 module Loyalty
-  @cards ||= []
-
-  class << self
-    attr_reader :cards
-  end
-
   class Card
     attr_reader :member_name, :points
 

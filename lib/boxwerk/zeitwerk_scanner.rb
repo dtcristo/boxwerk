@@ -36,6 +36,16 @@ module Boxwerk
       namespaces = entries.select { |e| e.type == :namespace }
       files = entries.select { |e| e.type == :file }
 
+      # Deduplicate namespaces: when both lib/ and public/ contribute a
+      # namespace with the same full_path, prefer the explicit one (has a
+      # .rb file) so the module definition is loaded rather than replaced
+      # by an empty Module.new.
+      namespaces =
+        namespaces
+          .group_by(&:full_path)
+          .values
+          .map { |group| group.find { |ns| ns.file } || group.first }
+
       # Phase 1: Set up namespaces
       namespaces.each do |ns|
         if ns.file
@@ -99,6 +109,10 @@ module Boxwerk
       def scan_dir(fs, inflector, dir, parent_path, entries)
         fs.ls(dir) do |basename, abspath, ftype|
           if ftype == :file
+            # Skip files that have a matching directory (explicit namespaces).
+            # These are already handled as namespace entries with their .rb file.
+            next if File.directory?(abspath.delete_suffix('.rb'))
+
             cname = inflector.camelize(basename.delete_suffix('.rb'), dir)
             full_path = parent_path.empty? ? cname : "#{parent_path}::#{cname}"
             entries << Entry.new(

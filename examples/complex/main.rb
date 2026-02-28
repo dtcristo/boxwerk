@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'colorize'
-
 puts Config::SHOP_NAME.colorize(:yellow).bold
 
 # Build the menu
