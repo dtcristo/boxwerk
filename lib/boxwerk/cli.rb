@@ -64,7 +64,7 @@ module Boxwerk
         puts 'Options:'
         puts '  -p, --package <name>         Run in a specific package box (default: .)'
         puts '      --all                    Run exec for all packages sequentially'
-        puts '  -r, --root-box               Run in the root box (no package context)'
+        puts '  -g, --global                 Run in the global context (no package)'
         puts ''
         puts 'Examples:'
         puts '  boxwerk run app.rb'
@@ -84,12 +84,12 @@ module Boxwerk
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
       end
 
-      # Parses --package/-p, --all, and --root-box/-r flags from args, returning
-      # { package: name_or_nil, all: bool, root_box: bool, remaining: [...] }.
+      # Parses --package/-p, --all, and --global/-g flags from args, returning
+      # { package: name_or_nil, all: bool, global: bool, remaining: [...] }.
       def parse_package_flag(args)
         package_name = nil
         all = false
-        root_box = false
+        global = false
         remaining = []
         i = 0
 
@@ -105,8 +105,8 @@ module Boxwerk
           when '--all'
             all = true
             i += 1
-          when '--root-box', '-r'
-            root_box = true
+          when '--global', '-g'
+            global = true
             i += 1
           else
             remaining = args[i..]
@@ -117,7 +117,7 @@ module Boxwerk
         {
           package: package_name,
           all: all,
-          root_box: root_box,
+          global: global,
           remaining: remaining,
         }
       end
@@ -187,7 +187,7 @@ module Boxwerk
             exit 1
           end
         else
-          if parsed[:root_box]
+          if parsed[:global]
             box = Ruby::Box.root
           else
             target_pkg =
@@ -228,7 +228,7 @@ module Boxwerk
         end
 
         result = perform_setup
-        if parsed[:root_box]
+        if parsed[:global]
           box = Ruby::Box.root
         else
           target_pkg =
@@ -249,8 +249,8 @@ module Boxwerk
         parsed = parse_package_flag(args)
 
         result = perform_setup
-        if parsed[:root_box]
-          pkg_label = 'root box'
+        if parsed[:global]
+          pkg_label = 'global'
         else
           target_pkg =
             (

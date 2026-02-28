@@ -38,17 +38,17 @@ class E2ERunner
     test_install_command
     test_missing_script_error
     test_nonexistent_script_error
-    test_missing_package_yml_error
+    test_implicit_root
     test_nested_constants
     test_unknown_command_error
     test_package_flag_run
     test_package_flag_exec
     test_package_flag_unknown
-    test_root_box_flag
-    test_help_shows_root_box_flag
+    test_global_flag
+    test_help_shows_global_flag
     test_console_root_package
     test_console_child_package
-    test_console_root_box
+    test_console_global
     test_bundle_exec_reexec
 
     puts ''
@@ -248,14 +248,12 @@ class E2ERunner
     assert_match /Script not found/, out, 'nonexistent_script: error message'
   end
 
-  def test_missing_package_yml_error
+  def test_implicit_root
     Dir.mktmpdir do |dir|
-      write_file(dir, 'app.rb', "puts 'hello'\n")
+      write_file(dir, 'app.rb', "puts 'hello from implicit root'\n")
       out, status = run_boxwerk(dir, 'run', 'app.rb')
-      assert_equal 1, status.exitstatus, 'missing_package_yml: exit status'
-      assert_match /package\.yml/,
-                   out,
-                   'missing_package_yml: mentions package.yml'
+      assert_equal 0, status.exitstatus, 'implicit_root: exit status'
+      assert_match /hello from implicit root/, out, 'implicit_root: script runs'
     end
   end
 
@@ -336,7 +334,7 @@ class E2ERunner
     end
   end
 
-  def test_root_box_flag
+  def test_global_flag
     with_project do |dir|
       create_root_package(dir, dependencies: ['packs/greeter'])
       create_package(dir, 'greeter')
@@ -348,30 +346,30 @@ class E2ERunner
       write_file(dir, 'script.rb', <<~RUBY)
         begin
           _ = Greeter
-          puts "FAIL: Greeter should not be accessible in root box"
+          puts "FAIL: Greeter should not be accessible in global context"
           exit 1
         rescue NameError
-          puts "PASS: root box has no package constants"
+          puts "PASS: global context has no package constants"
           exit 0
         end
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', '--root-box', 'script.rb')
-      assert_equal 0, status.exitstatus, 'root_box_flag: exit status'
+      out, status = run_boxwerk(dir, 'run', '--global', 'script.rb')
+      assert_equal 0, status.exitstatus, 'global_flag: exit status'
       assert_match /PASS/,
                    out,
-                   'root_box_flag: no package constants in root box'
+                   'global_flag: no package constants in global context'
 
-      # Also test -r alias
-      out2, status2 = run_boxwerk(dir, 'run', '-r', 'script.rb')
-      assert_equal 0, status2.exitstatus, 'root_box_flag: -r alias exit status'
-      assert_match /PASS/, out2, 'root_box_flag: -r alias works'
+      # Also test -g alias
+      out2, status2 = run_boxwerk(dir, 'run', '-g', 'script.rb')
+      assert_equal 0, status2.exitstatus, 'global_flag: -g alias exit status'
+      assert_match /PASS/, out2, 'global_flag: -g alias works'
     end
   end
 
-  def test_help_shows_root_box_flag
+  def test_help_shows_global_flag
     out, status = run_boxwerk(Dir.pwd, 'help')
-    assert_match /--root-box/, out, 'help: shows --root-box option'
+    assert_match /--global/, out, 'help: shows --global option'
   end
 
   def test_console_root_package
@@ -421,7 +419,7 @@ class E2ERunner
     end
   end
 
-  def test_console_root_box
+  def test_console_global
     with_project do |dir|
       create_root_package(dir, dependencies: ['packs/greeter'])
       create_package(dir, 'greeter')
@@ -431,7 +429,7 @@ class E2ERunner
         end
       RUBY
 
-      # Root box should not have access to package constants
+      # Global context should not have access to package constants
       script = <<~STDIN
         begin
           _ = Greeter
@@ -441,11 +439,11 @@ class E2ERunner
         end
         exit
       STDIN
-      out, status = run_boxwerk_with_stdin(dir, script, 'console', '--root-box')
-      assert_equal 0, status.exitstatus, 'console_root_box: exit status'
+      out, status = run_boxwerk_with_stdin(dir, script, 'console', '--global')
+      assert_equal 0, status.exitstatus, 'console_global: exit status'
       assert_match /PASS/,
                    out,
-                   'console_root_box: no package constants in root box'
+                   'console_global: no package constants in global context'
     end
   end
 
