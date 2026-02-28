@@ -12,7 +12,6 @@ task :test do
     .each { |f| require_relative f }
 end
 
-desc 'Run e2e tests'
 task :e2e do
   # Disconnect AR so forked subprocess doesn't inherit stale SQLite FDs
   if defined?(ActiveRecord::Base)
