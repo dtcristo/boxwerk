@@ -24,25 +24,37 @@ rails/
 │   └── integration_test.rb  # Cross-package integration tests
 └── packs/
     ├── foundation/           # ApplicationRecord, ApplicationController
-    │   ├── package.yml       # enforce_privacy: true (leaf package)
+    │   ├── package.yml       # enforce_privacy: true
     │   └── public/
-    ├── users/                # User model (public), UserValidator (private)
-    │   ├── package.yml       # depends on foundation
-    │   └── public/user.rb
-    ├── products/             # Product model (public), InventoryChecker (private)
-    │   ├── package.yml       # depends on foundation
-    │   └── public/product.rb
-    └── orders/               # Order model (public), OrderProcessor (private)
-        ├── package.yml       # depends on foundation, users, products
-        └── public/order.rb
+    ├── users/                # User model (public), controller + validator (private)
+    │   ├── package.yml       # depends on foundation, public_path: models
+    │   ├── boot.rb           # Adds controllers/ and validators/ autoload dirs
+    │   ├── models/
+    │   ├── controllers/
+    │   └── validators/
+    ├── products/             # Product model (public), controller + service (private)
+    │   ├── package.yml       # depends on foundation, public_path: models
+    │   ├── boot.rb           # Adds controllers/ and services/ autoload dirs
+    │   ├── models/
+    │   ├── controllers/
+    │   └── services/
+    └── orders/               # Order model (public), controller + service (private)
+        ├── package.yml       # depends on foundation, users, products, public_path: models
+        ├── boot.rb           # Adds controllers/ and services/ autoload dirs
+        ├── models/
+        ├── controllers/
+        └── services/
 ```
 
 ## Features Demonstrated
 
 - **Rails via global boot** — `global/boot.rb` loads and initializes Rails in the global context; all packs inherit Rails infrastructure
 - **Foundation package** — `ApplicationRecord` and `ApplicationController` as public base classes in a leaf package; all domain packs depend on it
+- **Rails directory conventions** — Domain packs use `models/`, `controllers/`, `validators/`, `services/` instead of `lib/` and `public/`
+- **Custom public_path** — Domain packs set `public_path: models` so model classes are the public API
+- **Per-package boot.rb** — Each domain pack uses `boot.rb` to register additional autoload dirs via `BOXWERK_CONFIG[:autoload_dirs]`
 - **ActiveRecord across boxes** — `Order` belongs_to `:user` and `:product`; associations resolve via `const_missing` across package boundaries
-- **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs
+- **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs (not in `public_path`)
 - **Zeitwerk disabled** — Boxwerk handles autoloading; `config.autoload_paths = []` in the app config
 
 ## Boot Sequence

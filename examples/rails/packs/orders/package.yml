@@ -1,5 +1,6 @@
 enforce_dependencies: true
 enforce_privacy: true
+public_path: models
 dependencies:
   - packs/foundation
   - packs/users
