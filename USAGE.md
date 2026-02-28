@@ -256,6 +256,45 @@ boxwerk exec --all rake test             # All packages sequentially
 
 Each `--all` run spawns a separate subprocess per package for clean isolation — test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.
 
+## Boot Script (`boot.rb`)
+
+An optional `boot.rb` file at the project root runs in the root box after global gems are loaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+
+```ruby
+# boot.rb
+require 'dotenv/load'
+puts "Booting #{Config::SHOP_NAME}..."
+```
+
+### Boot Directory (`boot/`)
+
+An optional `boot/` directory at the project root is autoloaded in the root box before `boot.rb` runs. Files follow Zeitwerk conventions:
+
+```
+boot/
+├── config.rb         → Config
+└── middleware.rb      → Middleware
+```
+
+Constants defined here are inherited by all package boxes (they live in the root box which child boxes are copied from).
+
+```ruby
+# boot/config.rb
+module Config
+  SHOP_NAME = ENV.fetch('SHOP_NAME', 'My App')
+  CURRENCY = '$'
+end
+```
+
+Both `boot.rb` and `boot/` are optional. If neither exists, Boxwerk boots normally.
+
+### Use Cases
+
+- Load environment variables (`dotenv`)
+- Define global configuration constants
+- Initialize shared services (logging, instrumentation)
+- Future: boot Rails in the root box
+
 ## Examples
 
 - [`examples/minimal/`](examples/minimal/) — Simplest setup: three packages, dependency enforcement, no gems

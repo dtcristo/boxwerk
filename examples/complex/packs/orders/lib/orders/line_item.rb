@@ -14,7 +14,7 @@ module Orders
     end
 
     def to_s
-      "  #{quantity}x #{menu_item.name} @ #{menu_item.price} = #{format('$%.2f', total_cents / 100.0)}"
+      "  #{quantity}x #{menu_item.name} @ #{menu_item.price} = #{format("#{Config::CURRENCY}%.2f", total_cents / 100.0)}"
     end
   end
 end

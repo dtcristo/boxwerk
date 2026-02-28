@@ -19,7 +19,7 @@ module Orders
     end
 
     def total
-      format('$%.2f', total_cents / 100.0)
+      format("#{Config::CURRENCY}%.2f", total_cents / 100.0)
     end
 
     def summary

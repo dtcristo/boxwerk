@@ -11,7 +11,7 @@ module Menu
     end
 
     def price
-      format('$%.2f', price_cents / 100.0)
+      format("#{Config::CURRENCY}%.2f", price_cents / 100.0)
     end
 
     def to_s

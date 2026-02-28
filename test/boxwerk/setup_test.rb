@@ -54,6 +54,38 @@ module Boxwerk
       assert_nil Setup.box_manager
     end
 
+    def test_run_executes_boot_script
+      create_package(@tmpdir)
+      File.write(File.join(@tmpdir, 'boot.rb'), "$BOXWERK_BOOT_TEST = true\n")
+
+      Setup.run(start_dir: @tmpdir)
+
+      assert Ruby::Box.root.eval('$BOXWERK_BOOT_TEST')
+    end
+
+    def test_run_autoloads_boot_directory
+      create_package(@tmpdir)
+      boot_dir = File.join(@tmpdir, 'boot')
+      FileUtils.mkdir_p(boot_dir)
+      File.write(
+        File.join(boot_dir, 'boot_helper.rb'),
+        "module BootHelper; VALUE = 42; end\n",
+      )
+
+      Setup.run(start_dir: @tmpdir)
+
+      assert_equal 42, Ruby::Box.root.eval('BootHelper::VALUE')
+    end
+
+    def test_run_works_without_boot_script
+      create_package(@tmpdir)
+
+      result = Setup.run(start_dir: @tmpdir)
+
+      assert Setup.booted?
+      assert_instance_of PackageResolver, result[:resolver]
+    end
+
     private
 
     def create_package(path, dependencies: nil)

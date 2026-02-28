@@ -70,9 +70,12 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 
 ```
 1. Find root package.yml (walk up from current directory)
-2. Create PackageResolver — discovers all package.yml files
-3. Create BoxManager — manages Ruby::Box instances
-4. Boot all packages in topological order (dependencies first)
+2. Run boot script (if boot/ or boot.rb exist):
+   a. Scan boot/ with Zeitwerk, register autoloads in root box
+   b. Require boot.rb in root box
+3. Create PackageResolver — discovers all package.yml files
+4. Create BoxManager — manages Ruby::Box instances
+5. Boot all packages in topological order (dependencies first)
 ```
 
 ### BoxManager.boot (per package)

@@ -2,8 +2,7 @@
 
 require 'colorize'
 
-shop = ENV['SHOP_NAME'] || 'Coffee Shop'
-puts shop.colorize(:yellow).bold
+puts Config::SHOP_NAME.colorize(:yellow).bold
 
 # Build the menu
 latte = Menu::Item.new(name: 'Latte', price_cents: 550)

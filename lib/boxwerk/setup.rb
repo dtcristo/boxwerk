@@ -10,6 +10,9 @@ module Boxwerk
           raise 'Cannot find package.yml in current directory or ancestors'
         end
 
+        # Run boot.rb in root box (after gems, before package boxes).
+        run_boot_script(root_path)
+
         resolver = Boxwerk::PackageResolver.new(root_path)
         @box_manager = Boxwerk::BoxManager.new(root_path)
         @box_manager.boot_all(resolver)
@@ -59,6 +62,25 @@ module Boxwerk
           current = parent
         end
         nil
+      end
+
+      # Runs the optional boot.rb script in the root box. If a boot/
+      # directory exists, its files are autoloaded in the root box first.
+      # This runs after global gems are loaded but before package boxes
+      # are created, so definitions here are inherited by all boxes.
+      def run_boot_script(root_path)
+        root_box = Ruby::Box.root
+        boot_dir = File.join(root_path, 'boot')
+        boot_script = File.join(root_path, 'boot.rb')
+
+        # Autoload boot/ files in root box
+        if File.directory?(boot_dir)
+          entries = ZeitwerkScanner.scan(boot_dir)
+          ZeitwerkScanner.register_autoloads(root_box, entries)
+        end
+
+        # Run boot.rb in root box
+        root_box.require(boot_script) if File.exist?(boot_script)
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)
