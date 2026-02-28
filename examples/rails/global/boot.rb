@@ -1,9 +1,20 @@
 # frozen_string_literal: true
 
 # Global boot — runs in root box before package boxes are created.
-# Rails classes are inherited by all package boxes.
+# Require and eager load Rails frameworks so they are available in all boxes.
 
-require_relative '../config/application'
-Example::Application.initialize!
+require 'rails'
+require 'active_record/railtie'
+require 'action_controller/railtie'
+require 'rails/command'
 
-puts "Rails #{Rails::VERSION::STRING} booted"
+# Eager load Rails internals so child boxes inherit fully resolved constants.
+# Boxwerk calls Zeitwerk::Loader.eager_load_all after this script, but the
+# framework-specific eager_load! methods resolve non-Zeitwerk autoloads too.
+ActiveSupport.eager_load!
+ActiveRecord.eager_load!
+ActionController.eager_load!
+
+# Pre-define the application module in root box so Rails files loaded
+# via Kernel#load (e.g. routes.rb) can reference it.
+module Example; end

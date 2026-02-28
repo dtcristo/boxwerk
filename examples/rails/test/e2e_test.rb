@@ -41,7 +41,7 @@ class RailsE2ERunner
     db_path = File.join(@rails_dir, 'db', 'test.sqlite3')
     FileUtils.rm_f(db_path)
 
-    out, status = run_rails_boxwerk('exec', '-g', 'rails', 'db:migrate')
+    out, status = run_rails_boxwerk('exec', 'rails', 'db:migrate')
     assert_equal 0, status.exitstatus, 'rails_db_migrate: exit status'
     assert_equal true, File.exist?(db_path), 'rails_db_migrate: db file created'
   end
@@ -50,7 +50,6 @@ class RailsE2ERunner
     out, status =
       run_rails_boxwerk(
         'exec',
-        '-g',
         'rails',
         'runner',
         'puts ENV["RAILS_ENV"]',
@@ -119,7 +118,7 @@ class RailsE2ERunner
   end
 
   def rails_migrate_test_db
-    run_rails_boxwerk('exec', '-g', 'rails', 'db:migrate')
+    run_rails_boxwerk('exec', 'rails', 'db:migrate')
   end
 
   def available_port
@@ -135,7 +134,6 @@ class RailsE2ERunner
       'ruby',
       @boxwerk_bin,
       'exec',
-      '-g',
       'rails',
       'server',
       '-p',
