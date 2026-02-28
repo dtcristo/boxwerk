@@ -67,7 +67,7 @@ module Boxwerk
         puts '  -g, --global                 Run in the global context (no package)'
         puts ''
         puts 'Examples:'
-        puts '  boxwerk run app.rb'
+        puts '  boxwerk run main.rb'
         puts '  boxwerk exec rake test'
         puts '  boxwerk exec -p packs/util rake test'
         puts '  boxwerk exec --all rake test'
@@ -79,7 +79,7 @@ module Boxwerk
         puts '  bundle install                       Install gems (including boxwerk)'
         puts '  bundle binstubs boxwerk              Create bin/boxwerk binstub'
         puts '  bin/boxwerk install                  Install per-package gems'
-        puts '  RUBY_BOX=1 bin/boxwerk run app.rb    Run your app'
+        puts '  RUBY_BOX=1 bin/boxwerk run main.rb   Run your app'
         puts ''
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
       end

@@ -2,4 +2,4 @@
 
 require_relative 'config/environment'
 
-run Application
+run Example::Application

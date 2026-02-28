@@ -2,4 +2,4 @@
 
 require_relative 'application'
 
-Application.initialize! unless Application.initialized?
+Example::Application.initialize! unless Example::Application.initialized?

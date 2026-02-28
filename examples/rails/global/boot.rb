@@ -4,6 +4,6 @@
 # Rails classes are inherited by all package boxes.
 
 require_relative '../config/application'
-Application.initialize!
+Example::Application.initialize!
 
 puts "Rails #{Rails::VERSION::STRING} booted"

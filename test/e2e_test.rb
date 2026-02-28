@@ -68,11 +68,11 @@ class E2ERunner
           def self.hello = 'Hello from Boxwerk!'
         end
       RUBY
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         puts Greeter.hello
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'basic_run: exit status'
       assert_match /Hello from Boxwerk!/, out, 'basic_run: output'
     end
@@ -87,13 +87,13 @@ class E2ERunner
           def self.add(a, b) = a + b
         end
       RUBY
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         result = Calc.add(3, 4)
         puts "Result: \#{result}"
         exit(result == 7 ? 0 : 1)
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'dependency_access: exit status'
       assert_match /Result: 7/, out, 'dependency_access: output'
     end
@@ -106,7 +106,7 @@ class E2ERunner
       create_package(dir, 'b')
       write_file(dir, 'packs/a/lib/class_a.rb', "class ClassA; end\n")
       write_file(dir, 'packs/b/lib/class_b.rb', "class ClassB; end\n")
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         begin
           ClassB
           puts "FAIL: transitive dependency was accessible"
@@ -117,7 +117,7 @@ class E2ERunner
         end
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'transitive_blocked: exit status'
       assert_match /PASS/, out, 'transitive_blocked: output'
     end
@@ -141,7 +141,7 @@ class E2ERunner
         end
       RUBY
 
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         # Public constant should work
         puts Api.call
 
@@ -161,7 +161,7 @@ class E2ERunner
         end
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'privacy_enforcement: exit status'
       assert_match /public api/, out, 'privacy_enforcement: public access'
       assert_match /PASS/, out, 'privacy_enforcement: privacy block'
@@ -177,11 +177,11 @@ class E2ERunner
           def self.hello = 'Hello via exec!'
         end
       RUBY
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         puts Greeter.hello
       RUBY
 
-      out, status = run_boxwerk(dir, 'exec', 'app.rb')
+      out, status = run_boxwerk(dir, 'exec', 'main.rb')
       assert_equal 0, status.exitstatus, 'exec_ruby_script: exit status'
       assert_match /Hello via exec!/, out, 'exec_ruby_script: output'
     end
@@ -250,8 +250,8 @@ class E2ERunner
 
   def test_implicit_root
     Dir.mktmpdir do |dir|
-      write_file(dir, 'app.rb', "puts 'hello from implicit root'\n")
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      write_file(dir, 'main.rb', "puts 'hello from implicit root'\n")
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'implicit_root: exit status'
       assert_match /hello from implicit root/, out, 'implicit_root: script runs'
     end
@@ -269,11 +269,11 @@ class E2ERunner
           end
         end
       RUBY
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         puts V2::Endpoint.path
       RUBY
 
-      out, status = run_boxwerk(dir, 'run', 'app.rb')
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'nested_constants: exit status'
       assert_match %r{/api/v2}, out, 'nested_constants: output'
     end
@@ -327,8 +327,9 @@ class E2ERunner
   def test_package_flag_unknown
     with_project do |dir|
       create_root_package(dir)
-      write_file(dir, 'app.rb', "puts 'hello'\n")
-      out, status = run_boxwerk(dir, 'run', '-p', 'packs/nonexistent', 'app.rb')
+      write_file(dir, 'main.rb', "puts 'hello'\n")
+      out, status =
+        run_boxwerk(dir, 'run', '-p', 'packs/nonexistent', 'main.rb')
       assert_equal 1, status.exitstatus, 'package_flag_unknown: exit status'
       assert_match /Unknown package/, out, 'package_flag_unknown: error message'
     end
@@ -456,7 +457,7 @@ class E2ERunner
           def self.hello = 'Hello via bundle exec!'
         end
       RUBY
-      write_file(dir, 'app.rb', <<~RUBY)
+      write_file(dir, 'main.rb', <<~RUBY)
         puts Greeter.hello
       RUBY
 
@@ -468,7 +469,7 @@ class E2ERunner
         'RUBYOPT' => '-rbundler/setup',
         'BUNDLE_GEMFILE' => gemfile,
       }
-      cmd = ['ruby', @boxwerk_bin, 'run', 'app.rb']
+      cmd = ['ruby', @boxwerk_bin, 'run', 'main.rb']
       stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
       out = stdout + stderr
       assert_equal 0, status.exitstatus, 'bundle_exec_reexec: exit status'

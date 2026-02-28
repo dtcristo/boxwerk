@@ -26,7 +26,7 @@ EXAMPLE_DIRS =
 desc 'Run example apps (assert successful exit)'
 task :example_apps do
   EXAMPLE_DIRS.each do |dir|
-    main = %w[main.rb app.rb].find { |f| File.exist?(File.join(dir, f)) }
+    main = %w[main.rb].find { |f| File.exist?(File.join(dir, f)) }
     next unless main
 
     name = File.basename(dir)
