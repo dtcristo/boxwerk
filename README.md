@@ -88,7 +88,7 @@ See [TODO.md](TODO.md) for plans to address these.
 
 - [`examples/minimal/`](examples/minimal/) — Three packages, dependency enforcement, no gems
 - [`examples/complex/`](examples/complex/) — Namespaced constants, privacy, per-package gems, tests
-- [`examples/rails/`](examples/rails/) — Rails integration plan
+- [`examples/rails/`](examples/rails/) — Rails with ActiveRecord, foundation package, privacy
 
 ## Development
 

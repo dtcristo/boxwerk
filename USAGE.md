@@ -299,4 +299,4 @@ Both `boot.rb` and `boot/` are optional. If neither exists, Boxwerk boots normal
 
 - [`examples/minimal/`](examples/minimal/) — Simplest setup: three packages, dependency enforcement, no gems
 - [`examples/complex/`](examples/complex/) — Full-featured: namespaced constants, privacy enforcement, per-package gems, global gems, and tests
-- [`examples/rails/`](examples/rails/) — Rails integration plan
+- [`examples/rails/`](examples/rails/) — Rails with ActiveRecord, foundation package, privacy
