@@ -10,7 +10,7 @@ complex/
 ├── global/
 │   ├── boot.rb              # Boot script (runs in global context before packages)
 │   └── config.rb            # Config module (autoloaded in global context)
-├── app.rb                   # Entry point
+├── main.rb                   # Entry point
 ├── gems.rb                  # Global gems (colorize, dotenv, minitest, rake)
 ├── .env                     # Environment variables
 ├── test/
@@ -49,7 +49,7 @@ complex/
 ```bash
 bundle install
 bin/boxwerk install
-RUBY_BOX=1 bin/boxwerk run app.rb
+RUBY_BOX=1 bin/boxwerk run main.rb
 RUBY_BOX=1 bin/boxwerk exec rake test
 RUBY_BOX=1 bin/boxwerk exec --all rake test
 bin/boxwerk info

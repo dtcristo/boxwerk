@@ -29,7 +29,7 @@ bin/boxwerk install                  # Install per-package gems
 Run your application:
 
 ```bash
-RUBY_BOX=1 bin/boxwerk run app.rb
+RUBY_BOX=1 bin/boxwerk run main.rb
 ```
 
 ## Package Configuration (package.yml)
@@ -83,9 +83,9 @@ boxwerk <command> [options] [args...]
 Run a Ruby script in a package box.
 
 ```bash
-boxwerk run app.rb                       # Run in root package box
-boxwerk run -p packs/finance app.rb      # Run in a specific package box
-boxwerk run -g app.rb                    # Run in global context (no package)
+boxwerk run main.rb                       # Run in root package box
+boxwerk run -p packs/finance main.rb      # Run in a specific package box
+boxwerk run -g main.rb                    # Run in global context (no package)
 ```
 
 #### `boxwerk exec <command> [args...]`

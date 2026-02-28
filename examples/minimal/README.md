@@ -15,5 +15,5 @@ Root can access `Foo` and `Bar` (direct dependencies) but not `Baz` (transitive)
 
 ```bash
 bundle install
-RUBY_BOX=1 bin/boxwerk run app.rb
+RUBY_BOX=1 bin/boxwerk run main.rb
 ```

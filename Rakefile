@@ -26,16 +26,16 @@ EXAMPLE_DIRS =
 desc 'Run example apps (assert successful exit)'
 task :example_apps do
   EXAMPLE_DIRS.each do |dir|
-    app = File.join(dir, 'app.rb')
-    next unless File.exist?(app)
+    main = %w[main.rb app.rb].find { |f| File.exist?(File.join(dir, f)) }
+    next unless main
 
     name = File.basename(dir)
-    puts "==> example:#{name} app.rb"
+    puts "==> example:#{name} #{main}"
     sh(
       { 'RUBY_BOX' => '1' },
       File.join(dir, 'bin', 'boxwerk'),
       'run',
-      'app.rb',
+      main,
       chdir: dir,
     )
   end

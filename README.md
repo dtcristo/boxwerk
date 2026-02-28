@@ -35,7 +35,7 @@ Create packages with `package.yml` files:
 ```
 my_app/
 ├── package.yml           # root package
-├── app.rb
+├── main.rb
 ├── gems.rb
 └── packs/
     ├── foo/
@@ -59,7 +59,7 @@ Install and run:
 ```bash
 bundle install
 bundle binstubs boxwerk
-RUBY_BOX=1 bin/boxwerk run app.rb
+RUBY_BOX=1 bin/boxwerk run main.rb
 ```
 
 See [USAGE.md](USAGE.md) for full documentation including CLI reference, package configuration, per-package gems, privacy enforcement, and testing.
