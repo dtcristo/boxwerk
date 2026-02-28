@@ -27,6 +27,9 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - CLI commands: `exec`, `run`, `console`, `install`, `info`.
 - CLI flags: `-p`/`--package`, `--all`, `-r`/`--root-box`.
 - Per-package gem isolation via `Gemfile`/`gems.rb` per package.
+- Per-package gem auto-require: gems declared in a package's `Gemfile` are
+  automatically required in the package box, matching Bundler's default
+  behaviour. Supports `require: false` and `require: 'custom/path'`.
 - Privacy enforcement: `enforce_privacy`, `public_path`,
   `private_constants`, `pack_public: true` sigil.
 - Zeitwerk-based file scanning and inflection (`ZeitwerkScanner`).

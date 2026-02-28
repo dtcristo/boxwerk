@@ -154,13 +154,16 @@ packs/billing/
 ├── Gemfile               # gem 'stripe', '~> 5.0'
 ├── Gemfile.lock
 └── lib/
-    └── payment.rb        # require 'stripe' → gets v5
+    └── payment.rb        # Stripe auto-required, ready to use
 ```
 
 ### Gem Isolation Model
 
 - **Global gems** (root `Gemfile`) are loaded in the global context and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
 - **Per-package gems** are resolved from lockfiles and added to each box's `$LOAD_PATH` independently
+- **Auto-required:** Gems declared in a package's `Gemfile`/`gems.rb` are automatically required in the package box (like Bundler's default behaviour). No manual `require` needed
+- **`require: false`** — Gems declared with `require: false` are added to `$LOAD_PATH` but not auto-required
+- **Custom require:** `gem 'foo', require: 'foo/bar'` auto-requires `foo/bar` instead of `foo`
 - **Gems do NOT leak** across package boundaries — package A cannot see package B's gems, even if A depends on B
 - **Cross-package version differences** are safe — each box has its own isolated `$LOAD_PATH`
 - **Global override warning:** If a package defines a gem that's also in the root `Gemfile` at a different version, both versions load into memory (functionally correct but wastes memory). Boxwerk warns at boot time

@@ -93,17 +93,19 @@ For each package, in dependency order:
 1. Create Ruby::Box.new (copied from root box, inherits global gems)
 2. Setup per-package gem load paths (if Gemfile exists)
    → Prepend gem load paths to the box's $LOAD_PATH
-3. Scan directories with Zeitwerk (file discovery + inflection)
+3. Auto-require gems from Gemfile (non-root packages only)
+   → Respects require: false and require: 'custom/path'
+4. Scan directories with Zeitwerk (file discovery + inflection)
    → Uses Zeitwerk::Loader::FileSystem for scanning
    → Uses Zeitwerk::Inflector for snake_case → CamelCase conversion
-4. Register autoload entries in the box via box.eval
+5. Register autoload entries in the box via box.eval
    → Implicit namespaces: create Module.new
    → Explicit namespaces: autoload + eager trigger
    → Files: autoload :Invoice, "/path/to/public/invoice.rb"
-5. Run per-package boot.rb (if it exists)
+6. Run per-package boot.rb (if it exists)
    → Executes after the package's own constants are scanned
    → Used for configuring additional autoload dirs and collapse dirs
-6. Wire dependency constants via const_missing
+7. Wire dependency constants via const_missing
    → Install a resolver that searches direct dependency boxes
    → When enforce_dependencies is false, searches ALL packages:
      explicit deps first (in declared order), then remaining packages
@@ -193,9 +195,14 @@ Privacy is checked at constant resolution time in the `const_missing` handler. A
 
 1. Check if the package has a `gems.rb` or `Gemfile` (and corresponding lockfile)
 2. Parse the lockfile with `Bundler::LockfileParser` to get gem specs
-3. Find the actual gem installation paths by searching all `Gem.path` directories
-4. Collect full require paths for each gem and its runtime dependencies
-5. Prepend these paths to the box's `$LOAD_PATH`
+3. Parse the Gemfile with `GemfileRequireParser` to extract autorequire directives
+4. Find the actual gem installation paths by searching all `Gem.path` directories
+5. Collect full require paths for each gem and its runtime dependencies
+6. Prepend these paths to the box's `$LOAD_PATH`
+7. Auto-require gems declared in the Gemfile (non-root packages only):
+   - Default (`gem 'faker'`) → `require 'faker'`
+   - Custom (`gem 'foo', require: 'foo/bar'`) → `require 'foo/bar'`
+   - Disabled (`gem 'dotenv', require: false`) → skip
 
 Since each box has its own `$LOAD_PATH`, `require 'faker'` in two different boxes can load different versions.
 
@@ -251,6 +258,7 @@ Boxwerk
 ├── BoxManager       # Create boxes, scan with Zeitwerk, wire constants
 ├── ConstantResolver # Install const_missing handlers per-box
 ├── PrivacyChecker   # Check public/private constant access
-├── GemResolver      # Resolve per-package gem load paths
+├── GemResolver      # Resolve per-package gem load paths and autorequire
+├── GemfileRequireParser # Lightweight Gemfile parser for require directives
 └── ZeitwerkScanner  # Zeitwerk-based file scanning and autoload registration
 ```

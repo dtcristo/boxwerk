@@ -335,5 +335,78 @@ module Boxwerk
       conflicts = gem_resolver.check_conflicts(pkg_resolver)
       assert_empty conflicts
     end
+
+    def test_parse_gemfile_requires_default
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(pkg_dir)
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
+
+      resolver = GemResolver.new(@tmpdir)
+      requires = resolver.parse_gemfile_requires(File.join(pkg_dir, 'Gemfile'))
+      assert_nil requires['json']
+    end
+
+    def test_parse_gemfile_requires_false
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(pkg_dir)
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json', require: false\n",
+      )
+
+      resolver = GemResolver.new(@tmpdir)
+      requires = resolver.parse_gemfile_requires(File.join(pkg_dir, 'Gemfile'))
+      assert_equal [], requires['json']
+    end
+
+    def test_parse_gemfile_requires_custom
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(pkg_dir)
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'foo', require: 'foo/bar'\n",
+      )
+
+      resolver = GemResolver.new(@tmpdir)
+      requires = resolver.parse_gemfile_requires(File.join(pkg_dir, 'Gemfile'))
+      assert_equal ['foo/bar'], requires['foo']
+    end
+
+    def test_gems_for_includes_autorequire
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(pkg_dir)
+      File.write(
+        File.join(pkg_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
+
+      json_spec = Gem::Specification.find_by_name('json')
+      File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
+        GEM
+          remote: https://rubygems.org/
+          specs:
+            json (#{json_spec.version})
+
+        PLATFORMS
+          arm64-darwin-25
+
+        DEPENDENCIES
+          json
+
+        BUNDLED WITH
+           2.7.5
+      LOCK
+
+      pkg = Package.new(name: 'packs/a', config: {})
+      resolver = GemResolver.new(@tmpdir)
+      gems = resolver.gems_for(pkg)
+
+      assert_equal 1, gems.length
+      # Gemfile entry with no require option → autorequire is :default
+      assert_equal :default, gems.first.autorequire
+    end
   end
 end

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'faker'
-
 module Kitchen
   class Barista
     attr_reader :name

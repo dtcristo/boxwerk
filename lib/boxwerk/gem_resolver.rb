@@ -16,8 +16,13 @@ module Boxwerk
   # Gemfile at a different version: both versions end up in memory (the global
   # version inherited at box creation, the package version loaded on demand).
   class GemResolver
-    # Represents a resolved gem for a package: name, version, load paths.
-    GemInfo = Struct.new(:name, :version, :load_paths, keyword_init: true)
+    # Represents a resolved gem for a package: name, version, load paths,
+    # and autorequire directives from the Gemfile.
+    #   autorequire: nil      → transitive dependency (not in Gemfile)
+    #   autorequire: :default → require the gem name (Gemfile entry, no require option)
+    #   autorequire: []       → skip (require: false)
+    #   autorequire: ["x/y"]  → require each listed path
+    GemInfo = Struct.new(:name, :version, :load_paths, :autorequire, keyword_init: true)
 
     attr_reader :root_path
 
@@ -37,6 +42,7 @@ module Boxwerk
     end
 
     # Returns [GemInfo] for a package, cached after first resolution.
+    # Merges lockfile resolution with Gemfile autorequire directives.
     def gems_for(package)
       return @package_gems[package.name] if @package_gems.key?(package.name)
 
@@ -52,9 +58,29 @@ module Boxwerk
         return nil
       end
 
+      requires = parse_gemfile_requires(gemfile_path)
       gems = resolve_gems_from_lockfile(lockfile_path)
+      gems.each do |g|
+        next unless requires.key?(g.name)
+        # :default means "require the gem name" (Gemfile entry with no require option).
+        # nil means transitive dependency (not in Gemfile) — skip auto-require.
+        g.autorequire = requires[g.name] || :default
+      end
       @package_gems[package.name] = gems
       gems
+    end
+
+    # Parses the Gemfile to extract autorequire directives.
+    # Returns { gem_name => autorequire_value } where value is:
+    #   nil      → require the gem name (default)
+    #   []       → skip (require: false)
+    #   ["path"] → require the listed paths
+    #
+    # Uses a lightweight DSL evaluator to avoid Bundler::Dsl side-effects.
+    def parse_gemfile_requires(gemfile_path)
+      parser = GemfileRequireParser.new
+      parser.eval_gemfile(gemfile_path)
+      parser.requires
     end
 
     # Checks for gem version conflicts between global and per-package gems.

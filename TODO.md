@@ -6,7 +6,7 @@ Planned improvements for Boxwerk, ordered by priority.
 
 | # | Item | Priority | Status |
 |---|------|----------|--------|
-| 1 | Per-package gem auto-require | High | Not started |
+| 1 | Per-package gem auto-require | High | Done |
 | 2 | `Boxwerk.package` public API | High | Not started |
 | 3 | Improved NameError messages | High | Not started |
 | 4 | Remove Rails special-casing from CLI | High | Not started |
@@ -29,33 +29,17 @@ Planned improvements for Boxwerk, ordered by priority.
 
 ## 1. Per-Package Gem Auto-Require
 
-**Priority: High**
+**Priority: High — Done**
 
-Per-package gems are added to `$LOAD_PATH` but never auto-required. Users must
-`require 'gem_name'` manually (e.g. `require 'faker'` in the complex example).
-This should match Bundler's default behaviour.
+Per-package gems declared in `Gemfile`/`gems.rb` are now auto-required after
+load paths are set up, matching Bundler's default behaviour. Manual
+`require 'gem_name'` is no longer needed.
 
-### Plan
+Implementation: `GemfileRequireParser` extracts autorequire directives from
+the Gemfile. `BoxManager#auto_require_gems` requires each gem in the package
+box. Root packages are skipped (global gems are already loaded by Bundler).
 
-1. Parse the package's `Gemfile`/`gems.rb` with `Bundler::Dsl` to extract
-   `autorequire` directives for each gem declaration:
-   - `nil` → `require "<gem_name>"` (default Bundler behaviour)
-   - `[]` → skip (`require: false`)
-   - `["foo/bar"]` → `require "foo/bar"` (custom require path)
-2. After adding gem load paths to the box in `BoxManager#setup_gem_load_paths`,
-   call `box.eval("require '#{require_name}'")` for each auto-require gem
-3. Skip gems that match global gem names (already loaded via `Bundler.require`)
-4. Store parsed `autorequire` info in `GemResolver::GemInfo`
-5. Remove manual `require 'faker'` from complex example packs
-6. Update USAGE.md with per-package gem require behaviour
-7. Add unit test for `GemResolver` auto-require parsing
-8. Add integration test verifying gems are auto-required in package boxes
-
-### Feasibility
-
-Confirmed: `Bundler::Dsl.new.eval_gemfile(path)` correctly returns
-`autorequire` as `nil`, `[]`, or `["path"]` for each dependency. No new
-dependencies needed.
+See `GemResolver#parse_gemfile_requires`, `BoxManager#auto_require_gems`.
 
 ---
 

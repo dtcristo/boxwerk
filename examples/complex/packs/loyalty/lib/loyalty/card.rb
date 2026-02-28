@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'faker'
-
 module Loyalty
   class Card
     attr_reader :member_name, :points

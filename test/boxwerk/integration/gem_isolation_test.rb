@@ -203,5 +203,44 @@ module Boxwerk
       parsed = root_box.eval('JsonUser.parse')
       assert_equal({ 'a' => 1 }, parsed)
     end
+
+    def test_gem_auto_required_in_package_box
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      json_spec = Gem::Specification.find_by_name('json')
+      File.write(
+        File.join(a_dir, 'Gemfile'),
+        "source 'https://rubygems.org'\ngem 'json'\n",
+      )
+      File.write(File.join(a_dir, 'Gemfile.lock'), <<~LOCK)
+        GEM
+          remote: https://rubygems.org/
+          specs:
+            json (#{json_spec.version})
+
+        PLATFORMS
+          arm64-darwin-25
+
+        DEPENDENCIES
+          json
+
+        BUNDLED WITH
+           2.7.5
+      LOCK
+
+      # No manual require 'json' — auto-require should handle it
+      File.write(
+        File.join(a_dir, 'lib', 'json_user.rb'),
+        "class JsonUser\n  def self.parse\n    JSON.parse('[1,2,3]')\n  end\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+      parsed = root_box.eval('JsonUser.parse')
+      assert_equal [1, 2, 3], parsed
+    end
   end
 end

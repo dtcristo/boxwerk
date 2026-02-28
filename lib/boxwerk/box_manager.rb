@@ -6,11 +6,12 @@ module Boxwerk
   # Boot sequence for each package (in topological order):
   #   1. Create Ruby::Box
   #   2. Configure per-package gem load paths (if Gemfile present)
-  #   3. Scan default directories with Zeitwerk (lib/ + public/)
-  #   4. Register autoload entries in the box
-  #   5. Run optional per-package boot.rb in the box
-  #   6. Scan any additional autoload dirs configured in boot.rb
-  #   7. Wire dependency constants, enforcing:
+  #   3. Auto-require gems from Gemfile (non-root packages)
+  #   4. Scan default directories with Zeitwerk (lib/ + public/)
+  #   5. Register autoload entries in the box
+  #   6. Run optional per-package boot.rb in the box
+  #   7. Scan any additional autoload dirs configured in boot.rb
+  #   8. Wire dependency constants, enforcing:
   #      - Constant privacy (public_path, private_constants)
   #
   # Zeitwerk is used for file scanning and inflection only. Autoload
@@ -45,6 +46,9 @@ module Boxwerk
       # Set up per-package gem load paths
       setup_gem_load_paths(box, package)
 
+      # Auto-require gems declared in the package Gemfile
+      auto_require_gems(box, package)
+
       # Scan default directories and register autoloads
       file_index = scan_and_register(box, package)
 
@@ -65,6 +69,44 @@ module Boxwerk
       return unless gem_paths&.any?
 
       gem_paths.each { |path| box.eval("$LOAD_PATH.unshift(#{path.inspect})") }
+    end
+
+    # Auto-require gems based on Gemfile autorequire directives.
+    # Mirrors Bundler's default behavior: gems are required unless
+    # `require: false` is specified. Skips the root package since its
+    # gems are already loaded globally by Bundler. Only auto-requires
+    # gems explicitly declared in the Gemfile, not transitive dependencies.
+    def auto_require_gems(box, package)
+      return if package.root?
+
+      gems = @gem_resolver.gems_for(package)
+      return unless gems&.any?
+
+      gems.each do |gem_info|
+        next if gem_info.name == 'boxwerk'
+        next unless gem_info.autorequire.is_a?(Array) || gem_info.autorequire == :default
+
+        paths = gem_require_paths(gem_info)
+        next unless paths
+
+        paths.each do |path|
+          box.eval(<<~RUBY)
+            begin
+              require #{path.inspect}
+            rescue LoadError
+            end
+          RUBY
+        end
+      end
+    end
+
+    # Returns the list of require paths for a gem, or nil to skip.
+    def gem_require_paths(gem_info)
+      case gem_info.autorequire
+      when :default then [gem_info.name]
+      when []       then nil
+      else               gem_info.autorequire
+      end
     end
 
     # Scans package directories with ZeitwerkScanner and registers autoloads
