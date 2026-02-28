@@ -33,17 +33,18 @@ def run_example(name)
   )
 end
 
-desc 'Run a specific example (e.g. rake example minimal)'
-task :example do
-  name = ARGV[1] || abort('Usage: rake example <name>')
-  run_example(name)
-  exit
+namespace :example do
+  EXAMPLE_DIRS.each do |dir|
+    name = File.basename(dir)
+    desc "Run the #{name} example"
+    task name.to_sym do
+      run_example(name)
+    end
+  end
 end
 
 desc 'Run all examples'
-task :examples do
-  EXAMPLE_DIRS.each { |dir| run_example(File.basename(dir)) }
-end
+task examples: EXAMPLE_DIRS.map { |d| "example:#{File.basename(d)}" }
 
 desc 'Format code with syntax_tree'
 task :format do
