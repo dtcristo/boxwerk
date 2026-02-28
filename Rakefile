@@ -17,7 +17,53 @@ task :format do
   sh "bundle exec stree write #{STREE_FILES}"
 end
 
-desc 'Run all tests (unit, integration, e2e)'
-task all: %i[test e2e]
+EXAMPLES_DIR = File.join(__dir__, 'examples')
 
-task default: :test
+# Discover examples that have tests (Rakefile present).
+EXAMPLE_DIRS =
+  Dir.glob(File.join(EXAMPLES_DIR, '*')).select { |d| File.directory?(d) }.sort
+
+desc 'Run example apps (assert successful exit)'
+task :example_apps do
+  EXAMPLE_DIRS.each do |dir|
+    app = File.join(dir, 'app.rb')
+    next unless File.exist?(app)
+
+    name = File.basename(dir)
+    puts "==> example:#{name} app.rb"
+    sh(
+      { 'RUBY_BOX' => '1' },
+      File.join(dir, 'bin', 'boxwerk'),
+      'run',
+      'app.rb',
+      chdir: dir,
+    )
+  end
+end
+
+desc 'Run example test suites'
+task :example_tests do
+  EXAMPLE_DIRS.each do |dir|
+    next unless File.exist?(File.join(dir, 'Rakefile'))
+
+    name = File.basename(dir)
+    puts "==> example:#{name} tests"
+    sh(
+      { 'RUBY_BOX' => '1' },
+      File.join(dir, 'bin', 'boxwerk'),
+      'exec',
+      '--all',
+      'rake',
+      'test',
+      chdir: dir,
+    )
+  end
+end
+
+desc 'Run all example apps and tests'
+task examples: %i[example_apps example_tests]
+
+desc 'Run all tests (unit, integration, e2e, examples)'
+task all: %i[test e2e examples]
+
+task default: :all

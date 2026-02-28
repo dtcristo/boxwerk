@@ -40,7 +40,7 @@ module Boxwerk
         @box_manager.boxes[@resolver.root.name]
       end
 
-      def reset!
+      def reset
         @resolver = nil
         @box_manager = nil
         @booted = false

@@ -10,12 +10,12 @@ module Boxwerk
   module IntegrationTestHelper
     def setup
       @tmpdir = Dir.mktmpdir
-      Setup.reset!
+      Setup.reset
     end
 
     def teardown
       FileUtils.rm_rf(@tmpdir)
-      Setup.reset!
+      Setup.reset
     end
 
     private

@@ -8,12 +8,12 @@ module Boxwerk
   class SetupTest < Minitest::Test
     def setup
       @tmpdir = Dir.mktmpdir
-      Setup.reset!
+      Setup.reset
     end
 
     def teardown
       FileUtils.rm_rf(@tmpdir)
-      Setup.reset!
+      Setup.reset
     end
 
     def test_run_raises_without_package_yml
@@ -47,7 +47,7 @@ module Boxwerk
       create_package(@tmpdir)
       Setup.run(start_dir: @tmpdir)
 
-      Setup.reset!
+      Setup.reset
 
       refute Setup.booted?
       assert_nil Setup.resolver
