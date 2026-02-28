@@ -6,9 +6,11 @@ module Boxwerk
   # Boot sequence for each package (in topological order):
   #   1. Create Ruby::Box
   #   2. Configure per-package gem load paths (if Gemfile present)
-  #   3. Scan directories with Zeitwerk (file discovery + inflection)
+  #   3. Scan default directories with Zeitwerk (lib/ + public/)
   #   4. Register autoload entries in the box
-  #   5. Wire dependency constants, enforcing:
+  #   5. Run optional per-package boot.rb in the box
+  #   6. Scan any additional autoload dirs configured in boot.rb
+  #   7. Wire dependency constants, enforcing:
   #      - Constant privacy (public_path, private_constants)
   #
   # Zeitwerk is used for file scanning and inflection only. Autoload
@@ -33,7 +35,7 @@ module Boxwerk
     end
 
     # Boot a single package: create box, set up gems, scan with Zeitwerk,
-    # register autoloads, wire dependencies.
+    # run boot.rb, register additional dirs, wire dependencies.
     def boot(package, resolver)
       return if @boxes.key?(package.name)
 
@@ -43,8 +45,13 @@ module Boxwerk
       # Set up per-package gem load paths
       setup_gem_load_paths(box, package)
 
-      # Scan directories and register autoloads
+      # Scan default directories and register autoloads
       file_index = scan_and_register(box, package)
+
+      # Run optional per-package boot.rb, then scan additional dirs
+      extra_index = run_package_boot(box, package)
+      file_index.merge!(extra_index) if extra_index
+
       @file_indexes[package.name] = file_index
 
       # Wire dependency constants into this box
@@ -92,6 +99,60 @@ module Boxwerk
       ZeitwerkScanner.build_file_index(all_entries)
     end
 
+    # Runs the optional per-package boot.rb in the package's box context.
+    # Injects a BOXWERK_CONFIG hash for the boot script to modify.
+    # Returns additional file index entries from configured autoload dirs.
+    def run_package_boot(box, package)
+      pkg_dir = package_dir(package)
+      boot_script = File.join(pkg_dir, 'boot.rb')
+      return nil unless File.exist?(boot_script)
+
+      # Inject config hash that boot.rb can modify
+      box.eval(<<~RUBY)
+        BOXWERK_CONFIG = {
+          autoload_dirs: [],
+          collapse_dirs: [],
+          ignore_dirs: [],
+        }
+      RUBY
+
+      # Run boot.rb in the package's box
+      box.require(boot_script)
+
+      # Read back config and apply additional autoload dirs
+      apply_boot_config(box, package)
+    end
+
+    # Reads BOXWERK_CONFIG from the box and registers additional autoloads.
+    def apply_boot_config(box, package)
+      pkg_dir = package_dir(package)
+      all_entries = []
+
+      # Read autoload_dirs from the box
+      autoload_dirs = box.eval('BOXWERK_CONFIG[:autoload_dirs]')
+      autoload_dirs.each do |dir|
+        abs_dir = File.expand_path(dir, pkg_dir)
+        next unless File.directory?(abs_dir)
+        all_entries.concat(ZeitwerkScanner.scan(abs_dir))
+      end
+
+      # Read collapse_dirs — scan each collapsed dir as an autoload root
+      # so its files map to top-level constants (e.g. concerns/taggable.rb
+      # becomes Taggable, not Concerns::Taggable).
+      collapse_dirs = box.eval('BOXWERK_CONFIG[:collapse_dirs]')
+      collapse_dirs.each do |dir|
+        abs_dir = File.expand_path(dir, pkg_dir)
+        next unless File.directory?(abs_dir)
+        # Scan the collapsed dir directly — files inside become top-level
+        all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
+      end
+
+      return nil if all_entries.empty?
+
+      ZeitwerkScanner.register_autoloads(box, all_entries)
+      ZeitwerkScanner.build_file_index(all_entries)
+    end
+
     # Installs a const_missing handler on the box that searches all direct
     # dependency boxes for the requested constant. Constants are NOT wrapped
     # in a namespace — they are accessible directly (e.g. Invoice, not
@@ -129,6 +190,14 @@ module Boxwerk
       return if deps_config.empty?
 
       ConstantResolver.install_dependency_resolver(box, deps_config)
+    end
+
+    def package_dir(package)
+      if package.root?
+        @root_path
+      else
+        File.join(@root_path, package.name)
+      end
     end
 
     def package_lib_path(package)

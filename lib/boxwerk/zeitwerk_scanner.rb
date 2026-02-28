@@ -54,6 +54,37 @@ module Boxwerk
       files.each { |f| register_autoload(box, f.parent, f.cname, f.file) }
     end
 
+    # Scans files directly in a directory (non-recursive), treating each
+    # as a top-level constant. Used for collapsed directories where
+    # lib/concerns/taggable.rb should map to Taggable (not Concerns::Taggable).
+    def self.scan_files_only(dir)
+      inflector = Zeitwerk::Inflector.new
+      entries = []
+
+      Dir
+        .glob(File.join(dir, '**', '*.rb'))
+        .sort
+        .each do |abspath|
+          relative = abspath.delete_prefix("#{dir}/").delete_suffix('.rb')
+          parts = relative.split('/')
+          cnames = parts.map { |part| inflector.camelize(part, dir) }
+          full_path = cnames.join('::')
+          cname = cnames.last
+          parent = cnames[0...-1].join('::')
+
+          entries << Entry.new(
+            type: :file,
+            cname: cname,
+            full_path: full_path,
+            file: abspath,
+            parent: parent,
+            dir: nil,
+          )
+        end
+
+      entries
+    end
+
     # Builds a file index (const_name → file_path) from scan entries.
     # Used by ConstantResolver for dependency wiring.
     def self.build_file_index(entries)
