@@ -284,9 +284,11 @@ If no `package.yml` exists at the project root, Boxwerk creates an implicit root
 
 This is useful for gradually adopting Boxwerk — you can start with just sub-packages and no root `package.yml`. The implicit root can access constants from all packages without declaring explicit dependencies.
 
-## Global Directory (`global/`)
+## Global Boot
 
-An optional `global/` directory at the project root is autoloaded in the global context before `global/boot.rb` runs. Files follow Zeitwerk conventions:
+### `global/` Directory
+
+An optional `global/` directory at the project root is autoloaded in the global context before boot scripts run. Files follow Zeitwerk conventions:
 
 ```
 global/
@@ -304,24 +306,24 @@ module Config
 end
 ```
 
-### `global/boot.rb`
+### `boot.rb`
 
-An optional `global/boot.rb` script runs in the global context after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+An optional `boot.rb` at the project root runs in the global context after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
 
 ```ruby
-# global/boot.rb
+# boot.rb
 require 'dotenv/load'
 puts "Booting #{Config::SHOP_NAME}..."
 ```
 
-Both `global/` and `global/boot.rb` are optional. If neither exists, Boxwerk boots normally.
+A `global/boot.rb` is also supported as an alternative location. Both are optional. If neither exists, Boxwerk boots normally.
 
 ### Use Cases
 
 - Load environment variables (`dotenv`)
 - Define global configuration constants
 - Initialize shared services (logging, instrumentation)
-- Future: boot Rails in the global context
+- Boot Rails in the global context
 
 ## Per-Package Boot Scripts
 

@@ -65,17 +65,19 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 9. Call Boxwerk::CLI.run(ARGV)
    → CLI delegates to Setup.run for package boot
    → Discovers boxwerk.yml for configuration (package_paths)
-   → Runs global boot (global/ autoload + global/boot.rb)
+   → Runs global boot (global/ autoload, boot.rb or global/boot.rb)
+   → Eager-loads Zeitwerk constants for child box inheritance
 ```
 
 ### Setup.run
 
 ```
 1. Find root package.yml or boxwerk.yml (walk up from current directory)
-2. Run global boot (if global/ or global/boot.rb exist):
+2. Run global boot (if global/ or boot.rb exist):
    a. Scan global/ with Zeitwerk, register autoloads in root box
-   b. Require global/boot.rb in root box
-3. Create PackageResolver — discovers all package.yml files
+   b. Require global/boot.rb or boot.rb in root box
+3. Eager-load all Zeitwerk-managed constants in root box
+4. Create PackageResolver — discovers all package.yml files
    → Respects package_paths from boxwerk.yml
    → Creates implicit root package if no root package.yml exists
 4. Create BoxManager — manages Ruby::Box instances

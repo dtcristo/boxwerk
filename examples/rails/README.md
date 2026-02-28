@@ -8,12 +8,11 @@ Rails application demonstrating Boxwerk runtime package isolation with ActiveRec
 rails/
 ├── package.yml              # Root (depends on all domain packs)
 ├── gems.rb                  # Global gems (rails, sqlite3, puma, minitest, rake)
+├── boot.rb                  # Boot Rails in global context
 ├── config/
 │   ├── application.rb       # Application config
 │   ├── database.yml         # SQLite (dev + test)
 │   └── routes.rb            # Placeholder routes
-├── global/
-│   └── boot.rb              # Boot Rails in global context
 ├── Rakefile
 ├── db/migrate/
 │   ├── 001_create_users.rb
@@ -39,7 +38,7 @@ rails/
 
 ## Features Demonstrated
 
-- **Rails in global context** — `global/boot.rb` initializes Rails; all packs inherit Rails infrastructure
+- **Rails via global boot** — `boot.rb` loads and initializes Rails in the global context; all packs inherit Rails infrastructure
 - **Foundation package** — `ApplicationRecord` and `ApplicationController` as public base classes in a leaf package; all domain packs depend on it
 - **ActiveRecord across boxes** — `Order` belongs_to `:user` and `:product`; associations resolve via `const_missing` across package boundaries
 - **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs
@@ -49,10 +48,9 @@ rails/
 
 ```
 1. Global gems loaded in global context (Rails, ActiveRecord, etc.)
-2. config/application.rb required → Application class defined
-3. global/boot.rb runs → Application.initialize!
-4. Package boxes created (foundation first, then domain packs)
-5. CLI command runs in target package box
+2. boot.rb runs in global context → requires config/application.rb, Application.initialize!
+3. Package boxes created (foundation first, then domain packs)
+4. CLI command runs in target package box
 ```
 
 ## Running

@@ -10,6 +10,10 @@ module Boxwerk
         # Run global boot in root box (after gems, before package boxes).
         run_global_boot(root_path)
 
+        # Eager-load all Zeitwerk-managed constants in root box so child
+        # boxes inherit fully resolved constants (not pending autoloads).
+        eager_load_zeitwerk
+
         resolver = Boxwerk::PackageResolver.new(root_path)
         @box_manager = Boxwerk::BoxManager.new(root_path)
         @box_manager.boot_all(resolver)
@@ -67,15 +71,14 @@ module Boxwerk
         File.expand_path(start_dir)
       end
 
-      # Runs the optional global boot in the root box. If a global/
-      # directory exists, its files are autoloaded in the root box first.
-      # Then global/boot.rb is required in the root box. This runs after
-      # global gems are loaded but before package boxes are created, so
-      # definitions here are inherited by all boxes.
+      # Runs the optional global boot in the root box. Checks for both a
+      # global/ directory and a root-level boot.rb. These run after global
+      # gems are loaded but before package boxes are created, so definitions
+      # here are inherited by all boxes.
       def run_global_boot(root_path)
         root_box = Ruby::Box.root
         global_dir = File.join(root_path, 'global')
-        boot_script = File.join(global_dir, 'boot.rb')
+        global_boot = File.join(global_dir, 'boot.rb')
 
         # Autoload global/ files in root box
         if File.directory?(global_dir)
@@ -83,8 +86,12 @@ module Boxwerk
           ZeitwerkScanner.register_autoloads(root_box, entries)
         end
 
-        # Run global/boot.rb in root box
-        root_box.require(boot_script) if File.exist?(boot_script)
+        # Run global/boot.rb in root box (legacy location)
+        root_box.require(global_boot) if File.exist?(global_boot)
+
+        # Run root-level boot.rb in root box (preferred location)
+        root_boot = File.join(root_path, 'boot.rb')
+        root_box.require(root_boot) if File.exist?(root_boot)
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)
@@ -93,6 +100,17 @@ module Boxwerk
           warn "Boxwerk: gem '#{c[:gem_name]}' is #{c[:package_version]} in #{c[:package]} " \
                  "but #{c[:global_version]} in global gems — both versions will be loaded into memory"
         end
+      end
+
+      # Eager-load all Zeitwerk-managed constants (gem autoloads) in the root
+      # box. Child boxes created via Ruby::Box.new inherit a snapshot of the
+      # root box's constants. Zeitwerk autoloads are lazy — without eager
+      # loading, child boxes inherit pending autoload entries that may not
+      # resolve correctly across box boundaries.
+      def eager_load_zeitwerk
+        Ruby::Box.root.eval(<<~RUBY)
+          Zeitwerk::Loader.eager_load_all if defined?(Zeitwerk)
+        RUBY
       end
     end
   end
