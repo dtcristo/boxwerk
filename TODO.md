@@ -21,7 +21,7 @@ Planned improvements and design considerations for Boxwerk.
 | Configurable violation handling (warn/strict) | Low | Easy |
 | package_todo.yml support | Low | Medium |
 | IDE / language server support | Low | Hard |
-| Rails integration | High | Hard |
+| Rails integration | High | Hard (partial) |
 
 ## Zeitwerk Full Integration
 
@@ -308,8 +308,21 @@ correct approach for bootstrapping the boxed environment.
 
 ## Rails Integration
 
-See [examples/rails/README.md](examples/rails/README.md) for the comprehensive
-Rails integration plan.
+See [examples/rails/](examples/rails/) for a working Rails example with
+ActiveRecord, foundation package pattern, cross-package associations, and
+privacy enforcement.
+
+### Remaining Work
+
+- **Action Controller routing** — Map Rails routes to controllers in package
+  boxes. Currently controllers are defined but routing dispatch needs work.
+- **Migrations in packages** — Allow packages to own their own migrations
+  (e.g. `packs/users/db/migrate/`). Needs migration path aggregation.
+- **Asset pipeline** — Handle Sprockets/Propshaft across package boundaries.
+- **Rails generators** — Package-aware generators that create files in the
+  correct package directory.
+- **`rails console` integration** — `boxwerk exec rails console` with
+  package-scoped constant access.
 
 ## IDE Support
 
