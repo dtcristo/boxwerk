@@ -351,10 +351,31 @@ A `boot.rb` at the project root is a **root package** boot script — it runs in
 
 ## Per-Package Boot Scripts
 
-Each package can have an optional `boot.rb` that runs after the package's own constants are scanned but before cross-package constants are wired. Use it to configure additional autoload dirs and Zeitwerk collapse:
+Each package can have an optional `boot.rb` that runs after the package's own constants are scanned but before cross-package constants are wired. Use it to configure additional autoload dirs and collapse:
 
 ```ruby
 # packs/models/boot.rb
+pkg = Boxwerk.package
+
+pkg.name           # => "packs/models"
+pkg.root?          # => false
+pkg.config         # => frozen hash of package.yml values
+pkg.root_path      # => absolute path to the package directory
+pkg.autoloader     # => autoload configuration object
+
+pkg.autoloader.push_dir("models")
+pkg.autoloader.collapse("lib/concerns")
+pkg.autoloader.ignore("lib/legacy")
+```
+
+`Boxwerk.package` returns a `PackageContext` during `boot.rb` execution (thread-local, `nil` outside boot). The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
+
+### Deprecated: BOXWERK_CONFIG
+
+The `BOXWERK_CONFIG` hash still works for backward compatibility but is deprecated:
+
+```ruby
+# Deprecated — use Boxwerk.package.autoloader instead
 BOXWERK_CONFIG[:autoload_dirs] << "models"
 BOXWERK_CONFIG[:collapse_dirs] << "lib/concerns"
 ```

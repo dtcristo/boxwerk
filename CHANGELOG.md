@@ -24,6 +24,11 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 
 ### Added
 
+- `Boxwerk.package` public API — returns a `PackageContext` during boot.rb
+  execution with `name`, `root?`, `config`, `root_path`, and `autoloader`.
+- `PackageContext::Autoloader` — configuration object with `push_dir`,
+  `collapse`, and `ignore` methods for boot.rb autoload configuration.
+- `BOXWERK_PACKAGE` constant injected into each package box.
 - CLI commands: `exec`, `run`, `console`, `install`, `info`.
 - CLI flags: `-p`/`--package`, `--all`, `-r`/`--root-box`.
 - Per-package gem isolation via `Gemfile`/`gems.rb` per package.

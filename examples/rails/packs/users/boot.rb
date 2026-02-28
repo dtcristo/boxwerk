@@ -1,3 +1,4 @@
 # frozen_string_literal: true
 
-BOXWERK_CONFIG[:autoload_dirs] << 'controllers' << 'validators'
+Boxwerk.package.autoloader.push_dir('controllers')
+Boxwerk.package.autoloader.push_dir('validators')

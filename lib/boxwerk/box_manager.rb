@@ -142,14 +142,28 @@ module Boxwerk
     end
 
     # Runs the optional per-package boot.rb in the package's box context.
-    # Injects a BOXWERK_CONFIG hash for the boot script to modify.
-    # Returns additional file index entries from configured autoload dirs.
+    # Injects BOXWERK_PACKAGE (PackageContext) and BOXWERK_CONFIG (deprecated)
+    # for the boot script to use. Returns additional file index entries from
+    # configured autoload dirs.
     def run_package_boot(box, package)
       pkg_dir = package_dir(package)
       boot_script = File.join(pkg_dir, 'boot.rb')
       return nil unless File.exist?(boot_script)
 
-      # Inject config hash that boot.rb can modify
+      # Build PackageContext with autoloader for this package
+      autoloader = PackageContext::Autoloader.new(pkg_dir)
+      context =
+        PackageContext.new(
+          name: package.name,
+          root_path: pkg_dir,
+          config: package.config,
+          autoloader: autoloader,
+        )
+
+      # Inject PackageContext into the box
+      box.const_set(:BOXWERK_PACKAGE, context)
+
+      # Inject deprecated BOXWERK_CONFIG hash for backward compatibility
       box.eval(<<~RUBY)
         BOXWERK_CONFIG = {
           autoload_dirs: [],
@@ -158,34 +172,47 @@ module Boxwerk
         }
       RUBY
 
+      # Set thread-local so Boxwerk.package works during boot.rb
+      Boxwerk.package = context
+
       # Run boot.rb in the package's box
       box.require(boot_script)
 
+      # Clear thread-local after boot
+      Boxwerk.package = nil
+
       # Read back config and apply additional autoload dirs
-      apply_boot_config(box, package)
+      apply_boot_config(box, package, autoloader)
     end
 
-    # Reads BOXWERK_CONFIG from the box and registers additional autoloads.
-    def apply_boot_config(box, package)
+    # Reads autoload configuration from both the new PackageContext autoloader
+    # and the deprecated BOXWERK_CONFIG hash, then registers additional
+    # autoloads.
+    def apply_boot_config(box, package, autoloader)
       pkg_dir = package_dir(package)
       all_entries = []
 
-      # Read autoload_dirs from the box
-      autoload_dirs = box.eval('BOXWERK_CONFIG[:autoload_dirs]')
+      # Merge autoload dirs from new API and deprecated BOXWERK_CONFIG
+      autoload_dirs = autoloader.autoload_dirs.dup
+      legacy_dirs = box.eval('BOXWERK_CONFIG[:autoload_dirs]')
+      autoload_dirs.concat(legacy_dirs)
+      autoload_dirs.uniq!
+
       autoload_dirs.each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan(abs_dir))
       end
 
-      # Read collapse_dirs — scan each collapsed dir as an autoload root
-      # so its files map to top-level constants (e.g. concerns/taggable.rb
-      # becomes Taggable, not Concerns::Taggable).
-      collapse_dirs = box.eval('BOXWERK_CONFIG[:collapse_dirs]')
+      # Merge collapse dirs from new API and deprecated BOXWERK_CONFIG
+      collapse_dirs = autoloader.collapse_dirs.dup
+      legacy_collapse = box.eval('BOXWERK_CONFIG[:collapse_dirs]')
+      collapse_dirs.concat(legacy_collapse)
+      collapse_dirs.uniq!
+
       collapse_dirs.each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
-        # Scan the collapsed dir directly — files inside become top-level
         all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
       end
 

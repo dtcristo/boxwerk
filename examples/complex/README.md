@@ -47,7 +47,7 @@ complex/
 - **Privacy via public_path** — `Menu::Item` is public, `Menu::Recipe` is private
 - **Privacy via `pack_public` sigil** — `Orders::Order` marked public in file header
 - **Per-package gem isolation** — faker 2.23.0 in loyalty, faker 3.6.0 in kitchen
-- **Custom autoload dirs** — kitchen's `boot.rb` adds `services/` via `BOXWERK_CONFIG[:autoload_dirs]`
+- **Custom autoload dirs** — kitchen's `boot.rb` adds `services/` via `Boxwerk.package.autoloader.push_dir`
 - **Global gems** — colorize accessible in all packages
 - **Global config** — `Config::CURRENCY` defined in global/ and used across packages
 - **Relaxed deps** — stats reads global data stores from other modules without declaring dependencies

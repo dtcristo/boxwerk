@@ -43,62 +43,13 @@ See `GemResolver#parse_gemfile_requires`, `BoxManager#auto_require_gems`.
 
 ---
 
-## 2. `Boxwerk.package` Public API
+## ~~2. `Boxwerk.package` Public API~~ ✅
 
-**Priority: High**
-
-Replace `BOXWERK_CONFIG` hash with a proper `Boxwerk.package` API accessible
-from both `boot.rb` and package code at runtime.
-
-### API Design
-
-```ruby
-# In boot.rb or package code:
-pkg = Boxwerk.package
-
-pkg.name           # => "packs/kitchen"
-pkg.root?          # => false
-pkg.config         # => frozen hash of package.yml values with defaults
-pkg.autoloader     # => Zeitwerk::Loader instance for this package
-```
-
-The `autoloader` method returns a real `Zeitwerk::Loader` that controls the
-package's autoload paths. In `boot.rb`:
-
-```ruby
-# packs/kitchen/boot.rb
-loader = Boxwerk.package.autoloader
-loader.push_dir("#{__dir__}/services")
-loader.collapse("#{__dir__}/lib/concerns")
-```
-
-### Plan
-
-1. Create `Boxwerk::PackageContext` class holding: name, config (frozen),
-   autoloader (Zeitwerk::Loader instance), root_path
-2. Add `Boxwerk.package` class method that returns the current package context
-   (stored in a thread-local or box-scoped constant `BOXWERK_PACKAGE`)
-3. During `BoxManager#boot`, create a real `Zeitwerk::Loader` per package
-   instead of using `ZeitwerkScanner` for scanning only — but still register
-   autoloads in the box via `box.eval` (Zeitwerk's own autoloads won't work
-   in child boxes)
-4. After `boot.rb` runs, read the loader's `dirs` and `collapse_dirs` to
-   discover additional autoload paths configured by the user
-5. Remove `BOXWERK_CONFIG` hash injection from `BoxManager#run_package_boot`
-6. Update complex and rails examples to use `Boxwerk.package.autoloader`
-7. Update USAGE.md with the new API
-8. Add unit tests for `PackageContext`
-9. Add integration test for `Boxwerk.package` access from boot.rb
-
-### Design Notes
-
-- `Boxwerk.package.config` returns a frozen hash with defaults applied:
-  `{ enforce_dependencies: true, enforce_privacy: false, public_path: "public/", ... }`
-- The `Zeitwerk::Loader` is used for its configuration API only. Autoload
-  registration still happens via `box.eval("autoload ...")` because Zeitwerk's
-  `autoload` calls execute in the root box, not the target package box.
-- `Boxwerk.package` returns `nil` outside of a package context (e.g. in the
-  global boot or when running in `--global` mode).
+Done. `Boxwerk.package` returns a `PackageContext` during `boot.rb` with
+`name`, `root?`, `config`, `root_path`, and `autoloader`. The autoloader is a
+lightweight configuration object (`PackageContext::Autoloader`) with `push_dir`,
+`collapse`, and `ignore`. `BOXWERK_CONFIG` still works for backward
+compatibility but is deprecated.
 
 ---
 

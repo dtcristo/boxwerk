@@ -52,7 +52,7 @@ rails/
 - **Foundation package** — `ApplicationRecord` and `ApplicationController` as public base classes in a leaf package; all domain packs depend on it
 - **Rails directory conventions** — Domain packs use `models/`, `controllers/`, `validators/`, `services/` instead of `lib/` and `public/`
 - **Custom public_path** — Domain packs set `public_path: models` so model classes are the public API
-- **Per-package boot.rb** — Each domain pack uses `boot.rb` to register additional autoload dirs via `BOXWERK_CONFIG[:autoload_dirs]`
+- **Per-package boot.rb** — Each domain pack uses `boot.rb` to register additional autoload dirs via `Boxwerk.package.autoloader.push_dir`
 - **ActiveRecord across boxes** — `Order` belongs_to `:user` and `:product`; associations resolve via `const_missing` across package boundaries
 - **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs (not in `public_path`)
 - **Zeitwerk disabled** — Boxwerk handles autoloading; `config.autoload_paths = []` in the app config
