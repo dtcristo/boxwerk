@@ -64,16 +64,20 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
    → All global gems now available in root box
 9. Call Boxwerk::CLI.run(ARGV)
    → CLI delegates to Setup.run for package boot
+   → Discovers boxwerk.yml for configuration (package_paths)
+   → Runs global boot (global/ autoload + global/boot.rb)
 ```
 
 ### Setup.run
 
 ```
-1. Find root package.yml (walk up from current directory)
-2. Run boot script (if boot/ or boot.rb exist):
-   a. Scan boot/ with Zeitwerk, register autoloads in root box
-   b. Require boot.rb in root box
+1. Find root package.yml or boxwerk.yml (walk up from current directory)
+2. Run global boot (if global/ or global/boot.rb exist):
+   a. Scan global/ with Zeitwerk, register autoloads in root box
+   b. Require global/boot.rb in root box
 3. Create PackageResolver — discovers all package.yml files
+   → Respects package_paths from boxwerk.yml
+   → Creates implicit root package if no root package.yml exists
 4. Create BoxManager — manages Ruby::Box instances
 5. Boot all packages in topological order (dependencies first)
 ```
@@ -93,8 +97,13 @@ For each package, in dependency order:
    → Implicit namespaces: create Module.new
    → Explicit namespaces: autoload + eager trigger
    → Files: autoload :Invoice, "/path/to/public/invoice.rb"
-5. Wire dependency constants via const_missing
+5. Run per-package boot.rb (if it exists)
+   → Executes after the package's own constants are scanned
+   → Used for configuring additional autoload dirs and collapse dirs
+6. Wire dependency constants via const_missing
    → Install a resolver that searches direct dependency boxes
+   → When enforce_dependencies is false, searches ALL packages:
+     explicit deps first (in declared order), then remaining packages
 ```
 
 ## Constant Resolution
@@ -143,11 +152,12 @@ When running commands via `boxwerk exec` or `boxwerk run`, some tools (like Rake
 
 `PackageResolver` discovers packages by scanning for `package.yml` files:
 
-1. Start from the root `package.yml` (the root package, named `.`)
-2. Glob for all `package.yml` files in subdirectories
+1. Start from the project root
+2. Glob for `package.yml` files using `package_paths` from `boxwerk.yml` (default: `**/`)
 3. Parse each YAML file into a `Package` object
-4. Validate no circular dependencies exist
-5. Provide topological ordering for boot (dependencies before dependents)
+4. If no root `package.yml` exists, create an implicit root package with `enforce_dependencies: false`, `enforce_privacy: false`, and automatic dependencies on all discovered packages
+5. Resolve dependency order via DFS — circular dependencies are allowed (back-edges are skipped)
+6. Provide topological ordering for boot (dependencies before dependents)
 
 ### package.yml Format
 

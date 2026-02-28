@@ -244,6 +244,8 @@ gem 'activesupport'                  # loaded globally, available everywhere
 gem 'pry', require: false            # on $LOAD_PATH but not loaded
 ```
 
+> **Note:** The root `gems.rb`/`Gemfile` is always for global gems shared across all packages. If your top-level package needs "package private" gems, use an implicit root (no `package.yml` at root) and create a `packs/main` package as your entry point with its own `gems.rb`.
+
 ## Testing
 
 Run tests through Boxwerk to enforce package isolation:
@@ -256,22 +258,38 @@ boxwerk exec --all rake test             # All packages sequentially
 
 Each `--all` run spawns a separate subprocess per package for clean isolation — test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.
 
-## Boot Script (`boot.rb`)
+## Configuration (`boxwerk.yml`)
 
-An optional `boot.rb` file at the project root runs in the root box after global gems are loaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+An optional `boxwerk.yml` file at the project root configures Boxwerk behaviour.
 
-```ruby
-# boot.rb
-require 'dotenv/load'
-puts "Booting #{Config::SHOP_NAME}..."
+```yaml
+# boxwerk.yml
+package_paths:
+  - "packs/*"        # default: ["**/"]
 ```
 
-### Boot Directory (`boot/`)
+| Field           | Type | Default   | Description                                       |
+|-----------------|------|-----------|---------------------------------------------------|
+| `package_paths` | list | `["**/"]` | Glob patterns for where to search for `package.yml` files |
 
-An optional `boot/` directory at the project root is autoloaded in the root box before `boot.rb` runs. Files follow Zeitwerk conventions:
+By default, Boxwerk searches everywhere (`**/`) for `package.yml` files. Set `package_paths` to restrict the search to specific directories.
+
+## Implicit Root Package
+
+If no `package.yml` exists at the project root, Boxwerk creates an implicit root package with:
+
+- `enforce_dependencies: false`
+- `enforce_privacy: false`
+- Automatic dependencies on all discovered packages
+
+This is useful for gradually adopting Boxwerk — you can start with just sub-packages and no root `package.yml`. The implicit root can access constants from all packages without declaring explicit dependencies.
+
+## Global Directory (`global/`)
+
+An optional `global/` directory at the project root is autoloaded in the root box before `global/boot.rb` runs. Files follow Zeitwerk conventions:
 
 ```
-boot/
+global/
 ├── config.rb         → Config
 └── middleware.rb      → Middleware
 ```
@@ -279,14 +297,24 @@ boot/
 Constants defined here are inherited by all package boxes (they live in the root box which child boxes are copied from).
 
 ```ruby
-# boot/config.rb
+# global/config.rb
 module Config
   SHOP_NAME = ENV.fetch('SHOP_NAME', 'My App')
   CURRENCY = '$'
 end
 ```
 
-Both `boot.rb` and `boot/` are optional. If neither exists, Boxwerk boots normally.
+### `global/boot.rb`
+
+An optional `global/boot.rb` script runs in the root box after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+
+```ruby
+# global/boot.rb
+require 'dotenv/load'
+puts "Booting #{Config::SHOP_NAME}..."
+```
+
+Both `global/` and `global/boot.rb` are optional. If neither exists, Boxwerk boots normally.
 
 ### Use Cases
 
@@ -294,6 +322,24 @@ Both `boot.rb` and `boot/` are optional. If neither exists, Boxwerk boots normal
 - Define global configuration constants
 - Initialize shared services (logging, instrumentation)
 - Future: boot Rails in the root box
+
+## Per-Package Boot Scripts
+
+Each package can have an optional `boot.rb` that runs after the package's own constants are scanned but before cross-package constants are wired. Use it to configure additional autoload dirs and Zeitwerk collapse:
+
+```ruby
+# packs/models/boot.rb
+BOXWERK_CONFIG[:autoload_dirs] << "models"
+BOXWERK_CONFIG[:collapse_dirs] << "lib/concerns"
+```
+
+## Circular Dependencies
+
+Boxwerk allows circular dependencies. Both packages in a cycle are booted; the first visited in DFS order goes first. Dependencies in cycles are still wired normally.
+
+## Relaxed Dependency Enforcement
+
+When `enforce_dependencies: false`, `const_missing` searches ALL packages — not just declared dependencies. Explicit dependencies are searched first (in declared order), then remaining packages. Privacy rules still apply per-package.
 
 ## Examples
 
