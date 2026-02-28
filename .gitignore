@@ -6,5 +6,7 @@
 /pkg/
 /spec/reports/
 /tmp/
+gems.locked
 Gemfile.lock
+!examples/**/gems.locked
 !examples/**/Gemfile.lock

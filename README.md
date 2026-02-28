@@ -39,10 +39,10 @@ See the [official Ruby::Box documentation](https://docs.ruby-lang.org/en/4.0/Rub
 
 ### 1. Install Boxwerk
 
-Add `boxwerk` to your project's `Gemfile`:
+Add `boxwerk` to your project's `Gemfile`/`gems.rb`:
 
 ```ruby
-# Gemfile
+# gems.rb
 source 'https://rubygems.org'
 
 gem 'boxwerk'
@@ -56,7 +56,7 @@ bundle install
 
 ### 2. Add global gems
 
-Global gems in `Gemfile` are accessible to all packages:
+Gems in root `Gemfile`/`gems.rb` are accessible to all packages, for example:
 
 ```ruby
 gem 'dotenv', require: 'dotenv/load'
@@ -71,9 +71,9 @@ gem 'dotenv', require: 'dotenv/load'
 
 ```
 my_app/
-├── Gemfile
 ├── package.yml              # Root package
 ├── app.rb
+├── gems.rb
 └── packs/
     ├── finance/
     │   ├── package.yml
@@ -218,7 +218,7 @@ Run `boxwerk install` to install gems for all packages.
 
 ## Architecture
 
-Add `gem 'boxwerk'` to your project's `Gemfile`. If invoked via `bundle exec`, Boxwerk automatically re-execs into a clean Ruby process so it controls gem loading from scratch — no double loading.
+Add `gem 'boxwerk'` to your project's `Gemfile`/`gems.rb`. If invoked via `bundle exec`, Boxwerk automatically re-execs into a clean Ruby process so it controls gem loading from scratch — no double loading.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for full implementation details including the boot sequence, constant resolution, and Ruby::Box internals.
 
