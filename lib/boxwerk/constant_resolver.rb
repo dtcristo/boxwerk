@@ -12,8 +12,23 @@ module Boxwerk
     # dependency boxes for the requested constant. Each dependency entry
     # contains: :box, :file_index, :public_constants, :private_constants,
     # :package_name.
-    def self.install_dependency_resolver(box, deps_config)
-      resolver = build_resolver(deps_config)
+    #
+    # +all_packages_ref+ is an optional hash with lazy references to
+    # :file_indexes, :packages, :root_path, :dep_names, and :self_name
+    # for producing helpful NameError hints.
+    # +package_name+ is the name of the current package (for error messages).
+    def self.install_dependency_resolver(
+      box,
+      deps_config,
+      all_packages_ref: nil,
+      package_name: nil
+    )
+      resolver =
+        build_resolver(
+          deps_config,
+          all_packages_ref: all_packages_ref,
+          package_name: package_name,
+        )
       box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, resolver)
 
       # Define const_missing on Object within the box so that top-level
@@ -28,7 +43,11 @@ module Boxwerk
     end
 
     # Builds a resolver proc that searches dependencies for a constant.
-    def self.build_resolver(deps_config)
+    def self.build_resolver(
+      deps_config,
+      all_packages_ref: nil,
+      package_name: nil
+    )
       proc do |const_name|
         name_str = const_name.to_s
         found = false
@@ -61,8 +80,11 @@ module Boxwerk
           if private_constants && !private_constants.empty?
             if private_constants.include?(name_str) ||
                  private_constants.any? { |pc| name_str.start_with?("#{pc}::") }
-              raise NameError,
-                    "Privacy violation: '#{name_str}' is private to '#{pkg_name}'"
+              from = package_name ? " referenced from '#{package_name}'" : ''
+              raise NameError.new(
+                "private constant #{name_str}#{from} — #{name_str} is private to '#{pkg_name}'",
+                const_name,
+              )
             end
           end
 
@@ -74,9 +96,12 @@ module Boxwerk
             namespace_match =
               public_constants.any? { |pc| pc.start_with?("#{name_str}::") }
             unless direct_match || namespace_match
-              raise NameError,
-                    "Privacy violation: '#{name_str}' is private to '#{pkg_name}'. " \
-                      'Only constants in the public path are accessible.'
+              from = package_name ? " referenced from '#{package_name}'" : ''
+              raise NameError.new(
+                "private constant #{name_str}#{from} — " \
+                  "only public/ constants in '#{pkg_name}' are accessible",
+                const_name,
+              )
             end
           end
 
@@ -99,7 +124,10 @@ module Boxwerk
                   dep_box.require(child_file)
                   dep_box.const_get(const_name)
                 else
-                  raise NameError, "uninitialized constant #{name_str}"
+                  raise NameError.new(
+                    "uninitialized constant #{name_str}",
+                    const_name,
+                  )
                 end
               end
             end
@@ -108,10 +136,55 @@ module Boxwerk
           break
         end
 
-        raise NameError, "uninitialized constant #{name_str}" unless found
+        unless found
+          hint = find_hint(name_str, all_packages_ref)
+          msg =
+            if hint
+              visibility = hint[:private] ? 'private in' : 'defined in'
+              from = package_name ? ", not a dependency of '#{package_name}'" : ''
+              "uninitialized constant #{name_str} (#{visibility} '#{hint[:package_name]}'#{from})"
+            else
+              "uninitialized constant #{name_str}"
+            end
+          raise NameError.new(msg, const_name)
+        end
 
         value
       end
+    end
+
+    # Searches all packages (via lazy ref) for one whose file_index
+    # contains the given constant name. Returns a hash with :package_name
+    # and :private (boolean), or nil if not found.
+    def self.find_hint(name_str, all_packages_ref)
+      return nil unless all_packages_ref
+
+      file_indexes = all_packages_ref[:file_indexes]
+      packages = all_packages_ref[:packages]
+      root_path = all_packages_ref[:root_path]
+      dep_names = all_packages_ref[:dep_names]
+      self_name = all_packages_ref[:self_name]
+
+      packages.each_value do |pkg|
+        next if pkg.name == self_name
+        next if dep_names.include?(pkg.name)
+
+        pkg_file_index = file_indexes[pkg.name] || {}
+        next unless pkg_file_index.key?(name_str) ||
+          pkg_file_index.any? { |k, _| k.start_with?("#{name_str}::") }
+
+        pub_consts = PrivacyChecker.public_constants(pkg, root_path)
+        is_private =
+          if pub_consts
+            !pub_consts.include?(name_str) &&
+              !pub_consts.any? { |pc| pc.start_with?("#{name_str}::") }
+          else
+            false
+          end
+
+        return { package_name: pkg.name, private: is_private }
+      end
+      nil
     end
   end
 end

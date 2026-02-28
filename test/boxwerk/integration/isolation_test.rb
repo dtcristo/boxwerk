@@ -326,5 +326,25 @@ module Boxwerk
       # a is explicit dep, should be searched first
       assert_equal 'from_a', c_box.eval('Shared.value')
     end
+
+    def test_nameerror_hints_at_non_dependency_package
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(File.join(b_dir, 'lib', 'class_b.rb'), "class ClassB\nend\n")
+
+      # Root depends only on a — b is not a dependency
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      error = assert_raises(NameError) { root_box.eval('_ = ClassB') }
+      assert_match(/defined in 'packs\/b'/, error.message)
+      assert_match(/not a dependency of '\.'/, error.message)
+    end
   end
 end

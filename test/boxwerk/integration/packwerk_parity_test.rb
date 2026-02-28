@@ -93,7 +93,7 @@ module Boxwerk
 
       error = assert_raises(NameError) { a_box.eval('_ = Secret') }
       assert_match(
-        /Privacy violation/,
+        /private constant Secret/,
         error.message,
         'Boxwerk: private constant should raise privacy error',
       )

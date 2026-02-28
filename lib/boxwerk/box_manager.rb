@@ -269,7 +269,23 @@ module Boxwerk
 
       return if deps_config.empty?
 
-      ConstantResolver.install_dependency_resolver(box, deps_config)
+      # Pass references for lazy hint lookup — other packages may not
+      # have been booted yet when this runs.
+      dep_names = search_packages.map(&:name).to_set
+      all_packages_ref = {
+        file_indexes: @file_indexes,
+        packages: package_resolver.packages,
+        root_path: @root_path,
+        dep_names: dep_names,
+        self_name: package.name,
+      }
+
+      ConstantResolver.install_dependency_resolver(
+        box,
+        deps_config,
+        all_packages_ref: all_packages_ref,
+        package_name: package.name,
+      )
     end
 
     def package_dir(package)

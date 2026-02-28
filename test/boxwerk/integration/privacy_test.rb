@@ -103,8 +103,49 @@ module Boxwerk
       root_box = result[:box_manager].boxes['.']
 
       error = assert_raises(NameError) { root_box.eval('_ = Secret') }
-      assert_match(/Privacy violation/, error.message)
+      assert_match(/private constant Secret/, error.message)
       assert_match(%r{packs/a}, error.message)
+    end
+
+    def test_privacy_violation_message_format_private_constants
+      a_dir = create_package_dir('a')
+      create_package(
+        a_dir,
+        enforce_privacy: true,
+        private_constants: ['::Invoice'],
+      )
+
+      pub_dir = File.join(a_dir, 'public')
+      FileUtils.mkdir_p(pub_dir)
+      File.write(File.join(pub_dir, 'invoice.rb'), "class Invoice\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      error = assert_raises(NameError) { root_box.eval('_ = Invoice') }
+      assert_match(
+        /private constant Invoice referenced from '\.'.*private to 'packs\/a'/,
+        error.message,
+      )
+    end
+
+    def test_privacy_violation_message_format_public_path
+      a_dir = create_package_dir('a')
+      create_package(a_dir, enforce_privacy: true)
+      File.write(File.join(a_dir, 'lib', 'secret.rb'), "class Secret\nend\n")
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      error = assert_raises(NameError) { root_box.eval('_ = Secret') }
+      assert_match(
+        /private constant Secret referenced from '\.'.*public\/ constants in 'packs\/a'/,
+        error.message,
+      )
     end
   end
 end
