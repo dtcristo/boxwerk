@@ -5,7 +5,11 @@ require_relative 'config/application'
 Rails.application.load_tasks
 
 task :test do
-  Dir.glob('test/**/*_test.rb').sort.each { |f| load f }
+  Dir
+    .glob('test/**/*_test.rb')
+    .reject { |f| f.include?('e2e') }
+    .sort
+    .each { |f| require_relative f }
 end
 
 task default: :test

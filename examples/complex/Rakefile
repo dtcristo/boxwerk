@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 task :test do
-  Dir.glob('test/**/*_test.rb').sort.each { |f| load f }
+  Dir.glob('test/**/*_test.rb').sort.each { |f| require_relative f }
 end
 
-task default: :test
+task :run do
+  sh 'bin/boxwerk run main.rb'
+end
+
+task default: %i[test run]

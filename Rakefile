@@ -1,81 +1,69 @@
 # frozen_string_literal: true
 
 require 'bundler/gem_tasks'
-require 'minitest/test_task'
-
-Minitest::TestTask.create { |t| t.test_globs = ['test/boxwerk/**/*_test.rb'] }
-
-desc 'Run end-to-end tests'
-task :e2e do
-  sh 'ruby test/e2e_test.rb'
-end
 
 STREE_FILES = '**/*.rb **/Rakefile'
-
-desc 'Format code with syntax_tree'
-task :format do
-  sh "bundle exec stree write #{STREE_FILES}"
-end
-
 EXAMPLES_DIR = File.join(__dir__, 'examples')
-
-# Discover examples that have tests (Rakefile present).
 EXAMPLE_DIRS =
   Dir.glob(File.join(EXAMPLES_DIR, '*')).select { |d| File.directory?(d) }.sort
 
-desc 'Run example apps (assert successful exit)'
-task :example_apps do
-  EXAMPLE_DIRS.each do |dir|
-    main = %w[main.rb].find { |f| File.exist?(File.join(dir, f)) }
-    next unless main
+desc 'Run all tests (unit, integration, e2e)'
+task :test do
+  $LOAD_PATH.unshift(File.join(__dir__, 'test'))
+  Dir.glob('test/boxwerk/**/*_test.rb').sort.each { |f| require_relative f }
+  sh 'ruby test/e2e_test.rb'
+end
 
-    name = File.basename(dir)
-    puts "==> example:#{name} #{main}"
-    sh(
-      { 'RUBY_BOX' => '1' },
-      File.join(dir, 'bin', 'boxwerk'),
-      'run',
-      main,
-      chdir: dir,
-    )
+desc 'Run a specific example (e.g. rake example[complex])'
+task :example, [:name] do |_t, args|
+  name = args[:name] || abort('Usage: rake example[name]')
+  dir = File.join(EXAMPLES_DIR, name)
+  abort("Example not found: #{name}") unless File.directory?(dir)
+
+  puts "==> example:#{name}"
+  sh(
+    { 'RUBY_BOX' => '1' },
+    File.join(dir, 'bin', 'boxwerk'),
+    'exec',
+    '--all',
+    'rake',
+    chdir: dir,
+  )
+
+  # Run e2e tests if present
+  e2e = File.join(dir, 'test', 'e2e_test.rb')
+  if File.exist?(e2e)
+    puts "==> example:#{name} e2e"
+    sh({ 'RUBY_BOX' => '1' }, 'ruby', e2e, chdir: dir)
   end
 end
 
-desc 'Run example test suites'
-task :example_tests do
+desc 'Run all examples'
+task :examples do
   EXAMPLE_DIRS.each do |dir|
-    next unless File.exist?(File.join(dir, 'Rakefile'))
-
     name = File.basename(dir)
-    puts "==> example:#{name} tests"
+    puts "==> example:#{name}"
     sh(
       { 'RUBY_BOX' => '1' },
       File.join(dir, 'bin', 'boxwerk'),
       'exec',
       '--all',
       'rake',
-      'test',
       chdir: dir,
     )
+
+    # Run e2e tests if present
+    e2e = File.join(dir, 'test', 'e2e_test.rb')
+    if File.exist?(e2e)
+      puts "==> example:#{name} e2e"
+      sh({ 'RUBY_BOX' => '1' }, 'ruby', e2e, chdir: dir)
+    end
   end
 end
 
-desc 'Run all example apps and tests'
-task examples: %i[example_apps example_tests example_e2e]
-
-desc 'Run example e2e tests'
-task :example_e2e do
-  EXAMPLE_DIRS.each do |dir|
-    e2e_file = File.join(dir, 'test', 'e2e_test.rb')
-    next unless File.exist?(e2e_file)
-
-    name = File.basename(dir)
-    puts "==> example:#{name} e2e"
-    sh({ 'RUBY_BOX' => '1' }, 'ruby', e2e_file, chdir: dir)
-  end
+desc 'Format code with syntax_tree'
+task :format do
+  sh "bundle exec stree write #{STREE_FILES}"
 end
 
-desc 'Run all tests (unit, integration, e2e, examples)'
-task all: %i[test e2e examples]
-
-task default: :all
+task default: %i[test examples]
