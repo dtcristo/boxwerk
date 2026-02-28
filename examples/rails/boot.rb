@@ -4,5 +4,3 @@
 # Load and initialize the Rails application.
 
 require_relative 'config/environment'
-
-puts "Rails #{Rails::VERSION::STRING} booted"
