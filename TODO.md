@@ -132,18 +132,17 @@ more helpful, matching Ruby's built-in style while providing Boxwerk context.
    ```
    uninitialized constant Foo (NameError)
    Note: 'Foo' exists in 'packs/util' which is not a dependency of 'packs/billing'.
-   Add 'packs/util' to packs/billing/package.yml dependencies to access it.
    ```
 2. When a constant is found but is private, improve the message:
    ```
-   private constant Foo referenced from packs/billing (NameError)
-   'Foo' is defined in 'packs/util' but is not in its public path.
-   Move it to packs/util/public/ or add '# pack_public: true' to make it public.
+   uninitialized constant Foo (NameError)
+   Note: 'Foo' is defined in 'packs/util' but is not public.
    ```
-3. Pass `all_deps_config` (all packages' file indexes) into the resolver proc
+3. Another message when it's not in a dependency AND it's not public.
+4. Pass `all_deps_config` (all packages' file indexes) into the resolver proc
    so it can search non-dependency packages for hints
-4. Use Ruby's `NameError` constructor: `NameError.new("message", name: const_name)`
-5. Add tests for each error message variant
+5. Use Ruby's `NameError` constructor: `NameError.new("message", name: const_name)`
+6. Add tests for each error message variant
 
 ### Message Format
 
@@ -359,15 +358,6 @@ Ruby 4.0.1 GC crash in child boxes). Revisit when Ruby::Box stabilizes.
 
 ---
 
-## 11. `boxwerk check` (Static Analysis)
-
-**Priority: Low**
-
-Scan source files without running code, report dependency/privacy violations.
-Useful in CI alongside Packwerk.
-
----
-
 ## 12. `boxwerk init`
 
 **Priority: Low**
@@ -411,7 +401,6 @@ isolation.
 
 ### Possible Improvements
 
-- **`boxwerk test` command** — dedicated test runner with better output
 - **Parallel execution** — run package tests in parallel for faster CI
 - **Coverage aggregation** — merge coverage reports across packages
 
@@ -481,4 +470,3 @@ Items completed and removed from active tracking:
   [examples/rails/](examples/rails/).
 - ✅ **Global gems** — Root `Gemfile` gems loaded in root box, inherited by
   all child boxes via snapshot. Version conflict warnings.
-- ✅ **Automatic version switching** — Low priority, deferred indefinitely.
