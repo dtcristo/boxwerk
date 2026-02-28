@@ -98,8 +98,7 @@ module Boxwerk
             unless direct_match || namespace_match
               from = package_name ? " referenced from '#{package_name}'" : ''
               raise NameError.new(
-                "private constant #{name_str}#{from} — " \
-                  "only public/ constants in '#{pkg_name}' are accessible",
+                "private constant #{name_str}#{from} — #{name_str} is private to '#{pkg_name}'",
                 const_name,
               )
             end

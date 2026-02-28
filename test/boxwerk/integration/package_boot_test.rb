@@ -56,7 +56,7 @@ module Boxwerk
 
       File.write(
         File.join(a_dir, 'boot.rb'),
-        "BOXWERK_CONFIG[:autoload_dirs] << 'models'\n",
+        "Boxwerk.package.autoloader.push_dir('models')\n",
       )
 
       create_package(@tmpdir, dependencies: ['packs/a'])
@@ -82,7 +82,7 @@ module Boxwerk
       # Collapse concerns/ so Taggable is at top level, not Concerns::Taggable
       File.write(
         File.join(a_dir, 'boot.rb'),
-        "BOXWERK_CONFIG[:collapse_dirs] << 'lib/concerns'\n",
+        "Boxwerk.package.autoloader.collapse('lib/concerns')\n",
       )
 
       create_package(@tmpdir, dependencies: ['packs/a'])
@@ -154,7 +154,7 @@ module Boxwerk
 
       File.write(
         File.join(@tmpdir, 'boot.rb'),
-        "BOXWERK_CONFIG[:autoload_dirs] << 'services'\n",
+        "Boxwerk.package.autoloader.push_dir('services')\n",
       )
 
       create_package(@tmpdir)
@@ -178,7 +178,7 @@ module Boxwerk
 
       File.write(
         File.join(a_dir, 'boot.rb'),
-        "BOXWERK_CONFIG[:autoload_dirs] << 'models'\n",
+        "Boxwerk.package.autoloader.push_dir('models')\n",
       )
 
       create_package(@tmpdir, dependencies: ['packs/a'])

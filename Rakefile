@@ -3,11 +3,11 @@
 require 'bundler/gem_tasks'
 require 'minitest/test_task'
 
-Minitest::TestTask.create
+Minitest::TestTask.create { |t| t.test_globs = ['test/boxwerk/**/*_test.rb'] }
 
 desc 'Run end-to-end tests'
 task :e2e do
-  sh 'ruby test/e2e/run.rb'
+  sh 'ruby test/e2e_test.rb'
 end
 
 STREE_FILES = '**/*.rb **/Rakefile'

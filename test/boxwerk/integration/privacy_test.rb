@@ -143,7 +143,7 @@ module Boxwerk
 
       error = assert_raises(NameError) { root_box.eval('_ = Secret') }
       assert_match(
-        /private constant Secret referenced from '\.'.*public\/ constants in 'packs\/a'/,
+        /private constant Secret referenced from '\.'.*Secret is private to 'packs\/a'/,
         error.message,
       )
     end

@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         ruby:
-          - "4.0.0"
+          - "4.0.1"
 
     steps:
       - uses: actions/checkout@v4
@@ -25,5 +25,19 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      - name: Install example gems
+        run: |
+          for dir in examples/*/; do
+            if [ -f "$dir/Gemfile" ] || [ -f "$dir/gems.rb" ]; then
+              echo "==> Installing gems for $dir"
+              (cd "$dir" && bundle install --jobs 4 --retry 3)
+            fi
+            for pack_dir in "$dir"/packs/*/; do
+              if [ -f "$pack_dir/Gemfile" ] || [ -f "$pack_dir/gems.rb" ]; then
+                echo "==> Installing gems for $pack_dir"
+                (cd "$pack_dir" && bundle install --jobs 4 --retry 3)
+              fi
+            done
+          done
       - name: Run tests
-        run: RUBY_BOX=1 bundle exec rake test
+        run: RUBY_BOX=1 bundle exec rake

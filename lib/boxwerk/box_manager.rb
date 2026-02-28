@@ -142,9 +142,8 @@ module Boxwerk
     end
 
     # Runs the optional per-package boot.rb in the package's box context.
-    # Injects BOXWERK_PACKAGE (PackageContext) and BOXWERK_CONFIG (deprecated)
-    # for the boot script to use. Returns additional file index entries from
-    # configured autoload dirs.
+    # Injects BOXWERK_PACKAGE (PackageContext) for the boot script to use.
+    # Returns additional file index entries from configured autoload dirs.
     def run_package_boot(box, package)
       pkg_dir = package_dir(package)
       boot_script = File.join(pkg_dir, 'boot.rb')
@@ -163,15 +162,6 @@ module Boxwerk
       # Inject PackageContext into the box
       box.const_set(:BOXWERK_PACKAGE, context)
 
-      # Inject deprecated BOXWERK_CONFIG hash for backward compatibility
-      box.eval(<<~RUBY)
-        BOXWERK_CONFIG = {
-          autoload_dirs: [],
-          collapse_dirs: [],
-          ignore_dirs: [],
-        }
-      RUBY
-
       # Set thread-local so Boxwerk.package works during boot.rb
       Boxwerk.package = context
 
@@ -185,32 +175,19 @@ module Boxwerk
       apply_boot_config(box, package, autoloader)
     end
 
-    # Reads autoload configuration from both the new PackageContext autoloader
-    # and the deprecated BOXWERK_CONFIG hash, then registers additional
-    # autoloads.
+    # Reads autoload configuration from the PackageContext autoloader
+    # and registers additional autoloads.
     def apply_boot_config(box, package, autoloader)
       pkg_dir = package_dir(package)
       all_entries = []
 
-      # Merge autoload dirs from new API and deprecated BOXWERK_CONFIG
-      autoload_dirs = autoloader.autoload_dirs.dup
-      legacy_dirs = box.eval('BOXWERK_CONFIG[:autoload_dirs]')
-      autoload_dirs.concat(legacy_dirs)
-      autoload_dirs.uniq!
-
-      autoload_dirs.each do |dir|
+      autoloader.autoload_dirs.each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan(abs_dir))
       end
 
-      # Merge collapse dirs from new API and deprecated BOXWERK_CONFIG
-      collapse_dirs = autoloader.collapse_dirs.dup
-      legacy_collapse = box.eval('BOXWERK_CONFIG[:collapse_dirs]')
-      collapse_dirs.concat(legacy_collapse)
-      collapse_dirs.uniq!
-
-      collapse_dirs.each do |dir|
+      autoloader.collapse_dirs.each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
