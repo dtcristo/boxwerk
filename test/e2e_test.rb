@@ -470,7 +470,7 @@ class E2ERunner
         'RUBYOPT' => '-rbundler/setup',
         'BUNDLE_GEMFILE' => gemfile,
       }
-      cmd = ['ruby', @boxwerk_bin, 'run', 'main.rb']
+      cmd = [@boxwerk_bin, 'run', 'main.rb']
       stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
       out = stdout + stderr
       assert_equal 0, status.exitstatus, 'bundle_exec_reexec: exit status'
@@ -508,14 +508,14 @@ class E2ERunner
   def run_boxwerk(dir, *args)
     gemfile = File.expand_path('../../gems.rb', __dir__)
     env = { 'RUBY_BOX' => '1' }
-    cmd = ['ruby', @boxwerk_bin, *args]
+    cmd = [@boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
     [stdout + stderr, status]
   end
 
   def run_boxwerk_with_stdin(dir, input, *args)
     env = { 'RUBY_BOX' => '1' }
-    cmd = ['ruby', @boxwerk_bin, *args]
+    cmd = [@boxwerk_bin, *args]
     stdout, stderr, status =
       Open3.capture3(env, *cmd, stdin_data: input, chdir: dir)
     [stdout + stderr, status]

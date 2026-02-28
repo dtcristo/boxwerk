@@ -112,7 +112,7 @@ class RailsE2ERunner
 
   def run_rails_boxwerk(*args)
     env = { 'RUBY_BOX' => '1', 'RAILS_ENV' => 'test' }
-    cmd = ['ruby', @boxwerk_bin, *args]
+    cmd = [@boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: @rails_dir)
     [stdout + stderr, status]
   end
