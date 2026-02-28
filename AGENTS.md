@@ -9,6 +9,7 @@ Guidelines for AI agents working on this codebase.
 - Consistent style with existing code and docs
 - Commit as you go with descriptive messages
 - Don't over-engineer — keep it simple
+- When multiple implementations or design choices exist, present a menu to the user with your recommendation
 - Run `RUBY_BOX=1 bundle exec rake` to run all tests (unit, e2e, examples)
 - Run `bundle exec rake format` to format code after every change
 - Fix any warnings
