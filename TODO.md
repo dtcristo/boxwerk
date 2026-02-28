@@ -6,117 +6,21 @@ Planned improvements for Boxwerk, ordered by priority.
 
 | # | Item | Priority | Status |
 |---|------|----------|--------|
-| 1 | Per-package gem auto-require | High | Done |
-| 2 | `Boxwerk.package` public API | High | Done |
-| 3 | Improved NameError messages | High | Done |
-| 4 | Remove Rails special-casing from CLI | High | Done |
-| 5 | Rails initialization in root package | High | Done |
-| 6 | Move Rails e2e tests to example dir | Medium | Done |
-| 7 | Monkey patch isolation example | Medium | Done |
-| 8 | `boxwerk-rails` gem | Medium | Future |
-| 9 | Constant reloading (dev workflow) | Medium | Not started |
-| 10 | IRB console autocomplete | Medium | Not started |
-| 11 | `boxwerk check` (static analysis) | Low | Not started |
-| 12 | `boxwerk init` (scaffold packages) | Low | Not started |
-| 13 | Sorbet support | Low | Future |
-| 14 | Per-package testing improvements | Low | Not started |
-| 15 | Additional CLI commands | Low | Not started |
-| 16 | IDE / language server support | Low | Future |
-| 17 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
-| 18 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
+| 1 | `boxwerk-rails` gem | Medium | Future |
+| 2 | Constant reloading (dev workflow) | Medium | Not started |
+| 3 | IRB console autocomplete | Medium | Not started |
+| 4 | `boxwerk check` (static analysis) | Low | Not started |
+| 5 | `boxwerk init` (scaffold packages) | Low | Not started |
+| 6 | Sorbet support | Low | Future |
+| 7 | Per-package testing improvements | Low | Not started |
+| 8 | Additional CLI commands | Low | Not started |
+| 9 | IDE / language server support | Low | Future |
+| 10 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
+| 11 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
 
 ---
 
-## 1. Per-Package Gem Auto-Require
-
-**Priority: High — Done**
-
-Per-package gems declared in `Gemfile`/`gems.rb` are now auto-required after
-load paths are set up, matching Bundler's default behaviour. Manual
-`require 'gem_name'` is no longer needed.
-
-Implementation: `GemfileRequireParser` extracts autorequire directives from
-the Gemfile. `BoxManager#auto_require_gems` requires each gem in the package
-box. Root packages are skipped (global gems are already loaded by Bundler).
-
-See `GemResolver#parse_gemfile_requires`, `BoxManager#auto_require_gems`.
-
----
-
-## 2. `Boxwerk.package` Public API
-
-**Priority: High — Done**
-
-`Boxwerk.package` returns a `PackageContext` during `boot.rb` with `name`,
-`root?`, `config` (frozen), `root_path`, and `autoloader`. The autoloader
-provides `push_dir`, `collapse`, and `ignore` for Zeitwerk configuration.
-
----
-
-## 3. Improved NameError Messages
-
-**Priority: High — Done**
-
-NameError messages now provide Boxwerk context while matching Ruby's style:
-- Privacy violations: `private constant Foo referenced from '.' — Foo is private to 'packs/a'`
-- Non-dependency hints: `uninitialized constant Foo (defined in 'packs/util', not a dependency of '.')`
-- Uses `NameError.new(msg, name:)` to preserve Ruby's `name` attribute
-
----
-
-## 4. Remove Rails Special-Casing from CLI
-
-**Priority: High — Done**
-
-Removed `execute_rails_command` and the rails-specific branch from CLI. Added
-generic project-level `bin/<command>` lookup: before searching gem binstubs,
-`run_command_in_box` checks for `./bin/<command>` in the project root. Project
-binstubs use `eval` with `__dir__` set for correct path resolution.
-
-The rails example now has `bin/rails` that sets `APP_PATH` and requires
-`rails/commands`. This is the standard Rails pattern and works generically.
-
----
-
-## 5. Rails Initialization in Root Package
-
-**Priority: High — Done**
-
-Rails now initializes in the root package box instead of the root box. The `-g`
-flag is no longer needed for Rails commands.
-
-**Approach:** Eager-load Rails frameworks and `rails/command` in
-`global/boot.rb`, then require `config/application.rb` and call
-`Application.initialize!` in the root package `boot.rb`. Files loaded via
-`Kernel#load` (e.g. `config/routes.rb`) use `Rails.application` instead of the
-`Application` constant directly, since they execute in root box context.
-
-**Limitation:** `rails runner` inline code uses `TOPLEVEL_BINDING` which is
-separate from `Ruby::Box.root`. Use `ENV["RAILS_ENV"]` instead of `Rails.env`
-in runner expressions. File-based runner scripts work fine.
-
----
-
-## 6. Move Rails E2E Tests to Example Directory
-
-**Priority: Medium — Done**
-
-Rails e2e tests moved to `examples/rails/test/e2e_test.rb`. Top-level Rakefile
-`example_e2e` task discovers and runs per-example e2e tests.
-
----
-
-## 7. Monkey Patch Isolation Example
-
-**Priority: Medium — Done**
-
-Complex example kitchen package demonstrates `String#to_order_ticket` monkey
-patch in `boot.rb`. Integration test verifies the patch doesn't leak to other
-packages. Pattern documented in USAGE.md.
-
----
-
-## 8. `boxwerk-rails` Gem
+## 1. `boxwerk-rails` Gem
 
 **Priority: Medium — Future**
 
@@ -127,20 +31,19 @@ eliminate manual setup in `global/boot.rb` and `bin/rails`.
 
 - Auto-configure `config.autoload_paths = []` and `config.eager_load_paths = []`
 - Create a `bin/rails` binstub compatible with `boxwerk exec`
-- Pre-require Rails sub-components in global boot
-- Alias `boxwerk exec rails` to `boxwerk exec -g rails` automatically
+- Pre-require and eager-load Rails frameworks in global boot
 - Aggregate migration paths from packages (`packs/*/db/migrate/`)
 - Package-aware Rails generators
 
 ### Prerequisites
 
-- #1 (per-package gem auto-require) — needed for clean gem loading
-- #2 (`Boxwerk.package` API) — needed for package-aware generators
+- Per-package gem auto-require — needed for clean gem loading ✅
+- `Boxwerk.package` API — needed for package-aware generators ✅
 - Stable Boxwerk API
 
 ---
 
-## 9. Constant Reloading
+## 2. Constant Reloading
 
 **Priority: Medium**
 
@@ -165,7 +68,7 @@ Start with Approach 1 behind an opt-in flag (`boxwerk run --watch`).
 
 ---
 
-## 10. IRB Console Autocomplete
+## 3. IRB Console Autocomplete
 
 **Priority: Medium**
 
@@ -184,7 +87,7 @@ Ruby 4.0.1 GC crash in child boxes). Revisit when Ruby::Box stabilizes.
 
 ---
 
-## 12. `boxwerk init`
+## 5. `boxwerk init`
 
 **Priority: Low**
 
@@ -192,7 +95,7 @@ Scaffold a new package with `package.yml`, `lib/`, `public/`, and `test/`.
 
 ---
 
-## 13. Sorbet Support
+## 6. Sorbet Support
 
 **Priority: Low — Future**
 
@@ -218,7 +121,7 @@ runtime constants.
 
 ---
 
-## 14. Per-Package Testing Improvements
+## 7. Per-Package Testing Improvements
 
 **Priority: Low**
 
@@ -232,7 +135,7 @@ isolation.
 
 ---
 
-## 15. Additional CLI Commands
+## 8. Additional CLI Commands
 
 **Priority: Low**
 
@@ -243,7 +146,7 @@ isolation.
 
 ---
 
-## 16. IDE / Language Server Support
+## 9. IDE / Language Server Support
 
 **Priority: Low — Future**
 
@@ -254,7 +157,7 @@ isolation.
 
 ---
 
-## 17. Bundler Inside Package Boxes
+## 10. Bundler Inside Package Boxes
 
 **Status: Blocked (Ruby::Box limitation)**
 
@@ -266,7 +169,7 @@ Requires Ruby::Box changes to support Bundler running in child box context.
 
 ---
 
-## 18. RUBYOPT Bootstrap (`-rboxwerk/setup`)
+## 11. RUBYOPT Bootstrap (`-rboxwerk/setup`)
 
 **Status: Blocked (Ruby::Box limitation)**
 
@@ -290,19 +193,19 @@ Items completed and removed from active tracking:
 
 - ✅ **Zeitwerk integration** — File scanning, inflection, `autoload_dirs`,
   `collapse_dirs`, eager loading. Remaining: `ignore_dirs` consumption,
-  reloading (see #9).
+  reloading (see #2).
 - ✅ **Rails integration** — Rails 8.1 API app, Puma, ActiveRecord,
   ActionController, foundation pattern, privacy enforcement. See
   [examples/rails/](examples/rails/).
 - ✅ **Global gems** — Root `Gemfile` gems loaded in root box, inherited by
   all child boxes via snapshot. Version conflict warnings.
-- ✅ **Per-package gem auto-require** (#1) — Gems auto-required matching
+- ✅ **Per-package gem auto-require** — Gems auto-required matching
   Bundler behaviour. `require: false` and custom require paths supported.
-- ✅ **`Boxwerk.package` API** (#2) — `PackageContext` with autoloader config.
-- ✅ **Improved NameError messages** (#3) — Privacy and non-dependency hints.
-- ✅ **Rails e2e tests moved** (#6) — To `examples/rails/test/e2e_test.rb`.
-- ✅ **Monkey patch isolation** (#7) — Kitchen example with integration test.
-- ✅ **Rails in root package** (#5) — Eager-load Rails in global/boot.rb,
+- ✅ **`Boxwerk.package` API** — `PackageContext` with autoloader config.
+- ✅ **Improved NameError messages** — Privacy and non-dependency hints.
+- ✅ **Rails e2e tests moved** — To `examples/rails/test/e2e_test.rb`.
+- ✅ **Monkey patch isolation** — Kitchen example with integration test.
+- ✅ **Rails in root package** — Eager-load Rails in global/boot.rb,
   initialize in root package boot.rb. `-g` no longer needed for Rails commands.
-- ✅ **Remove Rails special-casing** (#4) — Generic `bin/<command>` lookup
+- ✅ **Remove Rails special-casing** — Generic `bin/<command>` lookup
   replaces `execute_rails_command`. Rails example uses standard `bin/rails`.
