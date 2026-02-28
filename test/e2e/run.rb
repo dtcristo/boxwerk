@@ -12,9 +12,6 @@ require 'tmpdir'
 require 'fileutils'
 require 'yaml'
 require 'open3'
-require 'net/http'
-require 'timeout'
-require 'socket'
 
 class E2ERunner
   attr_reader :pass_count, :fail_count
@@ -53,12 +50,6 @@ class E2ERunner
     test_console_child_package
     test_console_global
     test_bundle_exec_reexec
-
-    test_rails_db_migrate
-    test_rails_runner
-    test_rails_server_boots
-    test_rails_server_responds
-    test_rails_example_tests
 
     puts ''
     puts '=' * 60
@@ -485,86 +476,6 @@ class E2ERunner
     end
   end
 
-  # --- Rails example tests ---
-
-  def test_rails_db_migrate
-    db_path = File.join(rails_dir, 'db', 'test.sqlite3')
-    FileUtils.rm_f(db_path)
-
-    out, status = run_rails_boxwerk('exec', '-g', 'rails', 'db:migrate')
-    assert_equal 0, status.exitstatus, 'rails_db_migrate: exit status'
-    assert_equal true, File.exist?(db_path), 'rails_db_migrate: db file created'
-  end
-
-  def test_rails_runner
-    out, status =
-      run_rails_boxwerk(
-        'exec',
-        '-g',
-        'rails',
-        'runner',
-        'puts ENV["RAILS_ENV"]',
-      )
-    assert_equal 0, status.exitstatus, 'rails_runner: exit status'
-    assert_match(/test/, out, 'rails_runner: RAILS_ENV output')
-  end
-
-  def test_rails_server_boots
-    rails_migrate_test_db
-    port = available_port
-    pid = start_rails_server(port)
-
-    begin
-      alive = false
-      Timeout.timeout(10) do
-        loop do
-          Process.kill(0, pid)
-          alive = true
-          break
-        rescue Errno::ESRCH
-          sleep 0.5
-        end
-      end
-      assert_equal true, alive, 'rails_server_boots: process is alive'
-    ensure
-      stop_process(pid)
-    end
-  end
-
-  def test_rails_server_responds
-    rails_migrate_test_db
-    port = available_port
-    pid = start_rails_server(port)
-
-    begin
-      response = nil
-      Timeout.timeout(15) do
-        loop do
-          response =
-            Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/users"))
-          break
-        rescue Errno::ECONNREFUSED
-          sleep 1
-        end
-      end
-
-      assert_equal false, response.nil?, 'rails_server_responds: got response'
-      assert_match(
-        /\d{3}/,
-        response.code,
-        'rails_server_responds: valid HTTP status',
-      )
-    ensure
-      stop_process(pid)
-    end
-  end
-
-  def test_rails_example_tests
-    out, status = run_rails_boxwerk('exec', '--all', 'rake', 'test')
-    assert_equal 0, status.exitstatus, 'rails_example_tests: exit status'
-    assert_match(/\d+ runs/, out, 'rails_example_tests: test results')
-  end
-
   # --- Helpers ---
 
   def with_project
@@ -627,56 +538,6 @@ class E2ERunner
       puts "  ✗ #{label}: #{pattern.inspect} not found in output"
       puts "    Output: #{string[0..200]}"
     end
-  end
-
-  # --- Rails helpers ---
-
-  def rails_dir
-    @rails_dir ||= File.expand_path('../../examples/rails', __dir__)
-  end
-
-  def rails_boxwerk_bin
-    @rails_boxwerk_bin ||= File.join(rails_dir, 'bin', 'boxwerk')
-  end
-
-  def run_rails_boxwerk(*args)
-    env = { 'RUBY_BOX' => '1', 'RAILS_ENV' => 'test' }
-    cmd = ['ruby', rails_boxwerk_bin, *args]
-    stdout, stderr, status = Open3.capture3(env, *cmd, chdir: rails_dir)
-    [stdout + stderr, status]
-  end
-
-  def rails_migrate_test_db
-    run_rails_boxwerk('exec', '-g', 'rails', 'db:migrate')
-  end
-
-  def available_port
-    server = TCPServer.new('127.0.0.1', 0)
-    port = server.addr[1]
-    server.close
-    port
-  end
-
-  def start_rails_server(port)
-    env = { 'RUBY_BOX' => '1', 'RAILS_ENV' => 'test' }
-    cmd = [
-      'ruby',
-      rails_boxwerk_bin,
-      'exec',
-      '-g',
-      'rails',
-      'server',
-      '-p',
-      port.to_s,
-    ]
-    Process.spawn(env, *cmd, chdir: rails_dir, out: File::NULL, err: File::NULL)
-  end
-
-  def stop_process(pid)
-    Process.kill('TERM', pid)
-    Process.wait(pid)
-  rescue Errno::ESRCH, Errno::ECHILD
-    # Process already exited
   end
 end
 

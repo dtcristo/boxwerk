@@ -61,7 +61,19 @@ task :example_tests do
 end
 
 desc 'Run all example apps and tests'
-task examples: %i[example_apps example_tests]
+task examples: %i[example_apps example_tests example_e2e]
+
+desc 'Run example e2e tests'
+task :example_e2e do
+  EXAMPLE_DIRS.each do |dir|
+    e2e_file = File.join(dir, 'test', 'e2e_test.rb')
+    next unless File.exist?(e2e_file)
+
+    name = File.basename(dir)
+    puts "==> example:#{name} e2e"
+    sh({ 'RUBY_BOX' => '1' }, 'ruby', e2e_file, chdir: dir)
+  end
+end
 
 desc 'Run all tests (unit, integration, e2e, examples)'
 task all: %i[test e2e examples]
