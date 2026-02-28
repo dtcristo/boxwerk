@@ -19,7 +19,7 @@ class E2ERunner
   def initialize
     @pass_count = 0
     @fail_count = 0
-    @boxwerk_bin = File.expand_path('../../exe/boxwerk', __dir__)
+    @boxwerk_bin = File.expand_path('../exe/boxwerk', __dir__)
   end
 
   def run_all
@@ -50,6 +50,7 @@ class E2ERunner
     test_console_child_package
     test_console_global
     test_bundle_exec_reexec
+    test_exec_project_binstub
 
     puts ''
     puts '=' * 60
@@ -463,7 +464,7 @@ class E2ERunner
 
       # Simulate Bundler being loaded (as with bundle exec or binstub)
       # by pre-requiring bundler via RUBYOPT. The re-exec should strip this.
-      gemfile = File.expand_path('../../gems.rb', __dir__)
+      gemfile = File.expand_path('../gems.rb', __dir__)
       env = {
         'RUBY_BOX' => '1',
         'RUBYOPT' => '-rbundler/setup',
@@ -474,6 +475,27 @@ class E2ERunner
       out = stdout + stderr
       assert_equal 0, status.exitstatus, 'bundle_exec_reexec: exit status'
       assert_match /Hello via bundle exec!/, out, 'bundle_exec_reexec: output'
+    end
+  end
+
+  def test_exec_project_binstub
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/greeter'])
+      create_package(dir, 'greeter')
+      write_file(dir, 'packs/greeter/lib/greeter.rb', <<~RUBY)
+        class Greeter
+          def self.hello = 'Hello from binstub!'
+        end
+      RUBY
+      # Create a project-level bin/mycommand binstub
+      write_file(dir, 'bin/mycommand', <<~RUBY)
+        puts Greeter.hello
+      RUBY
+      FileUtils.chmod(0o755, File.join(dir, 'bin/mycommand'))
+
+      out, status = run_boxwerk(dir, 'exec', 'mycommand')
+      assert_equal 0, status.exitstatus, 'exec_project_binstub: exit status'
+      assert_match(/Hello from binstub!/, out, 'exec_project_binstub: output')
     end
   end
 

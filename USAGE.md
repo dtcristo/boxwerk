@@ -90,7 +90,12 @@ boxwerk run -g main.rb                    # Run in global context (no package)
 
 #### `boxwerk exec <command> [args...]`
 
-Execute a command (gem binstub) in the boxed environment. Resolves the command to its gem binstub path and evaluates it in the target box.
+Execute a command in the boxed environment. Boxwerk looks for the command in this order:
+
+1. **Project binstub** — `./bin/<command>` in the project root
+2. **Gem binstub** — resolved via `Gem.bin_path`
+
+Project binstubs take precedence, allowing custom command entry points (e.g. a `bin/rails` that sets `APP_PATH` and requires `rails/commands`).
 
 ```bash
 boxwerk exec rake test                   # Root package

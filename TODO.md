@@ -9,7 +9,7 @@ Planned improvements for Boxwerk, ordered by priority.
 | 1 | Per-package gem auto-require | High | Done |
 | 2 | `Boxwerk.package` public API | High | Done |
 | 3 | Improved NameError messages | High | Done |
-| 4 | Remove Rails special-casing from CLI | High | Not started |
+| 4 | Remove Rails special-casing from CLI | High | Done |
 | 5 | Rails initialization in root package | High | Done |
 | 6 | Move Rails e2e tests to example dir | Medium | Done |
 | 7 | Monkey patch isolation example | Medium | Done |
@@ -66,39 +66,15 @@ NameError messages now provide Boxwerk context while matching Ruby's style:
 
 ## 4. Remove Rails Special-Casing from CLI
 
-**Priority: High**
+**Priority: High — Done**
 
-`cli.rb` has `execute_rails_command` which special-cases `rails` commands.
-This should be removed in favour of a general mechanism.
+Removed `execute_rails_command` and the rails-specific branch from CLI. Added
+generic project-level `bin/<command>` lookup: before searching gem binstubs,
+`run_command_in_box` checks for `./bin/<command>` in the project root. Project
+binstubs use `eval` with `__dir__` set for correct path resolution.
 
-### Background
-
-The special case exists because:
-1. `Gem.bin_path('rails', 'rails')` triggers a Bundler warning (gem is
-   `railties` not `rails`) — **already fixed** by `find_bin_path` rewrite
-2. The `rails` binstub goes through `rails/cli` → `AppLoader.exec_app` →
-   looks for `bin/rails` → not found → shows `rails new` help
-
-### Plan
-
-1. Add project-level `bin/` lookup to `run_command_in_box`: before searching
-   gem binstubs, check for `./bin/<command>` in the project root. This mirrors
-   how Bundler binstubs work.
-2. In the rails example, create a `bin/rails` binstub that does the right
-   thing when evaluated inside a box:
-   ```ruby
-   APP_PATH = File.expand_path("../config/application", __dir__)
-   require "rails/commands"
-   ```
-3. Remove `execute_rails_command` and the `if command == 'rails'` branch from
-   `run_command_in_box`
-4. Document the `bin/` lookup order in USAGE.md
-5. This approach is generic — any project can create custom binstubs
-
-### Future
-
-The `boxwerk-rails` gem (#8) will automate creating the `bin/rails` binstub
-and other Rails-specific configuration.
+The rails example now has `bin/rails` that sets `APP_PATH` and requires
+`rails/commands`. This is the standard Rails pattern and works generically.
 
 ---
 
@@ -328,3 +304,5 @@ Items completed and removed from active tracking:
 - ✅ **Monkey patch isolation** (#7) — Kitchen example with integration test.
 - ✅ **Rails in root package** (#5) — Eager-load Rails in global/boot.rb,
   initialize in root package boot.rb. `-g` no longer needed for Rails commands.
+- ✅ **Remove Rails special-casing** (#4) — Generic `bin/<command>` lookup
+  replaces `execute_rails_command`. Rails example uses standard `bin/rails`.
