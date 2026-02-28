@@ -14,8 +14,9 @@ Guidelines for AI agents working on this codebase.
 - Don't over-engineer — keep it simple
 - When multiple implementations or design choices exist, present a menu to the user with your recommendation
 - Run `RUBY_BOX=1 bundle exec rake` to run all tests (unit, e2e, examples)
-- Run `RUBY_BOX=1 bundle exec rake test` for unit and e2e tests only
-- Run `RUBY_BOX=1 bundle exec rake example[name]` for a specific example
+- Run `RUBY_BOX=1 bundle exec rake test` for unit tests only
+- Run `RUBY_BOX=1 bundle exec rake test e2e` for unit and e2e tests
+- Run `RUBY_BOX=1 bundle exec rake example minimal` for a specific example
 - Run `bundle exec rake format` to format code after every change
 - Fix any warnings
 - Use sub-agents where appropriate

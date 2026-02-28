@@ -12,4 +12,13 @@ task :test do
     .each { |f| require_relative f }
 end
 
-task default: :test
+desc 'Run e2e tests'
+task :e2e do
+  # Disconnect AR so forked subprocess doesn't inherit stale SQLite FDs
+  if defined?(ActiveRecord::Base)
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+  end
+  sh('ruby', 'test/e2e_test.rb')
+end
+
+task default: %i[test e2e]
