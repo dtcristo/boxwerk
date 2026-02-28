@@ -54,79 +54,60 @@ Then install:
 bundle install
 ```
 
-### 2. Add global gems
-
-Gems in root `Gemfile`/`gems.rb` are accessible to all packages, for example:
-
-```ruby
-gem 'dotenv', require: 'dotenv/load'
-```
-
-> **Note:** Gems with `require: false` are on `$LOAD_PATH` but not auto-required.
-> Any package can `require` them, but the constants are scoped to that package's
-> box. For shared gems, omit `require: false` so they are auto-required once in
-> the root box and inherited by all packages.
-
-### 3. Create packages
+### 2. Create packages
 
 ```
 my_app/
-├── package.yml              # Root package
+├── package.yml
 ├── app.rb
 ├── gems.rb
 └── packs/
-    ├── finance/
+    ├── foo/
     │   ├── package.yml
-    │   ├── public/
-    │   │   └── invoice.rb   # Public API
     │   └── lib/
-    │       └── tax_calc.rb  # Private
-    └── util/
+    │       └── foo.rb
+    └── bar/
         ├── package.yml
         └── lib/
-            └── calculator.rb
+            └── bar.rb
 ```
 
 **Root `package.yml`:**
 ```yaml
 enforce_dependencies: true
 dependencies:
-  - packs/finance
+  - packs/foo
+  - packs/bar
 ```
 
-**`packs/finance/package.yml`:**
+**`packs/foo/package.yml`:**
 ```yaml
 enforce_dependencies: true
-enforce_privacy: true
-dependencies:
-  - packs/util
 ```
 
-### 4. Write your application
+### 3. Write your application
+
+```ruby
+# packs/foo/lib/foo.rb
+class Foo
+  def self.call
+    'foo'
+  end
+end
+```
 
 ```ruby
 # app.rb — access dependency constants directly
-invoice = Invoice.new(tax_rate: 0.15)
-invoice.add_item('Consulting', 100_000)
-puts invoice.total
-
-# Direct dependency ✓
-Invoice.new
-
-# Transitive dependency ✗ (raises NameError)
-Calculator.add(1, 2)
+puts Foo.call  # ✓ direct dependency
+puts Bar.call  # ✓ direct dependency
 ```
 
-### 5. Run
+### 4. Run
 
 ```bash
 bundle binstubs boxwerk              # Create bin/boxwerk binstub
-bin/boxwerk install                  # Install per-package gems
 RUBY_BOX=1 bin/boxwerk run app.rb    # Run with package isolation
 ```
-
-> `bundle exec boxwerk` also works — Boxwerk re-execs into a clean process
-> automatically so gems aren't loaded twice.
 
 ## CLI
 
@@ -233,7 +214,8 @@ See [TODO.md](TODO.md) for plans to address these limitations.
 
 ## Examples
 
-- See [examples/simple/](examples/simple/) for a working multi-package application with per-package tests and gem version isolation.
+- See [examples/minimal/](examples/minimal/) for the simplest possible setup — three packages, dependency enforcement, no gems.
+- See [examples/complex/](examples/complex/) for a full-featured example with namespaced constants, privacy enforcement, per-package gems, global gems, and tests.
 - See [examples/rails/](examples/rails/) for the Rails integration plan.
 
 ## Development
@@ -242,12 +224,21 @@ See [TODO.md](TODO.md) for plans to address these limitations.
 bundle install                                            # Install dependencies
 RUBY_BOX=1 bundle exec rake test                          # Unit + integration tests
 RUBY_BOX=1 bundle exec rake e2e                           # End-to-end tests
+bundle exec rake format                                   # Format code
 ```
 
-To run the simple example:
+To run the minimal example:
 
 ```bash
-cd examples/simple
+cd examples/minimal
+bundle install
+RUBY_BOX=1 bin/boxwerk run app.rb
+```
+
+To run the complex example:
+
+```bash
+cd examples/complex
 bundle install
 bin/boxwerk install
 RUBY_BOX=1 bin/boxwerk run app.rb

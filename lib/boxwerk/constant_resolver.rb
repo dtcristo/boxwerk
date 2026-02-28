@@ -41,9 +41,11 @@ module Boxwerk
           private_constants = dep[:private_constants]
           pkg_name = dep[:package_name]
 
-          # Check if this dependency has the constant
+          # Check if this dependency has the constant or a namespace
+          # matching it (e.g. "Menu" when file_index has "Menu::Item")
           has_constant =
             file_index.key?(name_str) ||
+              file_index.any? { |k, _| k.start_with?("#{name_str}::") } ||
               (
                 begin
                   dep_box.const_get(const_name)
@@ -64,11 +66,18 @@ module Boxwerk
             end
           end
 
-          # Check public constants whitelist (privacy enforcement)
-          if public_constants && !public_constants.include?(name_str)
-            raise NameError,
-                  "Privacy violation: '#{name_str}' is private to '#{pkg_name}'. " \
-                    'Only constants in the public path are accessible.'
+          # Check public constants whitelist (privacy enforcement).
+          # A namespace module (e.g. Menu) is allowed if any public
+          # constant lives under it (e.g. Menu::Item).
+          if public_constants
+            direct_match = public_constants.include?(name_str)
+            namespace_match =
+              public_constants.any? { |pc| pc.start_with?("#{name_str}::") }
+            unless direct_match || namespace_match
+              raise NameError,
+                    "Privacy violation: '#{name_str}' is private to '#{pkg_name}'. " \
+                      'Only constants in the public path are accessible.'
+            end
           end
 
           # Resolve the constant from the dependency box
@@ -77,9 +86,22 @@ module Boxwerk
               dep_box.const_get(const_name)
             rescue NameError
               file = file_index[name_str]
-              raise NameError, "uninitialized constant #{name_str}" unless file
-              dep_box.require(file)
-              dep_box.const_get(const_name)
+              if file
+                dep_box.require(file)
+                dep_box.const_get(const_name)
+              else
+                # Namespace module — trigger autoload of a child constant
+                # so the module gets defined in the dependency box.
+                child_key =
+                  file_index.keys.find { |k| k.start_with?("#{name_str}::") }
+                if child_key
+                  child_file = file_index[child_key]
+                  dep_box.require(child_file)
+                  dep_box.const_get(const_name)
+                else
+                  raise NameError, "uninitialized constant #{name_str}"
+                end
+              end
             end
 
           found = true

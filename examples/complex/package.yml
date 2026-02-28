@@ -1,0 +1,6 @@
+enforce_dependencies: true
+dependencies:
+  - packs/menu
+  - packs/orders
+  - packs/loyalty
+  - packs/kitchen
