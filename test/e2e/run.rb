@@ -160,7 +160,7 @@ class E2ERunner
           puts "FAIL: private constant accessible"
           exit 1
         rescue NameError => e
-          if e.message.include?('Privacy violation')
+          if e.message.include?('private constant')
             puts "PASS: privacy enforced"
             exit 0
           else
