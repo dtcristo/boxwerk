@@ -265,5 +265,66 @@ module Boxwerk
 
       assert_equal 'from_b', root_box.eval('Shared.value')
     end
+    def test_relaxed_deps_child_package_accesses_siblings
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'class_a.rb'),
+        "class ClassA\n  def self.value = 'from_a'\nend\n",
+      )
+
+      b_dir = create_package_dir('b')
+      FileUtils.mkdir_p(File.join(b_dir, 'lib'))
+      File.write(
+        File.join(b_dir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => false),
+      )
+      File.write(
+        File.join(b_dir, 'lib', 'class_b.rb'),
+        "class ClassB\n  def self.value = 'from_b'\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b])
+
+      result = boot_system
+      b_box = result[:box_manager].boxes['packs/b']
+
+      # b has no explicit dep on a, but with relaxed enforcement can access it
+      assert_equal 'from_a', b_box.eval('ClassA.value')
+    end
+
+    def test_relaxed_deps_child_explicit_deps_searched_first
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'shared.rb'),
+        "class Shared\n  def self.value = 'from_a'\nend\n",
+      )
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(
+        File.join(b_dir, 'lib', 'shared.rb'),
+        "class Shared\n  def self.value = 'from_b'\nend\n",
+      )
+
+      c_dir = create_package_dir('c')
+      FileUtils.mkdir_p(File.join(c_dir, 'lib'))
+      File.write(
+        File.join(c_dir, 'package.yml'),
+        YAML.dump(
+          'enforce_dependencies' => false,
+          'dependencies' => ['packs/a'],
+        ),
+      )
+
+      create_package(@tmpdir, dependencies: %w[packs/a packs/b packs/c])
+
+      result = boot_system
+      c_box = result[:box_manager].boxes['packs/c']
+
+      # a is explicit dep, should be searched first
+      assert_equal 'from_a', c_box.eval('Shared.value')
+    end
   end
 end

@@ -85,6 +85,51 @@ module Boxwerk
       assert_equal 42, Ruby::Box.root.eval('GlobalHelper::VALUE')
     end
 
+    def test_global_files_all_eagerly_required
+      create_package(@tmpdir)
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
+      File.write(
+        File.join(global_dir, 'alpha.rb'),
+        "module Alpha; VALUE = 1; end\n",
+      )
+      File.write(
+        File.join(global_dir, 'beta.rb'),
+        "module Beta; VALUE = 2; end\n",
+      )
+      File.write(
+        File.join(global_dir, 'gamma.rb'),
+        "module Gamma; VALUE = 3; end\n",
+      )
+
+      Setup.run(start_dir: @tmpdir)
+
+      assert_equal 1, Ruby::Box.root.eval('Alpha::VALUE')
+      assert_equal 2, Ruby::Box.root.eval('Beta::VALUE')
+      assert_equal 3, Ruby::Box.root.eval('Gamma::VALUE')
+    end
+
+    def test_global_constants_available_in_child_packages
+      # Create a child package
+      packs_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(File.join(packs_dir, 'lib'))
+      create_package(packs_dir)
+
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
+      File.write(
+        File.join(global_dir, 'global_helper.rb'),
+        "module GlobalHelper; VALUE = 42; end\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      result = Setup.run(start_dir: @tmpdir)
+      a_box = result[:box_manager].boxes['packs/a']
+
+      assert_equal 42, a_box.eval('GlobalHelper::VALUE')
+    end
+
     def test_run_works_without_global_boot
       create_package(@tmpdir)
 

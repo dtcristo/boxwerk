@@ -169,6 +169,44 @@ module Boxwerk
       refute resolver.packages.key?('other/x')
     end
 
+    def test_default_no_boxwerk_yml_discovers_all_packages
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      other_dir = File.join(@tmpdir, 'other', 'x')
+      FileUtils.mkdir_p(File.join(other_dir, 'lib'))
+      create_package(other_dir)
+
+      resolver = PackageResolver.new(@tmpdir)
+
+      assert resolver.packages.key?('packs/a')
+      assert resolver.packages.key?('other/x')
+    end
+
+    def test_boxwerk_yml_multiple_package_paths
+      File.write(
+        File.join(@tmpdir, 'boxwerk.yml'),
+        YAML.dump('package_paths' => %w[packs/* components/*]),
+      )
+
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      comp_dir = File.join(@tmpdir, 'components', 'ui')
+      FileUtils.mkdir_p(File.join(comp_dir, 'lib'))
+      create_package(comp_dir)
+
+      other_dir = File.join(@tmpdir, 'other', 'x')
+      FileUtils.mkdir_p(File.join(other_dir, 'lib'))
+      create_package(other_dir)
+
+      resolver = PackageResolver.new(@tmpdir)
+
+      assert resolver.packages.key?('packs/a')
+      assert resolver.packages.key?('components/ui')
+      refute resolver.packages.key?('other/x')
+    end
+
     private
 
     def create_package_dir(name)

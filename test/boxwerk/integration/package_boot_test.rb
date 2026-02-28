@@ -110,6 +110,61 @@ module Boxwerk
       assert_equal 'from_a', a_box.eval('ClassA.value')
     end
 
+    def test_root_boot_script_runs_in_package_box_not_root_box
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+      File.write(File.join(@tmpdir, 'boot.rb'), "ROOT_BOOT_RAN = true\n")
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      # Ran in the root package box
+      assert root_box.eval('ROOT_BOOT_RAN')
+      # NOT in the Ruby root box
+      refute Ruby::Box.root.eval('defined?(ROOT_BOOT_RAN)')
+    end
+
+    def test_root_boot_dependencies_accessible_after_boot
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'class_a.rb'),
+        "class ClassA\n  def self.value = 'from_a'\nend\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+      File.write(File.join(@tmpdir, 'boot.rb'), "ROOT_BOOT_RAN = true\n")
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert root_box.eval('ROOT_BOOT_RAN')
+      assert_equal 'from_a', root_box.eval('ClassA.value')
+    end
+
+    def test_root_boot_configures_additional_autoload_dirs
+      services_dir = File.join(@tmpdir, 'services')
+      FileUtils.mkdir_p(services_dir)
+      File.write(
+        File.join(services_dir, 'root_service.rb'),
+        "class RootService\n  def self.value = 'root_svc'\nend\n",
+      )
+
+      File.write(
+        File.join(@tmpdir, 'boot.rb'),
+        "BOXWERK_CONFIG[:autoload_dirs] << 'services'\n",
+      )
+
+      create_package(@tmpdir)
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert_equal 'root_svc', root_box.eval('RootService.value')
+    end
+
     def test_additional_autoload_dir_constants_available_to_dependents
       a_dir = create_package_dir('a')
       create_package(a_dir, enforce_privacy: false)
