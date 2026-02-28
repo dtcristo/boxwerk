@@ -233,9 +233,9 @@ Console always runs IRB in `Ruby::Box.root` rather than the target package box. 
 
 The `--all` flag runs `exec` for each package in a separate subprocess. This is necessary because test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.
 
-### --root-box Flag
+### --global Flag
 
-The `--root-box` / `-r` flag runs commands directly in `Ruby::Box.root`, bypassing package resolution entirely. No package constants are accessible — only global gems. Useful for debugging.
+The `--global` / `-g` flag runs commands directly in `Ruby::Box.root`, bypassing package resolution entirely. No package constants are accessible — only global gems. Useful for debugging.
 
 ## Module Structure
 

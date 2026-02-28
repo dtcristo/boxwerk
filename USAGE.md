@@ -85,7 +85,7 @@ Run a Ruby script in a package box.
 ```bash
 boxwerk run app.rb                       # Run in root package box
 boxwerk run -p packs/finance app.rb      # Run in a specific package box
-boxwerk run -r app.rb                    # Run in root box (no package context)
+boxwerk run -g app.rb                    # Run in global context (no package)
 ```
 
 #### `boxwerk exec <command> [args...]`
@@ -96,7 +96,7 @@ Execute a command (gem binstub) in the boxed environment. Resolves the command t
 boxwerk exec rake test                   # Root package
 boxwerk exec -p packs/util rake test     # Specific package
 boxwerk exec --all rake test             # All packages sequentially
-boxwerk exec -r rake test               # Root box (debugging)
+boxwerk exec -g rake test               # Global context (debugging)
 ```
 
 With `--all`, each package runs in a separate subprocess for clean isolation (avoids `at_exit` conflicts from test frameworks like Minitest).
@@ -142,7 +142,7 @@ Show usage or version.
 |-----------------------|-------|-------------------------|----------------------------------------------------|
 | `--package <name>`    | `-p`  | `exec`, `run`, `console`| Run in a specific package box (default: `.`)       |
 | `--all`               |       | `exec`                  | Run for all packages sequentially (subprocesses)   |
-| `--root-box`          | `-r`  | `exec`, `run`, `console`| Run in the root box (no package context)           |
+| `--global`            | `-g`  | `exec`, `run`, `console`| Run in the global context (no package)             |
 
 ## Per-Package Gems
 
@@ -159,7 +159,7 @@ packs/billing/
 
 ### Gem Isolation Model
 
-- **Global gems** (root `Gemfile`) are loaded in the root box and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
+- **Global gems** (root `Gemfile`) are loaded in the global context and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
 - **Per-package gems** are resolved from lockfiles and added to each box's `$LOAD_PATH` independently
 - **Gems do NOT leak** across package boundaries — package A cannot see package B's gems, even if A depends on B
 - **Cross-package version differences** are safe — each box has its own isolated `$LOAD_PATH`
@@ -219,22 +219,22 @@ Privacy violation: 'InternalHelper' is private to 'packs/finance'.
 Only constants in the public path are accessible.
 ```
 
-## Root Package vs Root Box
+## Root Package vs Global Context
 
 These are different concepts:
 
 - **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants.
-- **Root box** (`Ruby::Box.root`) — Where global gems are loaded via `Bundler.require`. Has no package constants. All child boxes are copied from it.
+- **Global context** (`Ruby::Box.root`) — Where global gems are loaded via `Bundler.require`. Contains global gems and constants. All child boxes are copied from it.
 
-The root package box is where your application code runs by default. The root box is an implementation detail — global gems live there and are inherited by all child boxes.
+The root package box is where your application code runs by default. The global context is an implementation detail — global gems live there and are inherited by all child boxes.
 
-Use `--root-box` / `-r` for debugging gem loading issues. No package constants are accessible in this mode.
+Use `--global` / `-g` for debugging gem loading issues. No package constants are accessible in this mode.
 
 ## Global Gems
 
 Gems in the root `Gemfile`/`gems.rb` are loaded in `Ruby::Box.root` during boot:
 
-1. `Bundler.setup` + `Bundler.require` run in the root box
+1. `Bundler.setup` + `Bundler.require` run in the global context
 2. All loaded gems become available in child boxes via `$LOADED_FEATURES` snapshot
 3. Use `require: false` to keep a gem on `$LOAD_PATH` without loading it at boot
 
@@ -286,7 +286,7 @@ This is useful for gradually adopting Boxwerk — you can start with just sub-pa
 
 ## Global Directory (`global/`)
 
-An optional `global/` directory at the project root is autoloaded in the root box before `global/boot.rb` runs. Files follow Zeitwerk conventions:
+An optional `global/` directory at the project root is autoloaded in the global context before `global/boot.rb` runs. Files follow Zeitwerk conventions:
 
 ```
 global/
@@ -294,7 +294,7 @@ global/
 └── middleware.rb      → Middleware
 ```
 
-Constants defined here are inherited by all package boxes (they live in the root box which child boxes are copied from).
+Constants defined here are inherited by all package boxes (they live in the global context which child boxes are copied from).
 
 ```ruby
 # global/config.rb
@@ -306,7 +306,7 @@ end
 
 ### `global/boot.rb`
 
-An optional `global/boot.rb` script runs in the root box after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+An optional `global/boot.rb` script runs in the global context after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
 
 ```ruby
 # global/boot.rb
@@ -321,7 +321,7 @@ Both `global/` and `global/boot.rb` are optional. If neither exists, Boxwerk boo
 - Load environment variables (`dotenv`)
 - Define global configuration constants
 - Initialize shared services (logging, instrumentation)
-- Future: boot Rails in the root box
+- Future: boot Rails in the global context
 
 ## Per-Package Boot Scripts
 

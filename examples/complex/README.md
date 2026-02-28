@@ -8,8 +8,8 @@ Coffee shop application demonstrating all Boxwerk features with namespaced const
 complex/
 ├── package.yml              # Root (depends on menu, orders, loyalty, kitchen)
 ├── global/
-│   ├── boot.rb              # Boot script (runs in root box before packages)
-│   └── config.rb            # Config module (autoloaded in root box)
+│   ├── boot.rb              # Boot script (runs in global context before packages)
+│   └── config.rb            # Config module (autoloaded in global context)
 ├── app.rb                   # Entry point
 ├── gems.rb                  # Global gems (colorize, dotenv, minitest, rake)
 ├── .env                     # Environment variables

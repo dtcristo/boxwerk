@@ -13,7 +13,7 @@ rails/
 │   ├── database.yml         # SQLite (dev + test)
 │   └── routes.rb            # Placeholder routes
 ├── global/
-│   └── boot.rb              # Boot Rails in root box
+│   └── boot.rb              # Boot Rails in global context
 ├── Rakefile
 ├── db/migrate/
 │   ├── 001_create_users.rb
@@ -39,7 +39,7 @@ rails/
 
 ## Features Demonstrated
 
-- **Rails in root box** — `global/boot.rb` initializes Rails; all packs inherit Rails infrastructure
+- **Rails in global context** — `global/boot.rb` initializes Rails; all packs inherit Rails infrastructure
 - **Foundation package** — `ApplicationRecord` and `ApplicationController` as public base classes in a leaf package; all domain packs depend on it
 - **ActiveRecord across boxes** — `Order` belongs_to `:user` and `:product`; associations resolve via `const_missing` across package boundaries
 - **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs
@@ -48,7 +48,7 @@ rails/
 ## Boot Sequence
 
 ```
-1. Global gems loaded in root box (Rails, ActiveRecord, etc.)
+1. Global gems loaded in global context (Rails, ActiveRecord, etc.)
 2. config/application.rb required → Application class defined
 3. global/boot.rb runs → Application.initialize!
 4. Package boxes created (foundation first, then domain packs)

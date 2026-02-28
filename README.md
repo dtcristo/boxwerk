@@ -74,7 +74,7 @@ boxwerk info                        Show package structure and dependencies
 boxwerk install                     Install gems for all packages
 ```
 
-Options: `-p <package>`, `--all`, `-r` (root box). See [USAGE.md](USAGE.md) for details.
+Options: `-p <package>`, `--all`, `-g` (global context). See [USAGE.md](USAGE.md) for details.
 
 ## Limitations
 
