@@ -10,3 +10,5 @@ gems.locked
 Gemfile.lock
 !examples/**/gems.locked
 !examples/**/Gemfile.lock
+examples/rails/log/
+examples/rails/db/*.sqlite3
