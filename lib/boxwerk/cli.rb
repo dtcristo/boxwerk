@@ -328,14 +328,30 @@ module Boxwerk
         if command.end_with?('.rb') || File.exist?(command)
           execute_in_box(box, command, command_args)
         else
-          bin_path = find_bin_path(command)
-          unless bin_path
-            $stderr.puts "Error: Command not found: #{command}"
-            $stderr.puts "Make sure '#{command}' is installed as a gem."
-            exit 1
+          # Special handling for rails commands (avoids AppLoader.exec_app
+          # and Bundler binstub conflicts).
+          if command == 'rails' && File.exist?('config/application.rb')
+            execute_rails_command(box, command_args)
+          else
+            bin_path = find_bin_path(command)
+            unless bin_path
+              $stderr.puts "Error: Command not found: #{command}"
+              $stderr.puts "Make sure '#{command}' is installed as a gem."
+              exit 1
+            end
+            execute_in_box(box, bin_path, command_args, use_load: true)
           end
-          execute_in_box(box, bin_path, command_args, use_load: true)
         end
+      end
+
+      # Execute a rails command directly using rails/commands, bypassing
+      # the binstub and AppLoader. Sets APP_PATH so Rails knows where
+      # the application config lives.
+      def execute_rails_command(box, command_args)
+        app_path = File.expand_path('config/application', Dir.pwd)
+        box.eval("APP_PATH = #{app_path.inspect}")
+        box.eval("ARGV.replace(#{command_args.inspect})")
+        box.eval("require 'rails/commands'")
       end
 
       def execute_in_box(box, script_path, script_args, use_load: false)
@@ -408,10 +424,11 @@ module Boxwerk
         RUBY
       end
 
-      # Resolves a command name to its gem binstub path.
+      # Resolves a command name to its gem executable path. Iterates gem
+      # specs directly to avoid Bundler's Gem.bin_path hook which prints
+      # warnings when the gem name doesn't match the executable name
+      # (e.g. "rails" executable is in the "railties" gem).
       def find_bin_path(command)
-        Gem.bin_path(command, command)
-      rescue Gem::GemNotFoundException
         Gem::Specification.each do |spec|
           spec.executables.each do |exe|
             return spec.bin_file(exe) if exe == command

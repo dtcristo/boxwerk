@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require_relative 'config/application'
+
+Application.load_tasks
+
 task :test do
   Dir.glob('test/**/*_test.rb').sort.each { |f| load f }
 end
