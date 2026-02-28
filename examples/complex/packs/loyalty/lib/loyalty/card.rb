@@ -3,12 +3,19 @@
 require 'faker'
 
 module Loyalty
+  @cards ||= []
+
+  class << self
+    attr_reader :cards
+  end
+
   class Card
     attr_reader :member_name, :points
 
     def initialize(member_name: nil)
       @member_name = member_name || Faker::Name.name
       @points = 0
+      Loyalty.cards << self
     end
 
     def earn(amount_cents)

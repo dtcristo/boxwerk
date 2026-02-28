@@ -11,7 +11,7 @@ module Kitchen
     end
 
     def prepare(menu_item)
-      "#{@name} is preparing #{menu_item.name}"
+      "#{@name} is preparing #{menu_item.name} (#{PrepService.queue_count} in queue)"
     end
 
     def self.faker_version

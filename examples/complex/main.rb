@@ -26,8 +26,8 @@ puts "Loyalty: #{card}"
 barista = Kitchen::Barista.new
 puts barista.prepare(latte)
 
-# Stats (relaxed deps — no explicit dependencies declared)
-puts Stats::Summary.for(order)
+# Stats (relaxed deps — reads global data stores without declaring dependencies)
+Stats::Summary.print
 
 # Faker version isolation
 puts ''

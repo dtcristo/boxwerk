@@ -2,11 +2,18 @@
 # pack_public: true
 
 module Orders
+  @orders ||= []
+
+  class << self
+    attr_reader :orders
+  end
+
   class Order
     attr_reader :items
 
     def initialize
       @items = []
+      Orders.orders << self
     end
 
     def add(menu_item, quantity: 1)
