@@ -19,7 +19,8 @@ module Boxwerk
 
     # Returns packages in boot order. Dependencies come before dependents
     # when possible. Circular dependencies are allowed — strongly connected
-    # components are grouped together.
+    # components are grouped together. Packages with enforce_dependencies
+    # disabled are treated as depending on all other packages for ordering.
     def topological_order
       visited = {}
       order = []
@@ -98,10 +99,18 @@ module Boxwerk
       visited[package.name] = true
       in_stack.add(package.name)
 
-      package.dependencies.each do |dep_name|
+      # When enforce_dependencies is false, treat as depending on all
+      # other packages for boot ordering purposes.
+      deps =
+        if package.enforce_dependencies?
+          package.dependencies
+        else
+          @packages.keys.reject { |n| n == package.name }
+        end
+
+      deps.each do |dep_name|
         dep = @packages[dep_name]
         next unless dep
-        # Skip back-edges (cycles) — they'll be handled naturally
         next if in_stack.include?(dep_name)
         visit(dep, visited, order, in_stack)
       end

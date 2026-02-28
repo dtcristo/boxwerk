@@ -206,5 +206,64 @@ module Boxwerk
       assert_equal 'bar', root_box.eval('Bar.name')
       assert_equal 'baz', root_box.eval('Baz.name')
     end
+
+    def test_relaxed_deps_searches_all_packages
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'class_a.rb'),
+        "class ClassA\n  def self.value = 'from_a'\nend\n",
+      )
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(
+        File.join(b_dir, 'lib', 'class_b.rb'),
+        "class ClassB\n  def self.value = 'from_b'\nend\n",
+      )
+
+      # Root does NOT enforce dependencies and has NO explicit deps
+      File.write(
+        File.join(@tmpdir, 'package.yml'),
+        YAML.dump('enforce_dependencies' => false),
+      )
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      # Should be able to access both packages without declaring deps
+      assert_equal 'from_a', root_box.eval('ClassA.value')
+      assert_equal 'from_b', root_box.eval('ClassB.value')
+    end
+
+    def test_relaxed_deps_explicit_deps_searched_first
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(
+        File.join(a_dir, 'lib', 'shared.rb'),
+        "class Shared\n  def self.value = 'from_a'\nend\n",
+      )
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+      File.write(
+        File.join(b_dir, 'lib', 'shared.rb'),
+        "class Shared\n  def self.value = 'from_b'\nend\n",
+      )
+
+      # Root has explicit dep on b, but does not enforce — b searched first
+      File.write(
+        File.join(@tmpdir, 'package.yml'),
+        YAML.dump(
+          'enforce_dependencies' => false,
+          'dependencies' => ['packs/b'],
+        ),
+      )
+
+      result = boot_system
+      root_box = result[:box_manager].boxes['.']
+
+      assert_equal 'from_b', root_box.eval('Shared.value')
+    end
   end
 end

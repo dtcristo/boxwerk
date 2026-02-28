@@ -153,39 +153,50 @@ module Boxwerk
       ZeitwerkScanner.build_file_index(all_entries)
     end
 
-    # Installs a const_missing handler on the box that searches all direct
-    # dependency boxes for the requested constant. Constants are NOT wrapped
-    # in a namespace — they are accessible directly (e.g. Invoice, not
-    # Finance::Invoice). Privacy rules are enforced per-dependency.
+    # Installs a const_missing handler on the box that searches dependency
+    # boxes for the requested constant. When enforce_dependencies is false,
+    # ALL packages are searchable (explicit deps first, then rest).
+    # Privacy rules are still enforced per-dependency.
     def wire_dependency_constants(box, package, package_resolver)
       deps_config = []
 
-      package_resolver
-        .direct_dependencies(package)
-        .each do |dep|
-          dep_box = @boxes[dep.name]
-          next unless dep_box
+      if package.enforce_dependencies?
+        # Only search explicit dependencies
+        search_packages = package_resolver.direct_dependencies(package)
+      else
+        # Search explicit deps first, then all remaining packages
+        explicit = package_resolver.direct_dependencies(package)
+        remaining =
+          package_resolver
+            .all_except(package)
+            .reject { |p| explicit.include?(p) }
+        search_packages = explicit + remaining
+      end
 
-          dep_file_index = @file_indexes[dep.name] || {}
+      search_packages.each do |dep|
+        dep_box = @boxes[dep.name]
+        next unless dep_box
 
-          pub_consts = PrivacyChecker.public_constants(dep, @root_path)
-          priv_consts =
-            (
-              if PrivacyChecker.enforces_privacy?(dep)
-                PrivacyChecker.private_constants_list(dep)
-              else
-                nil
-              end
-            )
+        dep_file_index = @file_indexes[dep.name] || {}
 
-          deps_config << {
-            box: dep_box,
-            file_index: dep_file_index,
-            public_constants: pub_consts,
-            private_constants: priv_consts,
-            package_name: dep.name,
-          }
-        end
+        pub_consts = PrivacyChecker.public_constants(dep, @root_path)
+        priv_consts =
+          (
+            if PrivacyChecker.enforces_privacy?(dep)
+              PrivacyChecker.private_constants_list(dep)
+            else
+              nil
+            end
+          )
+
+        deps_config << {
+          box: dep_box,
+          file_index: dep_file_index,
+          public_constants: pub_consts,
+          private_constants: priv_consts,
+          package_name: dep.name,
+        }
+      end
 
       return if deps_config.empty?
 
