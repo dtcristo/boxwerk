@@ -9,8 +9,8 @@ rails/
 ├── package.yml              # Root (depends on all domain packs)
 ├── gems.rb                  # Global gems (rails, sqlite3, minitest, rake)
 ├── global/
-│   ├── boot.rb              # Boot Rails in root box
-│   └── rails_app.rb         # RailsApp::Application config (autoloaded)
+│   ├── application.rb       # Application config (autoloaded)
+│   └── boot.rb              # Boot Rails in root box
 ├── Rakefile
 ├── app.rb                   # Demo: seed data, test privacy
 ├── config/
@@ -50,8 +50,8 @@ rails/
 
 ```
 1. Global gems loaded in root box (Rails, ActiveRecord, etc.)
-2. global/ autoloaded → RailsApp::Application defined in root box
-3. global/boot.rb runs → Rails.application.initialize!
+2. global/ autoloaded → Application class defined in root box
+3. global/boot.rb runs → Application.initialize!
 4. Package boxes created (foundation first, then domain packs)
 5. CLI command runs in target package box
 ```

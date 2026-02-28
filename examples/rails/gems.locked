@@ -233,7 +233,7 @@ PLATFORMS
 DEPENDENCIES
   boxwerk!
   minitest
-  rails (~> 8.0)
+  rails (~> 8.1)
   rake
   sqlite3
 
