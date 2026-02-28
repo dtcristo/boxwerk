@@ -4,47 +4,54 @@ Planned improvements and design considerations for Boxwerk.
 
 ## Summary
 
-| Item | Priority | Complexity |
-|------|----------|------------|
-| Zeitwerk full integration (reloading, eager loading) | Medium | Hard |
-| Constant reloading (dev workflow) | High | Hard |
-| Auto-requiring per-package gems | High | Medium |
+| Item | Priority | Status |
+|------|----------|--------|
+| Zeitwerk integration | — | ✅ Done (ignore_dirs and reloading remain) |
+| Rails integration | — | ✅ Done (migrations/assets/generators remain) |
+| Constant reloading (dev workflow) | High | Not started |
+| Auto-requiring per-package gems | High | Partial (global works, per-package manual) |
 | Bundler inside package boxes | High | Blocked (Ruby::Box) |
 | RUBYOPT bootstrap (`-rboxwerk/setup`) | High | Blocked (Ruby::Box) |
-| Per-package testing (`boxwerk test`) | Medium | Medium |
-| IRB console autocomplete | Medium | Medium |
-| `boxwerk check` (static analysis) | Medium | Medium |
-| `boxwerk init` (scaffold packages) | Low | Easy |
-| `boxwerk list` / `boxwerk outdated` / `boxwerk update` | Low | Easy |
-| `boxwerk clean` | Low | Easy |
-| Automatic version switching | Low | Easy |
-| Configurable violation handling (warn/strict) | Low | Easy |
-| package_todo.yml support | Low | Medium |
-| IDE / language server support | Low | Hard |
-| Rails integration | High | Hard (partial) |
+| Per-package testing (`boxwerk test`) | Medium | Not started |
+| IRB console autocomplete | Medium | Not started |
+| `boxwerk check` (static analysis) | Medium | Not started |
+| `boxwerk init` (scaffold packages) | Low | Not started |
+| `boxwerk list` / `boxwerk outdated` / `boxwerk update` | Low | Not started |
+| `boxwerk clean` | Low | Not started |
+| Automatic version switching | Low | Not started |
+| Configurable violation handling (warn/strict) | Low | Not started |
+| package_todo.yml support | Low | Not started |
+| IDE / language server support | Low | Not started |
 
-## Zeitwerk Full Integration
+## Zeitwerk Integration
 
-**Current state:** Boxwerk uses Zeitwerk for file scanning and inflection. The
-`ZeitwerkScanner` module creates a temporary `Zeitwerk::Loader` to scan
-directories, then registers autoloads directly in each box via `box.eval`.
+**Status: ✅ Mostly done.**
 
-This gives us Zeitwerk's file discovery conventions and inflection rules, but
-not Zeitwerk's runtime features (reloading, eager loading, callbacks).
+Boxwerk uses Zeitwerk for file scanning and inflection. The `ZeitwerkScanner`
+module creates a temporary `Zeitwerk::Loader` to scan directories, then
+registers autoloads directly in each box via `box.eval`.
 
-**Why not full Zeitwerk?** Zeitwerk's `autoload` calls execute in the root box
-context (where Zeitwerk was loaded), not the target package box. Ruby::Box
-scopes autoloads per-box, so autoloads registered by Zeitwerk are invisible
-in child boxes. The `const_added` callback has the same problem.
+This gives us Zeitwerk's file discovery conventions and inflection rules.
+Full Zeitwerk runtime features (reloading, callbacks) are not possible because
+Zeitwerk's `autoload` calls execute in the root box context, not the target
+package box.
+
+### What's Done
+
+- **File scanning** — `ZeitwerkScanner` handles directory scanning and
+  namespace detection
+- **Inflection** — Zeitwerk's standard inflector for file-to-constant mapping
+- **Per-package boot.rb** — `BOXWERK_CONFIG` with `autoload_dirs`,
+  `collapse_dirs`, and `ignore_dirs` configuration
+- **Collapse directories** — `collapse_dirs` in boot.rb maps files to
+  top-level constants
+- **Eager loading** — `Zeitwerk::Loader.eager_load_all` in root box before
+  creating package boxes
 
 ### Remaining Work
 
-- **Custom inflections** — Forward custom inflection config to the Zeitwerk
-  inflector (e.g. acronyms like `HTML`, `API`)
-- **Collapse directories** — Support Zeitwerk's `collapse` equivalent
-- **Ignore paths** — Support Zeitwerk's `ignore` equivalent
-- **Eager loading** — Implement `box.eval(File.read(file))` for all files
-  to support production eager loading
+- **Ignore paths** — `ignore_dirs` is defined in `BOXWERK_CONFIG` but not yet
+  consumed during scanning
 - **Reloading** — Would require recreating boxes (see Constant Reloading below)
 
 **Long term:** If `Ruby::Box` gains the ability to specify the box context for
@@ -95,6 +102,8 @@ Ruby::Box stabilizes.
 3. Register via `IRB::Completion` API to enable box-aware autocomplete
 
 ## Gems
+
+**Status: ✅ Global gems working. Per-package auto-require not yet done.**
 
 Root `Gemfile`/`gems.rb` gems are loaded into the root box via Bundler before
 any package boxes are created. All child boxes inherit them via
@@ -308,21 +317,29 @@ correct approach for bootstrapping the boxed environment.
 
 ## Rails Integration
 
-See [examples/rails/](examples/rails/) for a working Rails example with
-ActiveRecord, foundation package pattern, cross-package associations, and
-privacy enforcement.
+**Status: ✅ Mostly done.**
+
+See [examples/rails/](examples/rails/) for a working Rails 8.1 example.
+
+### What's Done
+
+- Rails 8.1 API app with ActiveRecord and ActionController
+- config.ru and Puma support (`boxwerk exec rails server` works)
+- Rails commands work (`db:migrate`, `runner`, `console`, `server`)
+- Foundation package pattern with `ApplicationRecord`/`ApplicationController`
+- Cross-package associations (`User`, `Product`, `Order` across packs)
+- Privacy enforcement (controllers/validators/services are private)
+- Per-package `boot.rb` for `autoload_dirs` (models/, controllers/, etc.)
+- Action Controller routing — controllers serve requests; routes map to
+  controllers resolved in the global context
 
 ### Remaining Work
 
-- **Action Controller routing** — Map Rails routes to controllers in package
-  boxes. Currently controllers are defined but routing dispatch needs work.
 - **Migrations in packages** — Allow packages to own their own migrations
   (e.g. `packs/users/db/migrate/`). Needs migration path aggregation.
 - **Asset pipeline** — Handle Sprockets/Propshaft across package boundaries.
 - **Rails generators** — Package-aware generators that create files in the
   correct package directory.
-- **`rails console` integration** — `boxwerk exec rails console` with
-  package-scoped constant access.
 
 ## IDE Support
 
