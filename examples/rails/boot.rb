@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 # Root package boot — runs in root package box after global boot.
-# Initialize our Rails application here so it's ready for use.
+# Load and initialize the Rails application.
 
-require_relative 'config/application'
-Example::Application.initialize!
+require_relative 'config/environment'
 
 puts "Rails #{Rails::VERSION::STRING} booted"

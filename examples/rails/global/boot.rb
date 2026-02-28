@@ -14,8 +14,3 @@ require 'rails/command'
 ActiveSupport.eager_load!
 ActiveRecord.eager_load!
 ActionController.eager_load!
-
-# Pre-define the application module in root box so Rails files loaded
-# via Kernel#load (e.g. routes.rb) can reference it.
-module Example
-end
