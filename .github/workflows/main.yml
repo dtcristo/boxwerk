@@ -28,16 +28,12 @@ jobs:
       - name: Install example gems
         run: |
           for dir in examples/*/; do
-            if [ -f "$dir/Gemfile" ] || [ -f "$dir/gems.rb" ]; then
-              echo "==> Installing gems for $dir"
-              (cd "$dir" && bundle install --jobs 4 --retry 3)
+            echo "==> Installing gems for $dir"
+            (cd "$dir" && bundle install --jobs 4 --retry 3)
+            if [ -f "$dir/bin/boxwerk" ]; then
+              echo "==> Installing package gems for $dir"
+              (cd "$dir" && RUBY_BOX=1 bin/boxwerk install)
             fi
-            for pack_dir in "$dir"/packs/*/; do
-              if [ -f "$pack_dir/Gemfile" ] || [ -f "$pack_dir/gems.rb" ]; then
-                echo "==> Installing gems for $pack_dir"
-                (cd "$pack_dir" && bundle install --jobs 4 --retry 3)
-              fi
-            done
           done
       - name: Run tests
         run: RUBY_BOX=1 bundle exec rake

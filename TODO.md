@@ -9,14 +9,13 @@ Planned improvements for Boxwerk, ordered by priority.
 | 1 | `boxwerk-rails` gem | Medium | Future |
 | 2 | Constant reloading (dev workflow) | Medium | Not started |
 | 3 | IRB console autocomplete | Medium | Not started |
-| 4 | `boxwerk check` (static analysis) | Low | Not started |
-| 5 | `boxwerk init` (scaffold packages) | Low | Not started |
-| 6 | Sorbet support | Low | Future |
-| 7 | Per-package testing improvements | Low | Not started |
-| 8 | Additional CLI commands | Low | Not started |
-| 9 | IDE / language server support | Low | Future |
-| 10 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
-| 11 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
+| 4 | `boxwerk init` (scaffold packages) | Low | Not started |
+| 5 | Sorbet support | Low | Future |
+| 6 | Per-package testing improvements | Low | Not started |
+| 7 | Additional CLI commands | Low | Not started |
+| 8 | IDE / language server support | Low | Future |
+| 9 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
+| 10 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
 
 ---
 
@@ -87,7 +86,7 @@ Ruby 4.0.1 GC crash in child boxes). Revisit when Ruby::Box stabilizes.
 
 ---
 
-## 5. `boxwerk init`
+## 4. `boxwerk init`
 
 **Priority: Low**
 
@@ -95,7 +94,7 @@ Scaffold a new package with `package.yml`, `lib/`, `public/`, and `test/`.
 
 ---
 
-## 6. Sorbet Support
+## 5. Sorbet Support
 
 **Priority: Low — Future**
 
@@ -121,7 +120,7 @@ runtime constants.
 
 ---
 
-## 7. Per-Package Testing Improvements
+## 6. Per-Package Testing Improvements
 
 **Priority: Low**
 
@@ -135,7 +134,7 @@ isolation.
 
 ---
 
-## 8. Additional CLI Commands
+## 7. Additional CLI Commands
 
 **Priority: Low**
 
@@ -146,7 +145,7 @@ isolation.
 
 ---
 
-## 9. IDE / Language Server Support
+## 8. IDE / Language Server Support
 
 **Priority: Low — Future**
 
@@ -157,7 +156,7 @@ isolation.
 
 ---
 
-## 10. Bundler Inside Package Boxes
+## 9. Bundler Inside Package Boxes
 
 **Status: Blocked (Ruby::Box limitation)**
 
@@ -169,7 +168,7 @@ Requires Ruby::Box changes to support Bundler running in child box context.
 
 ---
 
-## 11. RUBYOPT Bootstrap (`-rboxwerk/setup`)
+## 10. RUBYOPT Bootstrap (`-rboxwerk/setup`)
 
 **Status: Blocked (Ruby::Box limitation)**
 
