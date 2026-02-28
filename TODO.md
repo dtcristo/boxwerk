@@ -10,7 +10,7 @@ Planned improvements for Boxwerk, ordered by priority.
 | 2 | `Boxwerk.package` public API | High | Done |
 | 3 | Improved NameError messages | High | Done |
 | 4 | Remove Rails special-casing from CLI | High | Not started |
-| 5 | Rails initialization in root package | High | Investigated (blocked) |
+| 5 | Rails initialization in root package | High | Done |
 | 6 | Move Rails e2e tests to example dir | Medium | Done |
 | 7 | Monkey patch isolation example | Medium | Done |
 | 8 | `boxwerk-rails` gem | Medium | Future |
@@ -104,60 +104,20 @@ and other Rails-specific configuration.
 
 ## 5. Rails Initialization in Root Package
 
-**Priority: High — Investigated, currently blocked**
+**Priority: High — Done**
 
-### Goal
+Rails now initializes in the root package box instead of the root box. The `-g`
+flag is no longer needed for Rails commands.
 
-Initialize Rails in the root package box instead of the root box (global
-context). This would allow `boxwerk exec rails server` to work without `-g`.
+**Approach:** Eager-load Rails frameworks and `rails/command` in
+`global/boot.rb`, then require `config/application.rb` and call
+`Application.initialize!` in the root package `boot.rb`. Files loaded via
+`Kernel#load` (e.g. `config/routes.rb`) use `Rails.application` instead of the
+`Application` constant directly, since they execute in root box context.
 
-### Investigation Results
-
-**Approach: Eager-load Rails in global/boot.rb, initialize in root boot.rb**
-
-1. In `global/boot.rb`: `require "active_record/railtie"` +
-   `require "action_controller/railtie"` + `Zeitwerk::Loader.eager_load_all`
-2. In root `boot.rb`: `require_relative "config/application"` +
-   `Application.initialize!`
-
-**Result: Partially works.** Rails internals (`ActiveRecord::Base`,
-`ActionController::Base`) are accessible in child boxes after eager loading.
-However, the `Application` class defined in root `boot.rb` is only visible
-in the root package box. Foundation packages (which boot BEFORE the root
-package) need `ApplicationRecord < ActiveRecord::Base` and
-`ApplicationController < ActionController::Base`. These work because
-`ActiveRecord::Base` is inherited from the root box. But any reference to
-`Application` (the Rails app instance) fails because it doesn't exist yet
-during foundation package boot.
-
-**Fundamental constraint:** Package boot order is topological — dependencies
-boot before dependents. The root package boots LAST. Foundation packages boot
-before the root package but need `ApplicationRecord` (which needs `ActiveRecord::Base`, not `Application` itself — this part works). The actual
-`Application.initialize!` call triggers database connections, route loading,
-and middleware setup. Any code that requires an initialized app must wait
-until after this call.
-
-**Rails commands specifically need `-g`** because `rails/commands` dispatches
-through `Rails::Command` which calls `require APP_PATH` and then
-`Rails.application.initialize!`. This all happens in the executing box's
-context. When running in a child box, `Rails::Command` is not accessible
-(it's loaded lazily, not via Zeitwerk). Pre-requiring `rails/command` in
-global/boot.rb and eager-loading Zeitwerk makes it accessible in child boxes,
-but `Rails.application` returns `nil` until `Application.initialize!` runs.
-
-### Conclusion
-
-**Not feasible with current architecture.** Rails must be initialized in the
-global context. The root package box is created after all other packages, but
-packages like foundation need `ApplicationRecord` during their boot — and
-`ActiveRecord::Base` (from global gems) is what they actually inherit.
-
-**Workaround:** Use `-g` for Rails commands. The `boxwerk-rails` gem (#8)
-could alias these automatically.
-
-**Would unblock:** A `Ruby::Box` API that allows constants defined in a child
-box to be visible in sibling boxes (breaking the snapshot model), or a way to
-defer package boot until after the root package initializes.
+**Limitation:** `rails runner` inline code uses `TOPLEVEL_BINDING` which is
+separate from `Ruby::Box.root`. Use `ENV["RAILS_ENV"]` instead of `Rails.env`
+in runner expressions. File-based runner scripts work fine.
 
 ---
 
@@ -366,3 +326,5 @@ Items completed and removed from active tracking:
 - ✅ **Improved NameError messages** (#3) — Privacy and non-dependency hints.
 - ✅ **Rails e2e tests moved** (#6) — To `examples/rails/test/e2e_test.rb`.
 - ✅ **Monkey patch isolation** (#7) — Kitchen example with integration test.
+- ✅ **Rails in root package** (#5) — Eager-load Rails in global/boot.rb,
+  initialize in root package boot.rb. `-g` no longer needed for Rails commands.

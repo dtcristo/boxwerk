@@ -17,4 +17,5 @@ ActionController.eager_load!
 
 # Pre-define the application module in root box so Rails files loaded
 # via Kernel#load (e.g. routes.rb) can reference it.
-module Example; end
+module Example
+end

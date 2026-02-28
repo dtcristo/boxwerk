@@ -328,10 +328,10 @@ module Boxwerk
         if command.end_with?('.rb') || File.exist?(command)
           execute_in_box(box, command, command_args)
         else
-          # Special handling for rails commands (avoids AppLoader.exec_app
-          # and Bundler binstub conflicts).
-          if command == 'rails' && File.exist?('config/application.rb')
-            execute_rails_command(box, command_args)
+          # Check for project-level bin/<command> first, then gem binstubs
+          project_bin = File.join(Dir.pwd, 'bin', command)
+          if File.exist?(project_bin)
+            execute_in_box(box, project_bin, command_args)
           else
             bin_path = find_bin_path(command)
             unless bin_path
@@ -344,16 +344,6 @@ module Boxwerk
         end
       end
 
-      # Execute a rails command directly using rails/commands, bypassing
-      # the binstub and AppLoader. Sets APP_PATH so Rails knows where
-      # the application config lives.
-      def execute_rails_command(box, command_args)
-        app_path = File.expand_path('config/application', Dir.pwd)
-        box.eval("APP_PATH = #{app_path.inspect}")
-        box.eval("ARGV.replace(#{command_args.inspect})")
-        box.eval("require 'rails/commands'")
-      end
-
       def execute_in_box(box, script_path, script_args, use_load: false)
         expanded = File.expand_path(script_path)
         box.eval("ARGV.replace(#{script_args.inspect})")
@@ -364,7 +354,12 @@ module Boxwerk
           content = File.read(expanded)
           box.eval(content)
         else
-          box.require(expanded)
+          # Use eval with __dir__ set so relative paths resolve
+          # correctly (e.g. project binstubs using File.expand_path).
+          content = File.read(expanded)
+          dir = File.dirname(expanded)
+          wrapped = "__dir__ = #{dir.inspect}\n" + content
+          box.eval(wrapped)
         end
       end
 
