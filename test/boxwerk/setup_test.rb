@@ -16,10 +16,13 @@ module Boxwerk
       Setup.reset
     end
 
-    def test_run_raises_without_package_yml
-      error = assert_raises(RuntimeError) { Setup.run(start_dir: @tmpdir) }
+    def test_run_with_implicit_root
+      # No package.yml or boxwerk.yml — CWD becomes implicit root
+      result = Setup.run(start_dir: @tmpdir)
 
-      assert_match(/Cannot find boxwerk.yml or package.yml/, error.message)
+      assert Setup.booted?
+      assert_equal '.', result[:resolver].root.name
+      refute result[:resolver].root.enforce_dependencies?
     end
 
     def test_run_finds_package_yml_and_boots

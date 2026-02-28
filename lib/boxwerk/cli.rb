@@ -271,10 +271,6 @@ module Boxwerk
 
       def info_command
         root_path = Setup.send(:find_root, Dir.pwd)
-        unless root_path
-          $stderr.puts 'Error: Cannot find package.yml in current directory or ancestors'
-          exit 1
-        end
 
         resolver = PackageResolver.new(root_path)
 
@@ -291,10 +287,6 @@ module Boxwerk
 
       def install_command
         root_path = Setup.send(:find_root, Dir.pwd)
-        unless root_path
-          $stderr.puts 'Error: Cannot find package.yml in current directory or ancestors'
-          exit 1
-        end
 
         resolver = PackageResolver.new(root_path)
         installed = 0

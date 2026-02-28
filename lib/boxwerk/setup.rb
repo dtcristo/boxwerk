@@ -6,9 +6,6 @@ module Boxwerk
     class << self
       def run(start_dir: Dir.pwd)
         root_path = find_root(start_dir)
-        unless root_path
-          raise 'Cannot find boxwerk.yml or package.yml in current directory or ancestors'
-        end
 
         # Run global boot in root box (after gems, before package boxes).
         run_global_boot(root_path)
@@ -51,8 +48,9 @@ module Boxwerk
 
       private
 
-      # Finds the project root directory. Looks for boxwerk.yml or
-      # package.yml in the directory tree.
+      # Finds the project root directory. Walks up the directory tree
+      # looking for boxwerk.yml or package.yml. Falls back to start_dir
+      # if neither is found (implicit root).
       def find_root(start_dir)
         current = File.expand_path(start_dir)
         loop do
@@ -64,7 +62,9 @@ module Boxwerk
 
           current = parent
         end
-        nil
+
+        # Fall back to CWD as implicit root
+        File.expand_path(start_dir)
       end
 
       # Runs the optional global boot in the root box. If a global/
