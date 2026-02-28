@@ -59,7 +59,6 @@ rails/
 
 ```bash
 bundle install
-bundle binstubs boxwerk
 bin/boxwerk install
 RUBY_BOX=1 bin/boxwerk exec rails server
 RUBY_BOX=1 bin/boxwerk exec rails console
