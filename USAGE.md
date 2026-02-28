@@ -288,15 +288,16 @@ This is useful for gradually adopting Boxwerk — you can start with just sub-pa
 
 ### `global/` Directory
 
-An optional `global/` directory at the project root is autoloaded in the global context before boot scripts run. Files follow Zeitwerk conventions:
+An optional `global/` directory at the project root provides global constants and initialization. Files in `global/` are required in the root box before package boxes are created, so all definitions are inherited by every package box.
+
+Files follow Zeitwerk conventions:
 
 ```
 global/
+├── boot.rb           # Global boot script (optional)
 ├── config.rb         → Config
 └── middleware.rb      → Middleware
 ```
-
-Constants defined here are inherited by all package boxes (they live in the global context which child boxes are copied from).
 
 ```ruby
 # global/config.rb
@@ -306,24 +307,24 @@ module Config
 end
 ```
 
-### `boot.rb`
+### `global/boot.rb`
 
-An optional `boot.rb` at the project root runs in the global context after global files are autoloaded but before package boxes are created. Use it for global initialization that all packages should inherit.
+An optional `global/boot.rb` script runs in the root box after global files are loaded but before package boxes are created. Use it for initialization that all packages should inherit.
 
 ```ruby
-# boot.rb
+# global/boot.rb
 require 'dotenv/load'
 puts "Booting #{Config::SHOP_NAME}..."
 ```
 
-A `global/boot.rb` is also supported as an alternative location. Both are optional. If neither exists, Boxwerk boots normally.
+### Root-Level `boot.rb`
+
+A `boot.rb` at the project root is a **root package** boot script — it runs in the root package's box (like any other package's `boot.rb`). This is different from `global/boot.rb` which runs in the root box.
 
 ### Use Cases
 
-- Load environment variables (`dotenv`)
-- Define global configuration constants
-- Initialize shared services (logging, instrumentation)
-- Boot Rails in the global context
+- **`global/boot.rb`** — Load environment variables, define global config, boot Rails
+- **`boot.rb`** — Root package initialization (runs after all packages are booted)
 
 ## Per-Package Boot Scripts
 

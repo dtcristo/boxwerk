@@ -100,13 +100,9 @@ module Boxwerk
     end
 
     # Runs the optional per-package boot.rb in the package's box context.
-    # Root package boot.rb is handled separately by Setup.run_global_boot
-    # (runs in root box before child boxes are created).
     # Injects a BOXWERK_CONFIG hash for the boot script to modify.
     # Returns additional file index entries from configured autoload dirs.
     def run_package_boot(box, package)
-      return nil if package.root?
-
       pkg_dir = package_dir(package)
       boot_script = File.join(pkg_dir, 'boot.rb')
       return nil unless File.exist?(boot_script)

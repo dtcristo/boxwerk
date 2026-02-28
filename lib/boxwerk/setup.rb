@@ -71,27 +71,30 @@ module Boxwerk
         File.expand_path(start_dir)
       end
 
-      # Runs the optional global boot in the root box. Checks for both a
-      # global/ directory and a root-level boot.rb. These run after global
-      # gems are loaded but before package boxes are created, so definitions
-      # here are inherited by all boxes.
+      # Runs the optional global boot in the root box. The global/
+      # directory is autoloaded and global/boot.rb is required in the root
+      # box. These run after global gems are loaded but before package
+      # boxes are created, so definitions here are inherited by all boxes.
+      #
+      # Root-level boot.rb is NOT handled here — it runs in the root
+      # package box via BoxManager (like any other package boot.rb).
       def run_global_boot(root_path)
         root_box = Ruby::Box.root
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
 
-        # Autoload global/ files in root box
+        # Require global/ files in root box so they are defined before
+        # child boxes are created (not just registered as autoloads).
         if File.directory?(global_dir)
           entries = ZeitwerkScanner.scan(global_dir)
-          ZeitwerkScanner.register_autoloads(root_box, entries)
+          entries.each do |entry|
+            next unless entry.file && entry.file != global_boot
+            root_box.require(entry.file)
+          end
         end
 
-        # Run global/boot.rb in root box (legacy location)
+        # Run global/boot.rb in root box
         root_box.require(global_boot) if File.exist?(global_boot)
-
-        # Run root-level boot.rb in root box (preferred location)
-        root_boot = File.join(root_path, 'boot.rb')
-        root_box.require(root_boot) if File.exist?(root_boot)
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)
