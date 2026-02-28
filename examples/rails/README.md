@@ -8,8 +8,8 @@ Rails application demonstrating Boxwerk runtime package isolation with ActiveRec
 rails/
 ├── package.yml              # Root (depends on all domain packs)
 ├── gems.rb                  # Global gems (rails, sqlite3, minitest, rake)
-├── boot.rb                  # Boot Rails in root box
-├── boot/
+├── global/
+│   ├── boot.rb              # Boot Rails in root box
 │   └── rails_app.rb         # RailsApp::Application config (autoloaded)
 ├── Rakefile
 ├── app.rb                   # Demo: seed data, test privacy
@@ -40,7 +40,7 @@ rails/
 
 ## Features Demonstrated
 
-- **Rails in root box** — `boot.rb` initializes Rails; all packs inherit Rails infrastructure
+- **Rails in root box** — `global/boot.rb` initializes Rails; all packs inherit Rails infrastructure
 - **Foundation package** — `ApplicationRecord` and `ApplicationController` as public base classes in a leaf package; all domain packs depend on it
 - **ActiveRecord across boxes** — `Order` belongs_to `:user` and `:product`; associations resolve via `const_missing` across package boundaries
 - **Privacy enforcement** — `UserValidator`, `InventoryChecker`, `OrderProcessor` are private to their packs
@@ -50,8 +50,8 @@ rails/
 
 ```
 1. Global gems loaded in root box (Rails, ActiveRecord, etc.)
-2. boot/ autoloaded → RailsApp::Application defined in root box
-3. boot.rb runs → Rails.application.initialize!
+2. global/ autoloaded → RailsApp::Application defined in root box
+3. global/boot.rb runs → Rails.application.initialize!
 4. Package boxes created (foundation first, then domain packs)
 5. CLI command runs in target package box
 ```

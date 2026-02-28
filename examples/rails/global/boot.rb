@@ -8,7 +8,7 @@ require 'rails'
 require 'active_record/railtie'
 require 'action_controller/railtie'
 
-# Load the application configuration (autoloaded from boot/)
+# Load the application configuration (autoloaded from global/)
 RailsApp::Application.initialize!
 
 puts "Rails #{Rails::VERSION::STRING} booted"

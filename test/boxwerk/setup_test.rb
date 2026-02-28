@@ -54,30 +54,35 @@ module Boxwerk
       assert_nil Setup.box_manager
     end
 
-    def test_run_executes_boot_script
+    def test_run_executes_global_boot_script
       create_package(@tmpdir)
-      File.write(File.join(@tmpdir, 'boot.rb'), "$BOXWERK_BOOT_TEST = true\n")
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
+      File.write(
+        File.join(global_dir, 'boot.rb'),
+        "$BOXWERK_BOOT_TEST = true\n",
+      )
 
       Setup.run(start_dir: @tmpdir)
 
       assert Ruby::Box.root.eval('$BOXWERK_BOOT_TEST')
     end
 
-    def test_run_autoloads_boot_directory
+    def test_run_autoloads_global_directory
       create_package(@tmpdir)
-      boot_dir = File.join(@tmpdir, 'boot')
-      FileUtils.mkdir_p(boot_dir)
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
       File.write(
-        File.join(boot_dir, 'boot_helper.rb'),
-        "module BootHelper; VALUE = 42; end\n",
+        File.join(global_dir, 'global_helper.rb'),
+        "module GlobalHelper; VALUE = 42; end\n",
       )
 
       Setup.run(start_dir: @tmpdir)
 
-      assert_equal 42, Ruby::Box.root.eval('BootHelper::VALUE')
+      assert_equal 42, Ruby::Box.root.eval('GlobalHelper::VALUE')
     end
 
-    def test_run_works_without_boot_script
+    def test_run_works_without_global_boot
       create_package(@tmpdir)
 
       result = Setup.run(start_dir: @tmpdir)

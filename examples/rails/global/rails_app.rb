@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Rails application configuration. Autoloaded in the root box
-# before boot.rb runs.
+# before global/boot.rb runs.
 module RailsApp
   class Application < Rails::Application
     config.load_defaults 8.0

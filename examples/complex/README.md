@@ -1,14 +1,14 @@
 # Complex Boxwerk Example
 
-Coffee shop application demonstrating all Boxwerk features with namespaced constants, per-package gems, privacy enforcement, boot script, and unit tests.
+Coffee shop application demonstrating all Boxwerk features with namespaced constants, per-package gems, privacy enforcement, global boot, and unit tests.
 
 ## Structure
 
 ```
 complex/
 ├── package.yml              # Root (depends on menu, orders, loyalty, kitchen)
-├── boot.rb                  # Boot script (runs in root box before packages)
-├── boot/
+├── global/
+│   ├── boot.rb              # Boot script (runs in root box before packages)
 │   └── config.rb            # Config module (autoloaded in root box)
 ├── app.rb                   # Entry point
 ├── gems.rb                  # Global gems (colorize, dotenv, minitest, rake)
@@ -35,13 +35,13 @@ complex/
 
 ## Features Demonstrated
 
-- **Boot script** — `boot.rb` loads environment, `boot/config.rb` defines global `Config` module
+- **Global boot** — `global/boot.rb` loads environment, `global/config.rb` defines global `Config` module
 - **Namespaced constants** — `Menu::Item`, `Orders::Order`, etc.
 - **Privacy via public_path** — `Menu::Item` is public, `Menu::Recipe` is private
 - **Privacy via `pack_public` sigil** — `Orders::Order` marked public in file header
 - **Per-package gem isolation** — faker 2.23.0 in loyalty, faker 3.6.0 in kitchen
 - **Global gems** — colorize accessible in all packages
-- **Global config** — `Config::CURRENCY` defined in boot/ and used across packages
+- **Global config** — `Config::CURRENCY` defined in global/ and used across packages
 - **Per-package unit tests** — each pack has its own minitest suite
 
 ## Running
