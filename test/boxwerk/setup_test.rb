@@ -19,7 +19,7 @@ module Boxwerk
     def test_run_raises_without_package_yml
       error = assert_raises(RuntimeError) { Setup.run(start_dir: @tmpdir) }
 
-      assert_match(/Cannot find package.yml/, error.message)
+      assert_match(/Cannot find boxwerk.yml or package.yml/, error.message)
     end
 
     def test_run_finds_package_yml_and_boots

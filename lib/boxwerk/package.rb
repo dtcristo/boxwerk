@@ -54,6 +54,19 @@ module Boxwerk
       new(name: name, config: config)
     end
 
+    # Creates an implicit root package that depends on all other packages.
+    # No enforcement is enabled.
+    def self.implicit_root(all_package_names)
+      new(
+        name: '.',
+        config: {
+          'enforce_dependencies' => false,
+          'enforce_privacy' => false,
+          'dependencies' => all_package_names.reject { |n| n == '.' },
+        },
+      )
+    end
+
     def self.relative_path(path, base)
       Pathname
         .new(File.expand_path(path))

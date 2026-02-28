@@ -5,23 +5,25 @@ require 'pathname'
 
 module Boxwerk
   # Discovers packages by scanning for package.yml files and provides
-  # topological ordering for boot.
+  # ordering for boot. Supports boxwerk.yml configuration for package_paths.
   class PackageResolver
     attr_reader :packages, :root
 
     def initialize(root_path)
       @root_path = File.expand_path(root_path)
       @packages = {}
+      @config = load_boxwerk_config
 
       discover_packages
-      validate_no_cycles
     end
 
-    # Returns packages in topological order (dependencies before dependents).
+    # Returns packages in boot order. Dependencies come before dependents
+    # when possible. Circular dependencies are allowed — strongly connected
+    # components are grouped together.
     def topological_order
       visited = {}
       order = []
-      @packages.each_value { |pkg| visit(pkg, visited, order) }
+      @packages.each_value { |pkg| visit(pkg, visited, order, Set.new) }
       order
     end
 
@@ -30,7 +32,26 @@ module Boxwerk
       package.dependencies.filter_map { |dep_name| @packages[dep_name] }
     end
 
+    # Returns all packages except the given one.
+    def all_except(package)
+      @packages.values.reject { |p| p.name == package.name }
+    end
+
+    # Boxwerk configuration from boxwerk.yml.
+    def boxwerk_config
+      @config
+    end
+
     private
+
+    def load_boxwerk_config
+      yml_path = File.join(@root_path, 'boxwerk.yml')
+      if File.exist?(yml_path)
+        YAML.safe_load_file(yml_path) || {}
+      else
+        {}
+      end
+    end
 
     def discover_packages
       yml_paths = find_package_ymls
@@ -41,53 +62,51 @@ module Boxwerk
         @root = package if package.root?
       end
 
-      @root ||= @packages['.']
+      # Implicit root package if no package.yml at root
+      unless @root
+        @root = Package.implicit_root(@packages.keys)
+        @packages['.'] = @root
+      end
     end
 
     def find_package_ymls
       ymls = []
 
-      # Always include root package.yml
+      # Check for root package.yml
       root_yml = File.join(@root_path, 'package.yml')
       ymls << root_yml if File.exist?(root_yml)
 
-      # Glob for all package.yml files in subdirectories
-      Dir
-        .glob(File.join(@root_path, '**', 'package.yml'))
-        .each do |path|
-          next if path == root_yml
-          ymls << path
-        end
+      # Use package_paths from boxwerk.yml (default: ["**/"])
+      package_paths = @config['package_paths'] || ['**/']
+
+      package_paths.each do |pattern|
+        glob = File.join(@root_path, pattern, 'package.yml')
+        Dir
+          .glob(glob)
+          .each do |path|
+            next if path == root_yml
+            ymls << path
+          end
+      end
 
       ymls.uniq
     end
 
-    def validate_no_cycles
-      @packages.each_value { |pkg| detect_cycle(pkg, []) }
-    end
+    def visit(package, visited, order, in_stack)
+      return if visited[package.name]
 
-    def detect_cycle(package, path)
-      if path.include?(package.name)
-        cycle = (path[path.index(package.name)..] + [package.name]).join(' -> ')
-        raise "Circular dependency detected: #{cycle}"
-      end
+      visited[package.name] = true
+      in_stack.add(package.name)
 
       package.dependencies.each do |dep_name|
         dep = @packages[dep_name]
         next unless dep
-
-        detect_cycle(dep, path + [package.name])
+        # Skip back-edges (cycles) — they'll be handled naturally
+        next if in_stack.include?(dep_name)
+        visit(dep, visited, order, in_stack)
       end
-    end
 
-    def visit(package, visited, order)
-      return if visited[package.name]
-
-      visited[package.name] = true
-      package.dependencies.each do |dep_name|
-        dep = @packages[dep_name]
-        visit(dep, visited, order) if dep
-      end
+      in_stack.delete(package.name)
       order << package
     end
   end

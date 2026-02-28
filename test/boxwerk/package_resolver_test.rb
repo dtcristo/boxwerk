@@ -70,7 +70,7 @@ module Boxwerk
       assert finance_index < root_index
     end
 
-    def test_circular_dependency_detection
+    def test_circular_dependency_allowed
       a_dir = create_package_dir('a')
       create_package(a_dir, dependencies: ['packs/b'])
 
@@ -79,7 +79,14 @@ module Boxwerk
 
       create_package(@tmpdir, dependencies: ['packs/a'])
 
-      assert_raises(RuntimeError) { PackageResolver.new(@tmpdir) }
+      resolver = PackageResolver.new(@tmpdir)
+      order = resolver.topological_order
+
+      # Both should be in the order (cycle doesn't prevent booting)
+      names = order.map(&:name)
+      assert_includes names, 'packs/a'
+      assert_includes names, 'packs/b'
+      assert_includes names, '.'
     end
 
     def test_direct_dependencies_returns_package_objects
@@ -121,6 +128,45 @@ module Boxwerk
 
       assert c_index < a_index
       assert c_index < b_index
+    end
+
+    def test_implicit_root_when_no_root_package_yml
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      b_dir = create_package_dir('b')
+      create_package(b_dir)
+
+      # No package.yml at root
+      resolver = PackageResolver.new(@tmpdir)
+
+      assert resolver.root
+      assert resolver.root.root?
+      assert_equal false, resolver.root.enforce_dependencies?
+      # Implicit root depends on all other packages
+      deps = resolver.root.dependencies.sort
+      assert_equal %w[packs/a packs/b], deps
+    end
+
+    def test_boxwerk_yml_package_paths
+      # Create boxwerk.yml with specific package_paths
+      File.write(
+        File.join(@tmpdir, 'boxwerk.yml'),
+        YAML.dump('package_paths' => ['packs/*']),
+      )
+
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+
+      # Create a package outside of packs/ — should NOT be discovered
+      other_dir = File.join(@tmpdir, 'other', 'x')
+      FileUtils.mkdir_p(File.join(other_dir, 'lib'))
+      create_package(other_dir)
+
+      resolver = PackageResolver.new(@tmpdir)
+
+      assert resolver.packages.key?('packs/a')
+      refute resolver.packages.key?('other/x')
     end
 
     private
