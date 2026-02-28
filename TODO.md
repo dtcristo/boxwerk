@@ -7,12 +7,12 @@ Planned improvements for Boxwerk, ordered by priority.
 | # | Item | Priority | Status |
 |---|------|----------|--------|
 | 1 | Per-package gem auto-require | High | Done |
-| 2 | `Boxwerk.package` public API | High | Not started |
-| 3 | Improved NameError messages | High | Not started |
+| 2 | `Boxwerk.package` public API | High | Done |
+| 3 | Improved NameError messages | High | Done |
 | 4 | Remove Rails special-casing from CLI | High | Not started |
 | 5 | Rails initialization in root package | High | Investigated (blocked) |
-| 6 | Move Rails e2e tests to example dir | Medium | Not started |
-| 7 | Monkey patch isolation example | Medium | Not started |
+| 6 | Move Rails e2e tests to example dir | Medium | Done |
+| 7 | Monkey patch isolation example | Medium | Done |
 | 8 | `boxwerk-rails` gem | Medium | Future |
 | 9 | Constant reloading (dev workflow) | Medium | Not started |
 | 10 | IRB console autocomplete | Medium | Not started |
@@ -43,47 +43,24 @@ See `GemResolver#parse_gemfile_requires`, `BoxManager#auto_require_gems`.
 
 ---
 
-## ~~2. `Boxwerk.package` Public API~~ ✅
+## 2. `Boxwerk.package` Public API
 
-Done. `Boxwerk.package` returns a `PackageContext` during `boot.rb` with
-`name`, `root?`, `config`, `root_path`, and `autoloader`. The autoloader is a
-lightweight configuration object (`PackageContext::Autoloader`) with `push_dir`,
-`collapse`, and `ignore`. `BOXWERK_CONFIG` still works for backward
-compatibility but is deprecated.
+**Priority: High — Done**
+
+`Boxwerk.package` returns a `PackageContext` during `boot.rb` with `name`,
+`root?`, `config` (frozen), `root_path`, and `autoloader`. The autoloader
+provides `push_dir`, `collapse`, and `ignore` for Zeitwerk configuration.
 
 ---
 
 ## 3. Improved NameError Messages
 
-**Priority: High**
+**Priority: High — Done**
 
-Current `const_missing` raises generic `NameError` messages. These should be
-more helpful, matching Ruby's built-in style while providing Boxwerk context.
-
-### Plan
-
-1. When a constant is not found in any dependency but EXISTS in another
-   (non-dependency) package, include a hint:
-   ```
-   uninitialized constant Foo (NameError)
-   Note: 'Foo' exists in 'packs/util' which is not a dependency of 'packs/billing'.
-   ```
-2. When a constant is found but is private, improve the message:
-   ```
-   uninitialized constant Foo (NameError)
-   Note: 'Foo' is defined in 'packs/util' but is not public.
-   ```
-3. Another message when it's not in a dependency AND it's not public.
-4. Pass `all_deps_config` (all packages' file indexes) into the resolver proc
-   so it can search non-dependency packages for hints
-5. Use Ruby's `NameError` constructor: `NameError.new("message", name: const_name)`
-6. Add tests for each error message variant
-
-### Message Format
-
-Follow Ruby convention: main error on first line, helpful context on subsequent
-lines. The `NameError` exception class should be preserved (not a custom class)
-so existing `rescue NameError` blocks work.
+NameError messages now provide Boxwerk context while matching Ruby's style:
+- Privacy violations: `private constant Foo referenced from '.' — Foo is private to 'packs/a'`
+- Non-dependency hints: `uninitialized constant Foo (defined in 'packs/util', not a dependency of '.')`
+- Uses `NameError.new(msg, name:)` to preserve Ruby's `name` attribute
 
 ---
 
@@ -186,42 +163,20 @@ defer package boot until after the root package initializes.
 
 ## 6. Move Rails E2E Tests to Example Directory
 
-**Priority: Medium**
+**Priority: Medium — Done**
 
-Rails-specific e2e tests currently live in `test/e2e/run.rb` alongside generic
-Boxwerk e2e tests. They should move to `examples/rails/test/` since they test
-the example, not Boxwerk itself.
-
-### Plan
-
-1. Extract `test_rails_*` methods and `rails_*` helpers from `test/e2e/run.rb`
-2. Create `examples/rails/test/e2e_test.rb` as a standalone test runner
-3. Update top-level Rakefile's `example_tests` task to also run e2e tests
-4. Remove rails tests from main e2e runner
-5. Verify the top-level `rake` task still runs everything
+Rails e2e tests moved to `examples/rails/test/e2e_test.rb`. Top-level Rakefile
+`example_e2e` task discovers and runs per-example e2e tests.
 
 ---
 
 ## 7. Monkey Patch Isolation Example
 
-**Priority: Medium**
+**Priority: Medium — Done**
 
-Demonstrate that monkey patches in one package don't leak to other packages.
-This is a key benefit of Ruby::Box isolation.
-
-### Plan
-
-1. In the complex example, add a monkey patch in one package's `boot.rb`:
-   ```ruby
-   # packs/kitchen/boot.rb
-   class String
-     def shout = upcase + "!!!"
-   end
-   ```
-2. Use the monkey patch in kitchen code (e.g. `"coffee".shout`)
-3. Add an integration test asserting `"test".shout` raises `NoMethodError`
-   when called from a different package (e.g. orders)
-4. Document monkey patch isolation in USAGE.md with a brief example
+Complex example kitchen package demonstrates `String#to_order_ticket` monkey
+patch in `boot.rb`. Integration test verifies the patch doesn't leak to other
+packages. Pattern documented in USAGE.md.
 
 ---
 
@@ -405,3 +360,9 @@ Items completed and removed from active tracking:
   [examples/rails/](examples/rails/).
 - ✅ **Global gems** — Root `Gemfile` gems loaded in root box, inherited by
   all child boxes via snapshot. Version conflict warnings.
+- ✅ **Per-package gem auto-require** (#1) — Gems auto-required matching
+  Bundler behaviour. `require: false` and custom require paths supported.
+- ✅ **`Boxwerk.package` API** (#2) — `PackageContext` with autoloader config.
+- ✅ **Improved NameError messages** (#3) — Privacy and non-dependency hints.
+- ✅ **Rails e2e tests moved** (#6) — To `examples/rails/test/e2e_test.rb`.
+- ✅ **Monkey patch isolation** (#7) — Kitchen example with integration test.
