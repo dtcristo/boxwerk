@@ -223,12 +223,19 @@ Only constants in the public path are accessible.
 
 These are different concepts:
 
-- **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants.
+- **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants. This is where your application code runs by default.
 - **Global context** (`Ruby::Box.root`) — Where global gems are loaded via `Bundler.require`. Contains global gems and constants. All child boxes are copied from it.
 
-The root package box is where your application code runs by default. The global context is an implementation detail — global gems live there and are inherited by all child boxes.
+The global context is an implementation detail of how `Ruby::Box` works. Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. This is because each `Ruby::Box.new` creates a snapshot of `Ruby::Box.root` at that moment.
 
-Use `--global` / `-g` for debugging gem loading issues. No package constants are accessible in this mode.
+This has important implications:
+
+- Global gems loaded via `Bundler.require` are available everywhere (loaded before boxes)
+- Constants defined in `global/` files are available everywhere (required before boxes)
+- Code in `global/boot.rb` runs before any package boxes exist
+- Anything loaded **after** box creation is only visible in the box that loaded it
+
+Use `--global` / `-g` to run commands in the global context directly. This is useful for debugging gem loading issues or running commands that need the full global environment (e.g. Rails commands).
 
 ## Global Gems
 
@@ -245,6 +252,19 @@ gem 'pry', require: false            # on $LOAD_PATH but not loaded
 ```
 
 > **Note:** The root `gems.rb`/`Gemfile` is always for global gems shared across all packages. If your top-level package needs "package private" gems, use an implicit root (no `package.yml` at root) and create a `packs/main` package as your entry point with its own `gems.rb`.
+
+### Gems with Internal Autoloading
+
+Some gems (like Rails) use Zeitwerk internally to autoload their own constants. When loaded via `Bundler.require` in the global context, these autoloads are registered as pending entries in `Ruby::Box.root`. Because child boxes inherit a snapshot of the root box at creation time, pending autoloads may not resolve correctly in child boxes.
+
+Boxwerk runs `Zeitwerk::Loader.eager_load_all` after global boot to resolve all pending autoloads. If your gem needs additional setup before eager loading (e.g. requiring sub-components), do this in `global/boot.rb`:
+
+```ruby
+# global/boot.rb
+require "active_record/railtie"      # register Zeitwerk autoloads
+require "action_controller/railtie"
+# Boxwerk runs Zeitwerk::Loader.eager_load_all after this script
+```
 
 ## Testing
 
