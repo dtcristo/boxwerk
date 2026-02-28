@@ -243,7 +243,7 @@ This has important implications:
 - Code in `global/boot.rb` runs before any package boxes exist
 - Anything loaded **after** box creation is only visible in the box that loaded it
 
-Use `--global` / `-g` to run commands in the global context directly. This is useful for debugging gem loading issues or running commands that need the full global environment (e.g. Rails commands).
+Use `--global` / `-g` to run commands in the global context directly. This is useful for debugging gem loading or constant visibility issues.
 
 ## Global Gems
 

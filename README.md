@@ -81,6 +81,7 @@ Options: `-p <package>`, `--all`, `-g` (global context). See [USAGE.md](USAGE.md
 - `Ruby::Box` is experimental in Ruby 4.0
 - No constant reloading (restart required for code changes)
 - IRB autocomplete disabled in console
+- `rails runner` inline code cannot reference box-scoped constants (use file scripts instead)
 
 See [TODO.md](TODO.md) for plans to address these.
 
