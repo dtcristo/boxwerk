@@ -26,6 +26,9 @@ puts "Loyalty: #{card}"
 barista = Kitchen::Barista.new
 puts barista.prepare(latte)
 
+# Stats (relaxed deps — no explicit dependencies declared)
+puts Stats::Summary.for(order)
+
 # Faker version isolation
 puts ''
 puts "Loyalty faker: v#{Loyalty::Card.faker_version}".colorize(:cyan)

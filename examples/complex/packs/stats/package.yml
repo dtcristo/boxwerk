@@ -1,0 +1,2 @@
+# No enforce_dependencies — can access constants from any package.
+# Useful for utility/reporting packages during gradual adoption.

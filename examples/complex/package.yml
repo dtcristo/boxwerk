@@ -4,3 +4,4 @@ dependencies:
   - packs/orders
   - packs/loyalty
   - packs/kitchen
+  - packs/stats
