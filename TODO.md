@@ -188,8 +188,6 @@ clean isolation.
 
 ### Possible Improvements
 
-- **`boxwerk test` command** — dedicated test runner that discovers and runs
-  all package tests, with better output formatting and summary
 - **Parallel execution** — run package tests in parallel (each in its own
   subprocess) for faster CI
 - **Test dependency isolation** — per-package test gems via Bundler groups
@@ -197,13 +195,6 @@ clean isolation.
 - **Coverage aggregation** — collect and merge coverage reports across packages
 
 ## Bundler-Inspired Commands
-
-- **`boxwerk check`** — Static analysis of cross-package constant references.
-  Scan source files without running code, report dependency/privacy violations.
-  Useful in CI alongside Packwerk.
-
-- **`boxwerk list`** — Display packages, dependencies, and per-package gem
-  versions. Show the full package graph with version differences highlighted.
 
 - **`boxwerk init [path]`** — Scaffold a new package with `package.yml`,
   `lib/`, `public/`, and `test/` directories.
@@ -215,21 +206,6 @@ clean isolation.
   in topological order.
 
 - **`boxwerk clean`** — Remove unused lockfiles and empty package directories.
-
-## Packwerk-Inspired Features
-
-- **package_todo.yml** — Track allowed violations with structured metadata.
-  Tolerate existing violations while preventing new ones. Enables gradual
-  enforcement for existing codebases.
-
-- **Configurable violation handling** — `warn`/`strict`/`log` modes per
-  package. `enforce_dependencies: warn` logs violations without raising.
-
-- **Violation context** — NameError messages show the required dependency
-  declaration and suggest the `package.yml` change needed.
-
-- **Custom checkers** — Plugin API for additional runtime constraints beyond
-  dependencies and privacy.
 
 ## RUBYOPT Bootstrap
 
@@ -345,5 +321,4 @@ See [examples/rails/](examples/rails/) for a working Rails 8.1 example.
 
 - Language servers aware of package boundaries
 - Autocomplete filtered to accessible constants only
-- Real-time privacy violation highlighting
 - Go-to-definition across package boundaries (respecting privacy)
