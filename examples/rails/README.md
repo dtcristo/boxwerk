@@ -7,15 +7,14 @@ Rails application demonstrating Boxwerk runtime package isolation with ActiveRec
 ```
 rails/
 ├── package.yml              # Root (depends on all domain packs)
-├── gems.rb                  # Global gems (rails, sqlite3, minitest, rake)
-├── global/
-│   ├── application.rb       # Application config (autoloaded)
-│   └── boot.rb              # Boot Rails in root box
-├── Rakefile
-├── app.rb                   # Demo: seed data, test privacy
+├── gems.rb                  # Global gems (rails, sqlite3, puma, minitest, rake)
 ├── config/
+│   ├── application.rb       # Application config
 │   ├── database.yml         # SQLite (dev + test)
 │   └── routes.rb            # Placeholder routes
+├── global/
+│   └── boot.rb              # Boot Rails in root box
+├── Rakefile
 ├── db/migrate/
 │   ├── 001_create_users.rb
 │   ├── 002_create_products.rb
@@ -50,7 +49,7 @@ rails/
 
 ```
 1. Global gems loaded in root box (Rails, ActiveRecord, etc.)
-2. global/ autoloaded → Application class defined in root box
+2. config/application.rb required → Application class defined
 3. global/boot.rb runs → Application.initialize!
 4. Package boxes created (foundation first, then domain packs)
 5. CLI command runs in target package box
@@ -62,7 +61,8 @@ rails/
 bundle install
 bundle binstubs boxwerk
 bin/boxwerk install
-RUBY_BOX=1 bin/boxwerk run app.rb
-RUBY_BOX=1 bin/boxwerk exec --all rake test
+RUBY_BOX=1 bin/boxwerk exec rails server
+RUBY_BOX=1 bin/boxwerk exec rails console
+RUBY_BOX=1 bin/boxwerk exec rake test
 bin/boxwerk info
 ```
