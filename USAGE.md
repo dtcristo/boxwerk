@@ -370,15 +370,22 @@ pkg.autoloader.ignore("lib/legacy")
 
 `Boxwerk.package` returns a `PackageContext` during `boot.rb` execution (thread-local, `nil` outside boot). The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
 
-### Deprecated: BOXWERK_CONFIG
+### Monkey Patch Isolation
 
-The `BOXWERK_CONFIG` hash still works for backward compatibility but is deprecated:
+Because each package runs in its own `Ruby::Box`, monkey patches defined in a
+package's `boot.rb` are isolated to that box:
 
 ```ruby
-# Deprecated — use Boxwerk.package.autoloader instead
-BOXWERK_CONFIG[:autoload_dirs] << "models"
-BOXWERK_CONFIG[:collapse_dirs] << "lib/concerns"
+# packs/kitchen/boot.rb
+class String
+  def to_order_ticket
+    "🎫 #{upcase}"
+  end
+end
 ```
+
+Code inside the kitchen package can call `"Latte".to_order_ticket`, but other
+packages and the root context will not see the method.
 
 ## Circular Dependencies
 

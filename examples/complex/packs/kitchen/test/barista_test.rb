@@ -6,7 +6,7 @@ class BaristaTest < Minitest::Test
   def test_prepare
     item = Menu::Item.new(name: 'Latte', price_cents: 550)
     barista = Kitchen::Barista.new(name: 'Alex')
-    assert_equal 'Alex is preparing Latte (3 in queue)', barista.prepare(item)
+    assert_equal 'Alex is preparing 🎫 LATTE (3 in queue)', barista.prepare(item)
   end
 
   def test_faker_generates_name

@@ -9,7 +9,8 @@ module Kitchen
     end
 
     def prepare(menu_item)
-      "#{@name} is preparing #{menu_item.name} (#{PrepService.queue_count} in queue)"
+      ticket = menu_item.name.to_order_ticket
+      "#{@name} is preparing #{ticket} (#{PrepService.queue_count} in queue)"
     end
 
     def self.faker_version

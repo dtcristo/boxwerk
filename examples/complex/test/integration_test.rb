@@ -99,4 +99,18 @@ class IntegrationTest < Minitest::Test
   def test_stats_summary
     assert_output(/Stats/) { Stats::Summary.print }
   end
+
+  # Monkey patch isolation: kitchen adds String#to_order_ticket in boot.rb,
+  # but it should NOT be available in the root package context.
+  def test_monkey_patch_not_leaked
+    refute 'hello'.respond_to?(:to_order_ticket),
+           'String#to_order_ticket should not leak outside kitchen box'
+  end
+
+  def test_kitchen_uses_monkey_patch
+    barista = Kitchen::Barista.new(name: 'Test')
+    item = Menu::Item.new(name: 'Latte', price_cents: 500)
+    result = barista.prepare(item)
+    assert_includes result, '🎫', 'Expected order ticket emoji from monkey patch'
+  end
 end
