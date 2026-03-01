@@ -236,7 +236,13 @@ module Boxwerk
               Dir.chdir(pkg_dir)
             end
           end
-          run_command_in_box(result, box, command, command_args)
+          run_command_in_box(
+            result,
+            box,
+            command,
+            command_args,
+            pkg_dir: Dir.pwd,
+          )
         end
       end
 
@@ -387,7 +393,9 @@ module Boxwerk
       end
 
       # Runs a command (binstub or script) in a box.
-      def run_command_in_box(result, box, command, command_args)
+      # Falls back to running as a shell command in pkg_dir if no
+      # binstub or gem binary is found.
+      def run_command_in_box(result, box, command, command_args, pkg_dir: nil)
         if command.end_with?('.rb') || File.exist?(command)
           execute_in_box(box, command, command_args)
         else
@@ -397,12 +405,14 @@ module Boxwerk
             execute_in_box(box, project_bin, command_args)
           else
             bin_path = find_bin_path(command)
-            unless bin_path
-              $stderr.puts "Error: Command not found: #{command}"
-              $stderr.puts "Make sure '#{command}' is installed as a gem."
-              exit 1
+            if bin_path
+              execute_in_box(box, bin_path, command_args, use_load: true)
+            else
+              # Fall back to shell command in the package directory
+              dir = pkg_dir || Dir.pwd
+              success = system(command, *command_args, chdir: dir)
+              exit(success ? 0 : 1)
             end
-            execute_in_box(box, bin_path, command_args, use_load: true)
           end
         end
       end

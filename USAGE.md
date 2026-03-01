@@ -112,6 +112,7 @@ Execute a command in the boxed environment. Boxwerk looks for the command in thi
 
 1. **Project binstub** — `./bin/<command>` in the project root
 2. **Gem binstub** — resolved via `Gem.bin_path`
+3. **Shell command** — falls back to running the command as a shell process in the package directory
 
 Project binstubs take precedence, allowing custom command entry points (e.g. a `bin/rails` that sets `APP_PATH` and requires `rails/commands`).
 
