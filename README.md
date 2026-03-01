@@ -13,13 +13,13 @@ Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.
 - **Enforce boundaries at runtime.** `Ruby::Box` turns architectural rules into runtime guarantees. Undeclared dependencies and privacy violations raise `NameError`.
 - **Enable gradual modularization.** Add `package.yml` files around existing code and declare dependencies incrementally.
 - **Feel Ruby-native.** Integrates with Bundler, `gems.rb`/`Gemfile`, and standard Ruby tools. `boxwerk exec rake test` feels like any other Ruby command.
-- **Work standalone.** Packwerk is NOT required — Boxwerk works entirely on its own.
+- **Work standalone.** Packwerk is not required — Boxwerk works entirely on its own.
 
 ## Ruby::Box
 
 [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) (Ruby 4.0+) provides in-process isolation of classes, modules, and constants. Each box has its own top-level `Object`, isolated `$LOAD_PATH` and `$LOADED_FEATURES`, and independent monkey patches. Boxwerk creates one box per package and wires cross-package constant resolution through `const_missing`.
 
-Set `RUBY_BOX=1` before starting Ruby. See the [official documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for details. See [ARCHITECTURE.md](ARCHITECTURE.md) for how Boxwerk uses Ruby::Box internally.
+Set `RUBY_BOX=1` before starting Ruby. See the [official documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for details. See [ARCHITECTURE.md](ARCHITECTURE.md) for how Boxwerk uses `Ruby::Box` internally.
 
 ## Quick Start
 
