@@ -29,10 +29,10 @@ jobs:
         run: |
           for dir in examples/*/; do
             echo "==> Installing gems for $dir"
-            (cd "$dir" && bundle install --jobs 4 --retry 3)
+            (cd "$dir" && bundle lock --add-platform ruby && bundle install --jobs 4 --retry 3)
             if [ -f "$dir/bin/boxwerk" ]; then
               echo "==> Installing package gems for $dir"
-              (cd "$dir" && RUBY_BOX=1 bin/boxwerk install)
+              (cd "$dir" && bin/boxwerk install)
             fi
           done
       - name: Run tests
