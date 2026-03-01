@@ -4,7 +4,7 @@
   </h1>
 </div>
 
-Boxwerk enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) isolation. Each package gets its own `Ruby::Box` — constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
+Boxwerk is a Ruby package system with Box-powered constant isolation. It enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) — each package gets its own `Ruby::Box`, constants are resolved lazily on first access and cached, and only direct dependencies are accessible. Transitive dependencies are blocked.
 
 Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files. Packwerk itself is optional — Boxwerk works standalone.
 
@@ -13,7 +13,7 @@ Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.
 - **Enforce boundaries at runtime.** `Ruby::Box` turns architectural guidelines into runtime guarantees. Undeclared dependencies and privacy violations raise `NameError`.
 - **Enable gradual modularization.** Add `package.yml` files around existing code and declare dependencies incrementally.
 - **Feel Ruby-native.** Integrates with Bundler, `gems.rb`/`Gemfile`, and standard Ruby tools. `boxwerk exec rake test` feels like any other Ruby command.
-- **Work standalone.** Packwerk is optional for static analysis at CI time, but not required at runtime.
+- **Work standalone.** Packwerk is NOT required — Boxwerk works entirely on its own.
 
 ## Ruby::Box
 
@@ -62,7 +62,7 @@ bundle binstubs boxwerk
 RUBY_BOX=1 bin/boxwerk run main.rb
 ```
 
-See [USAGE.md](USAGE.md) for full documentation including CLI reference, package configuration, per-package gems, privacy enforcement, and testing.
+See [USAGE.md](USAGE.md) for full documentation including CLI reference, package configuration, per-package gems, privacy enforcement, Bundler setup, and testing.
 
 ## CLI
 
@@ -82,7 +82,7 @@ Options: `-p <package>`, `--all`, `-g` (global context). See [USAGE.md](USAGE.md
 - No constant reloading (restart required for code changes)
 - IRB autocomplete disabled in console
 
-See [TODO.md](TODO.md) for plans to address these.
+See [TODO.md](TODO.md) for plans to address these and other planned features.
 
 ## Examples
 

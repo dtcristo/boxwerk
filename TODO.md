@@ -6,20 +6,157 @@ Planned improvements for Boxwerk, ordered by priority.
 
 | # | Item | Priority | Status |
 |---|------|----------|--------|
-| 1 | `boxwerk-rails` gem | Medium | Future |
-| 2 | Constant reloading (dev workflow) | Medium | Not started |
-| 3 | IRB console autocomplete | Medium | Not started |
-| 4 | `boxwerk init` (scaffold packages) | Low | Not started |
-| 5 | Sorbet support | Low | Future |
-| 6 | Per-package testing improvements | Low | Not started |
-| 7 | Additional CLI commands | Low | Not started |
-| 8 | IDE / language server support | Low | Future |
-| 9 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
-| 10 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
+| 1 | `Boxwerk.package` as box constant | High | Not started |
+| 2 | Immediate autoload in boot scripts (`autoloader.setup`) | High | Not started |
+| 3 | `global_eager_load` / `package_eager_load` config | High | Not started |
+| 4 | Global context loads all package constants | High | Not started |
+| 5 | Selective package booting | High | Not started |
+| 6 | Work without gems entirely | High | Not started |
+| 7 | `boxwerk-rails` gem | Medium | Future |
+| 8 | Fix `rails console` crash | Medium | Not started |
+| 9 | GitHub Action CI fix | Medium | Not started |
+| 10 | CLI config without `boxwerk.yml` | Medium | Not started |
+| 11 | Exec command shell fallback | Medium | Not started |
+| 12 | `-a` CLI option (alias of `--all`) | Medium | Not started |
+| 13 | Fix double NameError in console | Medium | Not started |
+| 14 | Constant reloading (dev workflow) | Medium | Not started |
+| 15 | IRB console autocomplete | Medium | Not started |
+| 16 | `boxwerk init` (scaffold packages) | Low | Not started |
+| 17 | Sorbet support | Low | Future |
+| 18 | Per-package testing improvements | Low | Not started |
+| 19 | Additional CLI commands | Low | Not started |
+| 20 | IDE / language server support | Low | Future |
+| 21 | Bundler inside package boxes | — | Blocked (Ruby::Box) |
+| 22 | RUBYOPT bootstrap | — | Blocked (Ruby::Box) |
 
 ---
 
-## 1. `boxwerk-rails` Gem
+## 1. `Boxwerk.package` as Box Constant
+
+**Priority: High**
+
+`Boxwerk.package` currently uses a thread-local (`Thread.current[:boxwerk_package_context]`) set only during `boot.rb` execution and cleared afterwards — it returns `nil` in regular package code. Instead, `Boxwerk.package` should return the `BOXWERK_PACKAGE` constant from the calling box, making it available at any point inside package code.
+
+### Implementation Plan
+
+1. **Remove thread-local** — Delete the `Thread.current[:boxwerk_package_context]` getter/setter from `lib/boxwerk.rb`.
+2. **Resolve from box constant** — `Boxwerk.package` should return the `BOXWERK_PACKAGE` constant set in the current box. Since `Boxwerk` is defined in the root box, it needs to detect the calling box context. Options:
+   - Use `Ruby::Box.current` (if available in Ruby 4.0 API) to get the box, then `box.const_get(:BOXWERK_PACKAGE)`.
+   - Alternatively, keep `BOXWERK_PACKAGE` as the primary API and have `Boxwerk.package` be a convenience that reads it.
+3. **Ensure BOXWERK_PACKAGE is set early** — It's already set in `run_package_boot` in `box_manager.rb`. Move the `const_set` to happen before `boot.rb` runs (it already does — line 163). Ensure it's also set for packages without a `boot.rb`.
+4. **Update boot.rb flow** — Remove the `Boxwerk.package = context` / `Boxwerk.package = nil` lines in `box_manager.rb`.
+5. **Update USAGE.md** — Remove mention of "thread-local, `nil` outside boot".
+6. **Update tests** — Ensure `BOXWERK_PACKAGE` is accessible in package code, not just boot scripts.
+
+---
+
+## 2. Immediate Autoload in Boot Scripts (`autoloader.setup`)
+
+**Priority: High**
+
+Currently, when `push_dir` is called in a package's `boot.rb`, the new autoload dirs are not registered until *after* `boot.rb` completes (in `apply_boot_config`). This means constants from newly added autoload dirs can't be used later in the same `boot.rb`. Additionally, there is no need for a separate `boot/` directory concept in packages since the boot script already has access to the package's default autoloaded constants (`lib/`, `public/`).
+
+The `global/` directory at the project root is unaffected — it remains as-is.
+
+### Implementation Plan
+
+1. **Add `Boxwerk.package.autoloader.setup` method** — When called in `boot.rb`, immediately scan and register autoload entries for any dirs added via `push_dir` or `collapse` so far. This requires the autoloader to hold a reference to the box and use `ZeitwerkScanner.scan` + `ZeitwerkScanner.register_autoloads` on the fly.
+2. **Pass box reference to Autoloader** — `PackageContext::Autoloader.new(pkg_dir, box: box)` so `setup` can register autoloads in the correct box.
+3. **Track registered dirs** — Avoid double-registering dirs already scanned by `setup` when `apply_boot_config` runs after boot.
+4. **Update docs** — Document `autoloader.setup` in USAGE.md per-package boot scripts section. Note that `setup` is optional — dirs are always registered after boot, but `setup` makes them available immediately.
+5. **Test** — Add test where boot.rb calls `push_dir`, then `setup`, then references a constant from the new dir.
+
+---
+
+## 3. `global_eager_load` / `package_eager_load` Config
+
+**Priority: High**
+
+Two new `boxwerk.yml` options to control eager loading during boot:
+
+- **`global_eager_load`** (default: `true`) — When `true`, calls `Zeitwerk::Loader.eager_load_all` after `global/boot.rb` has run and eager-loads all files in `global/`. When `false`, skips both. The `global/boot.rb` script itself always runs regardless.
+- **`package_eager_load`** (default: `false`) — When `true`, eager-loads all constants in each package box after boot. When `false` (default), constants are lazy-loaded via autoload.
+
+These options do not affect `boot.rb` / `global/boot.rb` execution (always run) or automatic gem requiring from Gemfiles (always happens).
+
+### Investigation: Does `Zeitwerk::Loader.eager_load_all` Actually Do Anything?
+
+The call exists in `setup.rb#eager_load_zeitwerk`. It resolves pending Zeitwerk autoloads in the root box so child boxes inherit fully resolved constants. Gems like Rails use Zeitwerk internally — without eager loading, child boxes may inherit unresolvable autoload entries. This call IS necessary for gems with internal Zeitwerk autoloading.
+
+### Implementation Plan
+
+1. **Parse new config** — Read `global_eager_load` and `package_eager_load` from `boxwerk.yml` in `PackageResolver#load_boxwerk_config`. Pass through to `Setup.run`.
+2. **Guard `eager_load_zeitwerk`** — In `Setup.run`, only call `eager_load_zeitwerk` when `global_eager_load` is `true` (default).
+3. **Guard `global/` file loading** — In `run_global_boot`, only require non-boot global files when `global_eager_load` is `true`. `global/boot.rb` always runs.
+4. **Add package eager loading** — In `BoxManager.boot`, after all autoloads are registered and deps wired, optionally eager-load all constants in the box when `package_eager_load` is `true`.
+5. **Update USAGE.md** — Add config options to the `boxwerk.yml` section.
+6. **Tests** — Unit tests for both options in `setup_test.rb`.
+
+---
+
+## 4. Global Context Loads All Package Constants
+
+**Priority: High**
+
+When using `run`, `console`, and `exec` in global context (`-g`), the global context should be able to resolve constants from ALL packages. This makes debugging easier. Global run/console/exec should run after all packages have booted.
+
+### Current Behaviour
+
+The `--global` flag runs directly in `Ruby::Box.root` with no package constant resolution — only global gems are available.
+
+### Implementation Plan
+
+1. **Install composite resolver on root box** — After all packages are booted, install a `const_missing` on `Ruby::Box.root` that searches all packages (similar to an implicit root package with `enforce_dependencies: false`).
+2. **Ensure all packages boot first** — Global mode should still call `perform_setup` (it does already) which boots all packages.
+3. **Reuse existing resolver logic** — Use `ConstantResolver.build_resolver` with all packages as deps, no privacy enforcement.
+4. **Tests** — Verify global context can access constants from any package.
+
+---
+
+## 5. Selective Package Booting
+
+**Priority: High**
+
+When using `run`, `exec`, and `console` for a specific package (`-p packs/foo`), only boot the necessary packages: global, then the target package and all its transitive dependencies. Other packages should not be booted.
+
+### Current Behaviour
+
+`perform_setup` calls `Setup.run` which boots ALL packages via `boot_all`.
+
+### Implementation Plan
+
+1. **Add `boot_package(package, resolver)` to BoxManager** — Recursively boot only the target package and its transitive deps (via DFS on `package.dependencies`).
+2. **Add `packages` parameter to `Setup.run`** — Optional list of packages to boot. Default `nil` boots all.
+3. **Determine target in CLI** — In `exec_command`, `run_command`, `console_command`, determine target package from flags and pass to setup.
+4. **Global mode still boots all** — When `-g` is used, boot all packages (for the global resolver from item 4).
+5. **`--all` still boots all** — Each subprocess boots its own target package independently.
+6. **Tests** — Verify only target + deps are booted, not unrelated packages.
+
+---
+
+## 6. Work Without Gems Entirely
+
+**Priority: High**
+
+Boxwerk should work without any root/global Gemfile. In this mode:
+- Use a system-installed `boxwerk` (not bundled)
+- No gems loaded into global context (except Boxwerk itself)
+- Per-package gems still supported (optional) but require Bundler on the system
+- `boxwerk install` should not crash without a root Gemfile
+
+### Implementation Plan
+
+1. **Guard Bundler calls** — In `exe/boxwerk`, the root box eval already checks `gemfile` existence. Ensure it doesn't crash when nil. Same for `install_command`.
+2. **Minimal example** — Remove `gems.rb` and `Rakefile` from `examples/minimal/`. Add a simple shell script (e.g. `run.sh`) or `Makefile` for CI execution instead of rake.
+3. **Update minimal README** — Remove Bundler setup steps. Show direct `boxwerk run main.rb` usage.
+4. **Update main README Quick Start** — Show gemless workflow as the simplest path. Move Bundler setup to USAGE.md.
+5. **Update USAGE.md** — Add a section on using Boxwerk with Bundler (creating binstub, etc.) and without Bundler (system install).
+6. **`boxwerk install` safety** — Skip root package in `install_command` when no Gemfile exists. Already partially handles this.
+7. **Tests** — E2E test with minimal example without Gemfile.
+
+---
+
+## 7. `boxwerk-rails` Gem
 
 **Priority: Medium — Future**
 
@@ -42,7 +179,94 @@ eliminate manual setup in `global/boot.rb` and `bin/rails`.
 
 ---
 
-## 2. Constant Reloading
+## 8. Fix `rails console` Crash
+
+**Priority: Medium**
+
+`boxwerk exec rails console` crashes when you type input. This is likely due to IRB/readline interaction with Ruby::Box context. The workaround is to use `boxwerk console` instead, which properly handles the console environment.
+
+### Implementation Plan
+
+1. **Investigate** — Reproduce the crash, check if it's a readline/reline issue in box context.
+2. **If fixable** — Fix the interaction between `rails/commands` console mode and box eval.
+3. **If not easily fixable** — Document `boxwerk console` as the recommended interactive console. Rails console docs already updated in `examples/rails/README.md`.
+
+---
+
+## 9. GitHub Action CI Fix
+
+**Priority: Medium**
+
+Faker gem is missing in CI causing specs to fail. The step that installs package gems may be missing `bundler-cache: true`. Also, the install task should not need a regular `bundle install` first — it should rely solely on `bin/boxwerk install`.
+
+### Implementation Plan
+
+1. **Fix install step** — In `.github/workflows/main.yml`, the per-example install loop does `bundle install` then `bin/boxwerk install`. The first `bundle install` is needed for the example's root gems (including boxwerk itself). Keep it but ensure caching works.
+2. **Check bundler-cache** — The main setup-ruby step has `bundler-cache: true`. Per-example installs are manual. Consider caching example gem directories.
+3. **Verify Faker** — Check if `examples/complex/packs/kitchen/gems.rb` (which requires Faker) gets its lockfile gems installed during `bin/boxwerk install`.
+4. **Test locally** — Run the full CI flow to reproduce the issue.
+
+---
+
+## 10. CLI Config Without `boxwerk.yml`
+
+**Priority: Medium**
+
+Allow providing `boxwerk.yml` configuration via CLI options instead of a config file. This enables quick configuration without creating a file.
+
+### Implementation Plan
+
+1. **Add `--package-paths` option** — Parse `--package-paths "packs/*"` in the CLI and pass to `Setup.run` / `PackageResolver`.
+2. **CLI options override file** — If both CLI option and `boxwerk.yml` exist, CLI takes precedence.
+3. **Extend to new config options** — Also support `--global-eager-load` / `--package-eager-load` flags.
+4. **Update USAGE.md** — Document CLI config options in the options table.
+
+---
+
+## 11. Exec Command Shell Fallback
+
+**Priority: Medium**
+
+When `boxwerk exec` can't find a binstub or gem bin for the given command, it should fall back to treating the remaining args as a shell command that runs in the package directory as cwd.
+
+### Implementation Plan
+
+1. **Modify `run_command_in_box`** — In `cli.rb`, after checking project bin and gem bin, fall back to `system(*command_args, chdir: pkg_dir)` running in the package directory.
+2. **Use `Kernel.exec` or `system`** — Since this is a shell command, use `system` with the package dir as cwd. The command runs outside box context (native shell).
+3. **Update docs** — Document the fallback behaviour in USAGE.md exec section.
+
+---
+
+## 12. `-a` CLI Option (Alias of `--all`)
+
+**Priority: Medium**
+
+Add `-a` as a short alias for `--all` in the CLI.
+
+### Implementation Plan
+
+1. **Update `parse_package_flag`** — Add `'-a'` to the case match alongside `'--all'`.
+2. **Update CLI help text** — Show `-a` in the options table.
+3. **Update USAGE.md** — Add `-a` to the options table.
+
+---
+
+## 13. Fix Double NameError in Console
+
+**Priority: Medium**
+
+When a `NameError` occurs in `boxwerk console`, the error and stack trace are printed twice. Should be printed once.
+
+### Implementation Plan
+
+1. **Reproduce** — Start a console and reference a non-existent constant. Observe double output.
+2. **Investigate** — Likely caused by the composite resolver on `Ruby::Box.root` rethrowing the error, plus IRB's own error handler catching and displaying it. Or `const_missing` being called twice (once by Object, once by the composite resolver).
+3. **Fix** — Ensure the resolver raises `NameError` exactly once. Check if the composite resolver in `install_resolver_on_ruby_root` re-raises after the dep resolver already raised. May need to catch and re-raise cleanly without double display.
+4. **Test** — Console test verifying single error output.
+
+---
+
+## 14. Constant Reloading
 
 **Priority: Medium**
 
@@ -67,7 +291,7 @@ Start with Approach 1 behind an opt-in flag (`boxwerk run --watch`).
 
 ---
 
-## 3. IRB Console Autocomplete
+## 15. IRB Console Autocomplete
 
 **Priority: Medium**
 
@@ -86,7 +310,7 @@ Ruby 4.0.1 GC crash in child boxes). Revisit when Ruby::Box stabilizes.
 
 ---
 
-## 4. `boxwerk init`
+## 16. `boxwerk init`
 
 **Priority: Low**
 
@@ -94,7 +318,7 @@ Scaffold a new package with `package.yml`, `lib/`, `public/`, and `test/`.
 
 ---
 
-## 5. Sorbet Support
+## 17. Sorbet Support
 
 **Priority: Low — Future**
 
@@ -120,7 +344,7 @@ runtime constants.
 
 ---
 
-## 6. Per-Package Testing Improvements
+## 18. Per-Package Testing Improvements
 
 **Priority: Low**
 
@@ -134,7 +358,7 @@ isolation.
 
 ---
 
-## 7. Additional CLI Commands
+## 19. Additional CLI Commands
 
 **Priority: Low**
 
@@ -145,7 +369,7 @@ isolation.
 
 ---
 
-## 8. IDE / Language Server Support
+## 20. IDE / Language Server Support
 
 **Priority: Low — Future**
 
@@ -156,7 +380,7 @@ isolation.
 
 ---
 
-## 9. Bundler Inside Package Boxes
+## 21. Bundler Inside Package Boxes
 
 **Status: Blocked (Ruby::Box limitation)**
 
@@ -168,7 +392,7 @@ Requires Ruby::Box changes to support Bundler running in child box context.
 
 ---
 
-## 10. RUBYOPT Bootstrap (`-rboxwerk/setup`)
+## 22. RUBYOPT Bootstrap (`-rboxwerk/setup`)
 
 **Status: Blocked (Ruby::Box limitation)**
 
@@ -192,7 +416,7 @@ Items completed and removed from active tracking:
 
 - ✅ **Zeitwerk integration** — File scanning, inflection, `autoload_dirs`,
   `collapse_dirs`, eager loading. Remaining: `ignore_dirs` consumption,
-  reloading (see #2).
+  reloading (see #14).
 - ✅ **Rails integration** — Rails 8.1 API app, Puma, ActiveRecord,
   ActionController, foundation pattern, privacy enforcement. See
   [examples/rails/](examples/rails/).
@@ -208,3 +432,13 @@ Items completed and removed from active tracking:
   initialize in root package boot.rb. `-g` no longer needed for Rails commands.
 - ✅ **Remove Rails special-casing** — Generic `bin/<command>` lookup
   replaces `execute_rails_command`. Rails example uses standard `bin/rails`.
+- ✅ **USAGE.md global/boot.rb description** — Updated to describe eager
+  loading constants (e.g. Rails internals), not "booting Rails". Root
+  `boot.rb` is for booting Rails in the root package.
+- ✅ **README description** — Updated tagline to "Ruby package system with
+  Box-powered constant isolation". Packwerk standalone note clarified.
+- ✅ **README TODO mention** — Updated to mention other planned features.
+- ✅ **Rails console docs** — Updated `examples/rails/README.md` to recommend
+  `boxwerk console` instead of `boxwerk exec rails console`.
+- ✅ **USAGE.md boot.rb docs** — Clarified per-package gems are available in
+  boot scripts. Added Bundler mention to USAGE.md reference in README.

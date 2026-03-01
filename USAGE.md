@@ -351,12 +351,12 @@ A `boot.rb` at the project root is a **root package** boot script — it runs in
 
 ### Use Cases
 
-- **`global/boot.rb`** — Load environment variables, define global config, boot Rails
-- **`boot.rb`** — Root package initialization (runs after all packages are booted)
+- **`global/boot.rb`** — Load environment variables, define global config, manually eager load constants (e.g. Rails internals)
+- **`boot.rb`** — Root package initialization, e.g. booting Rails (see [Rails example](examples/rails/)). Runs after all packages are booted
 
 ## Per-Package Boot Scripts
 
-Each package can have an optional `boot.rb` that runs after the package's own constants are scanned but before cross-package constants are wired. Use it to configure additional autoload dirs and collapse:
+Each package can have an optional `boot.rb` that runs after the package's own constants are scanned and per-package gems are loaded, but before cross-package constants are wired. Use it to configure additional autoload dirs and collapse:
 
 ```ruby
 # packs/models/boot.rb

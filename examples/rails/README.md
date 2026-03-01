@@ -82,7 +82,7 @@ bundle install                              # Install global gems
 bundle binstubs boxwerk                     # Create bin/boxwerk binstub
 bin/boxwerk install                         # Install per-package gems
 RUBY_BOX=1 bin/boxwerk exec rails server    # Start server
-RUBY_BOX=1 bin/boxwerk exec rails console   # Open console
+RUBY_BOX=1 bin/boxwerk console              # Open interactive console
 RUBY_BOX=1 bin/boxwerk exec rake test       # Run tests
 bin/boxwerk info                            # Show package graph
 ```
