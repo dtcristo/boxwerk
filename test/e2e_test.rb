@@ -49,6 +49,7 @@ class E2ERunner
     test_console_root_package
     test_console_child_package
     test_console_global
+    test_console_single_name_error
     test_bundle_exec_reexec
     test_exec_project_binstub
     test_autoloader_setup_in_boot
@@ -447,6 +448,29 @@ class E2ERunner
       assert_match /PASS/,
                    out,
                    'console_global: global resolves all package constants'
+    end
+  end
+
+  def test_console_single_name_error
+    with_project do |dir|
+      create_root_package(dir, dependencies: [])
+
+      # Reference a non-existent constant and count NameError occurrences
+      script = <<~STDIN
+        begin
+          _ = NonExistent
+        rescue NameError => e
+          puts "ERR: \#{e.message}"
+        end
+        exit
+      STDIN
+      out, status = run_boxwerk_with_stdin(dir, script, 'console')
+      assert_equal 0, status.exitstatus, 'console_single_name_error: exit status'
+      # Should see exactly one "uninitialized constant" error message
+      error_count = out.scan(/uninitialized constant/).length
+      assert_equal 1,
+                   error_count,
+                   'console_single_name_error: single NameError output'
     end
   end
 

@@ -19,7 +19,7 @@ module Boxwerk
   # autoload calls execute in the root box context (where Zeitwerk was
   # loaded), not the target package box.
   class BoxManager
-    attr_reader :boxes, :gem_resolver
+    attr_reader :boxes, :gem_resolver, :file_indexes
 
     def initialize(root_path)
       @root_path = root_path

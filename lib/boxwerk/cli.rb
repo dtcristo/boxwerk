@@ -540,8 +540,11 @@ module Boxwerk
         target_pkg = target_package || result[:resolver].root
         target_box = result[:box_manager].boxes[target_pkg.name]
 
-        # Build a composite resolver: first check the target box's own
-        # constants, then fall through to the target box's dependency resolver.
+        # Delegate constant resolution from Ruby::Box.root to the target box.
+        # The target box already has its own const_missing (dependency resolver)
+        # for cross-package lookup. We check own constants first via
+        # const_get (which doesn't trigger const_missing recursion), then
+        # fall through to the dependency resolver.
         own_box = target_box
         dep_resolver =
           begin
@@ -550,19 +553,36 @@ module Boxwerk
             nil
           end
 
+        # File index for the target package (for autoload-style loading)
+        file_index = result[:box_manager].file_indexes[target_pkg.name] || {}
+
         composite =
           proc do |const_name|
             name_str = const_name.to_s
-            # Try own box first (for the pack's internal constants).
-            # Use eval to trigger autoload within the box's context.
-            begin
-              own_box.eval("_ = ::#{name_str}")
-            rescue NameError
-              # Fall through to dependency resolver
-              if dep_resolver
+            # Try own box's already-defined constants first
+            resolved =
+              begin
+                own_box.const_get(const_name)
+              rescue NameError
+                nil
+              end
+
+            if resolved
+              resolved
+            else
+              # Try loading from file index (autoload entries)
+              file = file_index[name_str]
+              if file
+                own_box.require(file)
+                own_box.const_get(const_name)
+              elsif dep_resolver
+                # Delegate to the target box's dependency resolver
                 dep_resolver.call(const_name)
               else
-                raise NameError, "uninitialized constant #{name_str}"
+                raise NameError.new(
+                        "uninitialized constant #{name_str}",
+                        const_name,
+                      )
               end
             end
           end
