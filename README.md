@@ -4,9 +4,13 @@
   </h1>
 </div>
 
-Boxwerk is a Ruby package system with boundary enforcement at runtime using a [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for each package. When constants are resolved, only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
+Boxwerk is a tool for creating modular Ruby and Rails applications. It enables you to organize code into packages of Ruby files with clear boundaries and explicit dependencies. Boxwerk is heavily inspired by [Packwerk](https://github.com/Shopify/packwerk) but provides more robust enforcement at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html), ensuring that only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
 
-- Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files, supporting both dependency and privacy enforcement. Packwerk itself is not required.
+As your application grows, Boxwerk helps prevent accidental coupling, enforces modularity, and makes it easier to understand and modify code without breaking other parts of the system.
+
+## Features
+
+- Boxwerk reads standard Packwerk `package.yml` files, supporting both dependency and privacy enforcement. Packwerk itself is not required.
 - Packages in a Boxwerk application share a set of global gems but may also define package-local ones. Multiple packages can depend on different versions of the same gem.
 - `Ruby::Box` provides monkey patch isolation between packages.
 - Boxwerk uses [Zeitwerk](https://github.com/fxn/zeitwerk) to automatically load constants in packages with [conventional file structure](https://github.com/fxn/zeitwerk#file-structure) although manual loading is also supported.
