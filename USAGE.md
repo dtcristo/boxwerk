@@ -165,7 +165,7 @@ Show usage or version.
 | Flag                      | Short | Applies to              | Description                                        |
 |---------------------------|-------|-------------------------|----------------------------------------------------|
 | `--package <name>`        | `-p`  | `exec`, `run`, `console`| Run in a specific package box (default: `.`)       |
-| `--all`                   |       | `exec`                  | Run for all packages sequentially (subprocesses)   |
+| `--all`                   | `-a`  | `exec`                  | Run for all packages sequentially (subprocesses)   |
 | `--global`                | `-g`  | `exec`, `run`, `console`| Run in the global context (no package)             |
 | `--package-paths <paths>` |       | `exec`, `run`, `console`| Comma-separated package path globs (override `boxwerk.yml`) |
 | `--eager-load-global`     |       | `exec`, `run`, `console`| Enable global eager loading                        |

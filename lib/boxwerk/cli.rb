@@ -63,7 +63,7 @@ module Boxwerk
         puts ''
         puts 'Options:'
         puts '  -p, --package <name>         Run in a specific package box (default: .)'
-        puts '      --all                    Run exec for all packages sequentially'
+        puts '  -a, --all                    Run exec for all packages sequentially'
         puts '  -g, --global                 Run in the global context (no package)'
         puts '      --package-paths <paths>  Comma-separated package path globs'
         puts '      --[no-]eager-load-global Toggle global eager loading'
@@ -108,7 +108,7 @@ module Boxwerk
               exit 1
             end
             i += 2
-          when '--all'
+          when '--all', '-a'
             all = true
             i += 1
           when '--global', '-g'
