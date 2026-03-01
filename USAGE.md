@@ -378,7 +378,7 @@ pkg.autoloader.ignore("lib/legacy")
 ### Monkey Patch Isolation
 
 Because each package runs in its own `Ruby::Box`, monkey patches defined in a
-package's `boot.rb` are isolated to that box:
+package are isolated to that box:
 
 ```ruby
 # packs/kitchen/boot.rb
