@@ -294,13 +294,22 @@ An optional `boxwerk.yml` file at the project root configures Boxwerk behaviour.
 # boxwerk.yml
 package_paths:
   - "packs/*"        # default: ["**/"]
+eager_load_global: true   # default: true
+eager_load_packages: false # default: false
 ```
 
-| Field           | Type | Default   | Description                                               |
-|-----------------|------|-----------|-----------------------------------------------------------|
-| `package_paths` | list | `["**/"]` | Glob patterns for where to search for `package.yml` files |
+| Field                 | Type | Default   | Description                                               |
+|-----------------------|------|-----------|-----------------------------------------------------------|
+| `package_paths`       | list | `["**/"]` | Glob patterns for where to search for `package.yml` files |
+| `eager_load_global`   | bool | `true`    | Eager-load `global/` files and Zeitwerk constants at boot  |
+| `eager_load_packages` | bool | `false`   | Eager-load all constants in each package box after boot    |
 
 By default, Boxwerk searches everywhere (`**/`) for `package.yml` files. Set `package_paths` to restrict the search to specific directories.
+
+### Eager Loading
+
+- **`eager_load_global`** — When `true` (default), requires all files in `global/` and runs `Zeitwerk::Loader.eager_load_all` after `global/boot.rb`. This ensures gems with internal Zeitwerk autoloading (like Rails) have their constants resolved before child boxes are created. When `false`, skips both, but `global/boot.rb` still runs.
+- **`eager_load_packages`** — When `true`, eager-loads all constants in each package box after boot. When `false` (default), constants are lazy-loaded via autoload on first access.
 
 ## Implicit Root Package
 

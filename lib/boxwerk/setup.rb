@@ -7,16 +7,20 @@ module Boxwerk
       def run(start_dir: Dir.pwd)
         root_path = find_root(start_dir)
 
+        resolver = Boxwerk::PackageResolver.new(root_path)
+        config = resolver.boxwerk_config
+        eager_load_global = config.fetch('eager_load_global', true)
+        eager_load_packages = config.fetch('eager_load_packages', false)
+
         # Run global boot in root box (after gems, before package boxes).
-        run_global_boot(root_path)
+        run_global_boot(root_path, eager_load: eager_load_global)
 
         # Eager-load all Zeitwerk-managed constants in root box so child
         # boxes inherit fully resolved constants (not pending autoloads).
-        eager_load_zeitwerk
+        eager_load_zeitwerk if eager_load_global
 
-        resolver = Boxwerk::PackageResolver.new(root_path)
         @box_manager = Boxwerk::BoxManager.new(root_path)
-        @box_manager.boot_all(resolver)
+        @box_manager.boot_all(resolver, eager_load_packages: eager_load_packages)
 
         check_gem_conflicts(@box_manager.gem_resolver, resolver)
 
@@ -78,14 +82,15 @@ module Boxwerk
       #
       # Root-level boot.rb is NOT handled here — it runs in the root
       # package box via BoxManager (like any other package boot.rb).
-      def run_global_boot(root_path)
+      def run_global_boot(root_path, eager_load: true)
         root_box = Ruby::Box.root
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
 
         # Require global/ files in root box so they are defined before
         # child boxes are created (not just registered as autoloads).
-        if File.directory?(global_dir)
+        # Only when eager_load_global is true; global/boot.rb always runs.
+        if eager_load && File.directory?(global_dir)
           entries = ZeitwerkScanner.scan(global_dir)
           entries.each do |entry|
             next unless entry.file && entry.file != global_boot
@@ -93,7 +98,7 @@ module Boxwerk
           end
         end
 
-        # Run global/boot.rb in root box
+        # Run global/boot.rb in root box (always, regardless of eager_load)
         root_box.require(global_boot) if File.exist?(global_boot)
       end
 

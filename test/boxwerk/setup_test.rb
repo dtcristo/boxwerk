@@ -139,6 +139,66 @@ module Boxwerk
       assert_instance_of PackageResolver, result[:resolver]
     end
 
+    def test_eager_load_global_false_skips_global_files
+      create_package(@tmpdir)
+      File.write(
+        File.join(@tmpdir, 'boxwerk.yml'),
+        YAML.dump('eager_load_global' => false),
+      )
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
+      File.write(
+        File.join(global_dir, 'eager_test.rb'),
+        "module EagerTest; VALUE = 99; end\n",
+      )
+
+      Setup.run(start_dir: @tmpdir)
+
+      # Global file should NOT be eagerly loaded
+      refute Ruby::Box.root.eval('defined?(EagerTest)')
+    end
+
+    def test_eager_load_global_false_still_runs_boot
+      create_package(@tmpdir)
+      File.write(
+        File.join(@tmpdir, 'boxwerk.yml'),
+        YAML.dump('eager_load_global' => false),
+      )
+      global_dir = File.join(@tmpdir, 'global')
+      FileUtils.mkdir_p(global_dir)
+      File.write(
+        File.join(global_dir, 'boot.rb'),
+        "$EAGER_BOOT_TEST = true\n",
+      )
+
+      Setup.run(start_dir: @tmpdir)
+
+      # global/boot.rb should STILL run
+      assert Ruby::Box.root.eval('$EAGER_BOOT_TEST')
+    end
+
+    def test_eager_load_packages_true_loads_constants
+      packs_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(File.join(packs_dir, 'lib'))
+      create_package(packs_dir)
+      File.write(
+        File.join(packs_dir, 'lib', 'eager_pkg.rb'),
+        "class EagerPkg; VALUE = 42; end\n",
+      )
+
+      create_package(@tmpdir, dependencies: ['packs/a'])
+      File.write(
+        File.join(@tmpdir, 'boxwerk.yml'),
+        YAML.dump('eager_load_packages' => true),
+      )
+
+      result = Setup.run(start_dir: @tmpdir)
+      a_box = result[:box_manager].boxes['packs/a']
+
+      # Constant should be defined (eager-loaded, not just autoloaded)
+      assert a_box.eval('defined?(EagerPkg)')
+    end
+
     private
 
     def create_package(path, dependencies: nil)

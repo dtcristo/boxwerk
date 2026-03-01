@@ -29,10 +29,20 @@ module Boxwerk
     end
 
     # Boot all packages in topological order.
-    def boot_all(resolver)
+    def boot_all(resolver, eager_load_packages: false)
       order = resolver.topological_order
 
       order.each { |package| boot(package, resolver) }
+
+      # Optionally eager-load all constants in each package box
+      if eager_load_packages
+        order.each do |package|
+          box = @boxes[package.name]
+          next unless box
+          file_index = @file_indexes[package.name] || {}
+          eager_load_box(box, file_index)
+        end
+      end
     end
 
     # Boot a single package: create box, set up gems, scan with Zeitwerk,
@@ -276,6 +286,15 @@ module Boxwerk
           end
         end
       RUBY
+    end
+
+    # Eager-loads all constants in a box by requiring every file in
+    # the file index.
+    def eager_load_box(box, file_index)
+      file_index.each_value do |file|
+        next unless file
+        box.require(file)
+      end
     end
 
     def package_dir(package)
