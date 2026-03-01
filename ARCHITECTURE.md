@@ -8,16 +8,16 @@ Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each p
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Root Box                          │
+│                    Root Box                         │
 │  (Bundler + global gems loaded here)                │
 │                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
 │  │ root pkg │  │ finance  │  │   util   │  ...      │
-│  │  (box)   │  │  (box)   │  │  (box)   │          │
-│  └──────────┘  └──────────┘  └──────────┘          │
-│       │              │              │                │
-│       │  const_missing             autoload          │
-│       │  searches deps             resolves files    │
+│  │  (box)   │  │  (box)   │  │  (box)   │           │
+│  └──────────┘  └──────────┘  └──────────┘           │
+│       │              │              │               │
+│       │  const_missing             autoload         │
+│       │  searches deps             resolves files   │
 └─────────────────────────────────────────────────────┘
 ```
 

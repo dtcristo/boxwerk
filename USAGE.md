@@ -51,11 +51,11 @@ private_constants:
 
 | Field                  | Type     | Default   | Description                                     |
 |------------------------|----------|-----------|-------------------------------------------------|
-| `enforce_dependencies` | bool     | `false`   | Block access to undeclared dependencies          |
-| `dependencies`         | list     | `[]`      | Direct dependency package paths                  |
-| `enforce_privacy`      | bool     | `false`   | Restrict external access to public constants     |
-| `public_path`          | string   | `public/` | Directory containing the package's public API    |
-| `private_constants`    | list     | `[]`      | Constants blocked even if in the public path     |
+| `enforce_dependencies` | bool     | `false`   | Block access to undeclared dependencies         |
+| `dependencies`         | list     | `[]`      | Direct dependency package paths                 |
+| `enforce_privacy`      | bool     | `false`   | Restrict external access to public constants    |
+| `public_path`          | string   | `public/` | Directory containing the package's public API   |
+| `private_constants`    | list     | `[]`      | Constants blocked even if in the public path    |
 
 ## `pack_public: true` Sigil
 
