@@ -385,30 +385,32 @@ isolation.
 
 **Priority: High — Future**
 
-**Status: Previously blocked; revisited for monkey-patching approach**
+**Status: Previously blocked; revisited for box-local monkey-patching**
 
 `Bundler.setup` inside a child box currently modifies the ROOT box's `$LOAD_PATH` because Bundler's code is defined in the root box. We currently parse lockfiles directly and manipulate `$LOAD_PATH` manually.
 
-### Monkey-Patch Approach
+### Box-Local Monkey-Patch Approach
 
-Rather than waiting for Ruby::Box API changes, we can monkey-patch `Bundler` and `Gem` in the root box to be box-context-aware:
+Rather than patching from the root box, we can **monkey-patch Bundler FROM WITHIN the child box**. Since code evaluated in a child box runs in that box's context, the patches only affect that box and don't leak:
 
-1. **Detect calling box** — When `Bundler.setup` runs, detect which box is making the call (via stack inspection or a thread-local set in the box eval)
-2. **Redirect `$LOAD_PATH` modification** — Instead of modifying the root box's `$LOAD_PATH`, modify the calling box's `$LOAD_PATH`
-3. **Intercept `Gem.activate`** — Similarly patch Gem activation to update the correct box's `$LOAD_PATH`
+1. **Eval patch code in package box** — In `BoxManager.boot`, after creating the box, eval a script that monkey-patches `Bundler::Runtime#setup` and `Gem` methods
+2. **Patches modify child box's `$LOAD_PATH`** — The monkey-patched code runs in the child box context, so `$LOAD_PATH` modifications affect the child box automatically (no detection needed)
+3. **Call `Bundler.setup` natively** — Replace our current lockfile parsing with native `Bundler.setup` calls in the child box
+4. **Patches don't leak** — Each box has its own patch instance; root box is unaffected
 
-This is maintainable because:
-- Bundler/Gem modification is localized to a single monkey-patch in `box_manager.rb` or a new `bundler_patch.rb`
-- The patch only affects behavior when called from a non-root box
-- It doesn't require Ruby::Box API changes
+This is simpler than detecting caller context because:
+- No stack inspection or thread-locals needed
+- Bundler's code naturally operates in the correct box context
+- Patches are isolated per-box automatically
 
 ### Implementation Plan
 
-1. **Study Bundler internals** — Understand how `Bundler.setup` modifies `$LOAD_PATH`
-2. **Create `boxwerk/bundler_patch.rb`** — Monkey patch `Bundler::Runtime#setup` to detect calling box and modify correct `$LOAD_PATH`
-3. **Load patch in root box** — In `exe/boxwerk` root box eval, require the patch after Bundler loads
-4. **Test** — Test that per-package gems can call `Bundler.setup` in their package box and get the correct load paths
-5. **Phase out manual lockfile parsing** — Once proven, replace `GemResolver` lockfile parsing with native `Bundler.setup` calls in package boxes
+1. **Create `lib/boxwerk/patches/bundler.rb`** — Define Bundler monkey patches (minimal, surgical changes to setup methods)
+2. **Create `lib/boxwerk/patches/gem.rb`** — Define Gem monkey patches for gem activation
+3. **In `BoxManager.boot`** — After `setup_gem_load_paths`, eval the patch scripts in the package box
+4. **Call `Bundler.setup` from the box** — Replace manual `GemResolver` lockfile parsing with `box.eval("Bundler.setup")`
+5. **Test** — Verify per-package `Bundler.setup` works and modifies correct box's `$LOAD_PATH`
+6. **Phase out lockfile parsing** — Remove `GemResolver` lockfile parsing code once native Bundler setup works
 
 ---
 
@@ -416,30 +418,39 @@ This is maintainable because:
 
 **Priority: Medium — Future**
 
-**Status: Previously blocked; revisited for multi-phase approach**
+**Status: Previously blocked; revisited for box-local monkey-patching**
 
-Using `RUBYOPT=-rboxwerk/setup` to automatically bootstrap Boxwerk without `boxwerk exec` hits several obstacles. A multi-phase approach might work:
+Using `RUBYOPT=-rboxwerk/setup` to automatically bootstrap hits obstacles with gem loading and Zeitwerk handling. Box-local monkey-patching can help:
 
-### Revised Approach: Phase 1 + Monkey-Patching
+### Box-Local Monkey-Patch Approach
 
-**Phase 1: RUBYOPT loads a minimal setup**
-- `RUBYOPT=-rboxwerk/setup` loads a tiny bootstrap that:
-  - Activates Ruby::Box (if enabled)
-  - Switches to root box
-  - Requires the real Boxwerk lib
-  - Calls `Boxwerk::Setup.run` to boot packages
+When RUBYOPT loads `boxwerk/setup`:
 
-**Phase 2: Monkey-patch Zeitwerk and Bundler**
-- Patches (from item 21) ensure that when gems with internal Zeitwerk or Bundler usage run in child boxes, they operate in the correct box context
-- Zeitwerk's `Kernel.require` patches get box-awareness via similar interception
+1. **Bootstrap minimal setup** — Detect Ruby::Box, activate it, call `Boxwerk::Setup.run` from root box to boot all packages
+2. **Bundler patches in package boxes** — When package boxes are created, inject Bundler patches (from item 21) so native gem loading works
+3. **Zeitwerk patches in package boxes** — Inject Zeitwerk patches so `Kernel.require` and autoload work in correct box context
 
-### Challenges & Feasibility
+This is feasible because patches are box-local and don't interfere with each other.
 
-- **Gem double-loading** — Can be mitigated if gems are loaded once in root box, then per-package gems use the patch approach
-- **Boot order** — Careful about when patches are installed vs when gems load
-- **Complexity** — This is more complex than the direct Bundler patch from item 21
+### Implementation Plan
 
-Recommend starting with item 21 (Bundler patch). RUBYOPT bootstrap is desirable but lower priority since `boxwerk exec` works well.
+1. **Create `lib/boxwerk/setup.rb`** (RUBYOPT entry point) — Minimal bootstrap that:
+   - Checks Ruby::Box availability
+   - Switches to root box
+   - Requires Boxwerk lib
+   - Calls `Boxwerk::Setup.run`
+2. **Reuse item 21 patches** — Bundler patches from item 21 are automatically applied in package boxes during boot
+3. **Create `lib/boxwerk/patches/zeitwerk.rb`** — Monkey patches for Zeitwerk if needed (may be unnecessary if Bundler alone works)
+4. **Test** — RUBYOPT bootstrap with both global and per-package gems
+5. **Handle edge cases** — Double-loading prevention, boot order, gem requiring
+
+### Challenges
+
+- Complexity of initial RUBYOPT bootstrap (but simpler if Bundler patches from item 21 work)
+- Ensuring all gems load correctly without being loaded twice
+- May require additional Zeitwerk patches beyond Bundler
+
+Recommend starting with item 21 (Bundler patch). If that works, RUBYOPT becomes straightforward.
 
 ---
 
@@ -447,42 +458,39 @@ Recommend starting with item 21 (Bundler patch). RUBYOPT bootstrap is desirable 
 
 **Priority: Medium — Future**
 
-**Status: New idea; requires investigation**
+**Status: New idea; box-local patches make this feasible**
 
-Currently, Boxwerk uses Zeitwerk only for file scanning and inflection. Autoloads are registered via `box.eval` calls (not through native Zeitwerk). This works but is unconventional. We could instead use native Zeitwerk autoloaders directly in each box:
+Currently, Boxwerk uses Zeitwerk only for file scanning and inflection. Autoloads are registered via `box.eval("autoload :Foo, '/path'")` (manual). We could use native Zeitwerk autoloaders instead, leveraging box-local patches:
 
 ### Current Approach (Manual Autoload Registration)
-- Zeitwerk scans files and computes constants
+- Zeitwerk scans files
 - Boxwerk calls `box.eval("autoload :Foo, '/path'")` for each file
-- On constant access, Ruby's built-in autoload mechanism fires
+- Ruby's built-in autoload mechanism loads files on constant access
 
 ### Proposed: Native Zeitwerk Autoloaders Per Box
-- Create a `Zeitwerk::Loader` instance for each package box
-- Loader is instantiated and `setup` is called within the box's context
-- Zeitwerk handles all autoload registration natively (respects box context)
-- Zeitwerk's `const_missing` auto-require works correctly in box context
+- Create `Zeitwerk::Loader` instance for each package box
+- Instantiate and setup Loader within the box's eval context (it runs in that box)
+- Loader's autoloads, eager loading, and inflection work natively in box context
+- Box-local Zeitwerk patches (if needed) ensure `require` and constant resolution work correctly
 
 ### Benefits
+
 - More standard Zeitwerk usage
-- Zeitwerk's eager loading and lazy loading work natively
-- Potential for better IDE integration (LSP can query Zeitwerk)
-- Simplifies our constant resolution logic
+- Zeitwerk's eager loading works natively
+- Potential for better IDE/LSP integration (can query Zeitwerk directly)
+- Simplifies Boxwerk's constant resolution logic
 
-### Challenges
-- **Box scoping** — Need to instantiate Loader in the correct box's context
-- **Zeitwerk's internal state** — Loader expects to run in a specific box, ensure it doesn't escape
-- **Inflector** — Our custom inflector logic would need to be passed to Zeitwerk
-- **Collapse dirs** — Ensure Zeitwerk's collapse behavior works in box context
-- **Interaction with const_missing** — Ensure native autoloads and our dependency resolver play well together
+### Implementation Plan
 
-### Investigation Plan
-1. **Prototype** — Try instantiating `Zeitwerk::Loader` inside a box's context via `box.eval`
-2. **Test autoload resolution** — Verify constants autoload correctly in box context
-3. **Test eager loading** — Verify `loader.eager_load` works in box context
-4. **Test collapse dirs** — Verify collapsed namespaces work
-5. **Measure impact** — Compare startup time, memory usage, constant resolution performance
+1. **Prototype** — Try instantiating `Zeitwerk::Loader.new` inside a box via `box.eval`, then calling `setup` and `eager_load`
+2. **Create Loader per package** — In `BoxManager.boot`, instead of using `ZeitwerkScanner` + manual autoload, create native Loader
+3. **Test autoload resolution** — Verify constants autoload correctly in box context
+4. **Test eager loading** — Verify `loader.eager_load` works in box context
+5. **Test collapse dirs** — Verify collapsed namespaces work
+6. **Integrate with const_missing** — Ensure our dependency resolver works alongside native Zeitwerk autoloads
+7. **Measure performance** — Compare startup time and constant resolution speed vs manual approach
 
-This is lower priority because current manual approach works well, but it's a cleaner long-term direction.
+This is lower priority because manual approach works well, but it's a cleaner long-term direction that works well with box-local patches from items 21-22.
 
 ---
 
