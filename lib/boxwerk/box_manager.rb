@@ -193,18 +193,19 @@ module Boxwerk
     end
 
     # Reads autoload configuration from the PackageContext autoloader
-    # and registers additional autoloads.
+    # and registers additional autoloads. Skips entries already
+    # registered by autoloader.setup during boot.rb execution.
     def apply_boot_config(box, package, autoloader)
       pkg_dir = package_dir(package)
       all_entries = []
 
-      autoloader.autoload_dirs.each do |dir|
+      autoloader.autoload_dirs[autoloader.push_setup_count..].each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan(abs_dir))
       end
 
-      autoloader.collapse_dirs.each do |dir|
+      autoloader.collapse_dirs[autoloader.collapse_setup_count..].each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
@@ -286,7 +287,7 @@ module Boxwerk
     # and overrides Boxwerk.package in the box to return it.
     def set_package_context(box, package)
       pkg_dir = package_dir(package)
-      autoloader = PackageContext::Autoloader.new(pkg_dir)
+      autoloader = PackageContext::Autoloader.new(pkg_dir, box: box)
       context =
         PackageContext.new(
           name: package.name,

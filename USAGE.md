@@ -400,6 +400,22 @@ pkg.autoloader.collapse("lib/concerns")
 pkg.autoloader.ignore("lib/legacy")
 ```
 
+### `autoloader.setup`
+
+By default, directories added via `push_dir` and `collapse` are registered **after** `boot.rb` finishes. Call `autoloader.setup` to register them immediately, making constants available during boot:
+
+```ruby
+# packs/svc/boot.rb
+pkg = Boxwerk.package
+pkg.autoloader.push_dir("extras")
+pkg.autoloader.setup
+
+# Helper is now available (defined in packs/svc/extras/helper.rb)
+Helper.configure(ENV["API_KEY"])
+```
+
+`setup` can be called multiple times — each call registers only the dirs added since the last call.
+
 `Boxwerk.package` returns a `PackageContext` accessible from anywhere inside a package box. The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
 
 ### Monkey Patch Isolation

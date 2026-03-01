@@ -51,6 +51,7 @@ class E2ERunner
     test_console_global
     test_bundle_exec_reexec
     test_exec_project_binstub
+    test_autoloader_setup_in_boot
 
     puts ''
     puts '=' * 60
@@ -496,6 +497,48 @@ class E2ERunner
       out, status = run_boxwerk(dir, 'exec', 'mycommand')
       assert_equal 0, status.exitstatus, 'exec_project_binstub: exit status'
       assert_match(/Hello from binstub!/, out, 'exec_project_binstub: output')
+    end
+  end
+
+  def test_autoloader_setup_in_boot
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/svc'])
+      create_package(dir, 'svc')
+
+      # Add an extra dir with a constant
+      write_file(dir, 'packs/svc/extras/helper.rb', <<~RUBY)
+        class Helper
+          def self.greet = 'Hello from extras!'
+        end
+      RUBY
+
+      # boot.rb calls push_dir + setup so Helper is available immediately
+      write_file(dir, 'packs/svc/boot.rb', <<~RUBY)
+        pkg = Boxwerk.package
+        pkg.autoloader.push_dir('extras')
+        pkg.autoloader.setup
+
+        # Use the constant right here in boot.rb
+        BOOT_GREETING = Helper.greet
+      RUBY
+
+      write_file(dir, 'packs/svc/lib/svc.rb', <<~RUBY)
+        class Svc
+          def self.boot_greeting = BOOT_GREETING
+        end
+      RUBY
+
+      write_file(dir, 'main.rb', <<~RUBY)
+        puts Svc.boot_greeting
+      RUBY
+
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
+      assert_equal 0, status.exitstatus, 'autoloader_setup: exit status'
+      assert_match(
+        /Hello from extras!/,
+        out,
+        'autoloader_setup: constants available during boot',
+      )
     end
   end
 
