@@ -2,4 +2,5 @@
 ruby = "4.0.1"
 
 [env]
+RUBY_BOX = 1
 RUBYOPT = "-W:no-experimental"
