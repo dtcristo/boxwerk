@@ -4,13 +4,13 @@
   </h1>
 </div>
 
-Boxwerk is a Ruby package system with Box-powered constant isolation. It enforces package boundaries at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) — each package gets its own `Ruby::Box`, constants are resolved lazily on first access and cached, and only direct dependencies are accessible. Transitive dependencies are blocked.
+Boxwerk is a Ruby package system with boundary enforcement at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) — each package gets its own `Ruby::Box`. When constants are resolved, only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
 
-Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files. Packwerk itself is optional — Boxwerk works standalone.
+Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files.
 
 ## Goals
 
-- **Enforce boundaries at runtime.** `Ruby::Box` turns architectural guidelines into runtime guarantees. Undeclared dependencies and privacy violations raise `NameError`.
+- **Enforce boundaries at runtime.** `Ruby::Box` turns architectural rules into runtime guarantees. Undeclared dependencies and privacy violations raise `NameError`.
 - **Enable gradual modularization.** Add `package.yml` files around existing code and declare dependencies incrementally.
 - **Feel Ruby-native.** Integrates with Bundler, `gems.rb`/`Gemfile`, and standard Ruby tools. `boxwerk exec rake test` feels like any other Ruby command.
 - **Work standalone.** Packwerk is NOT required — Boxwerk works entirely on its own.

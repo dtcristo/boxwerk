@@ -101,7 +101,7 @@ Project binstubs take precedence, allowing custom command entry points (e.g. a `
 boxwerk exec rake test                   # Root package
 boxwerk exec -p packs/util rake test     # Specific package
 boxwerk exec --all rake test             # All packages sequentially
-boxwerk exec -g rake test               # Global context (debugging)
+boxwerk exec -g rake test                # Global context (debugging)
 ```
 
 With `--all`, each package runs in a separate subprocess for clean isolation (avoids `at_exit` conflicts from test frameworks like Minitest).
@@ -296,8 +296,8 @@ package_paths:
   - "packs/*"        # default: ["**/"]
 ```
 
-| Field           | Type | Default   | Description                                       |
-|-----------------|------|-----------|---------------------------------------------------|
+| Field           | Type | Default   | Description                                               |
+|-----------------|------|-----------|-----------------------------------------------------------|
 | `package_paths` | list | `["**/"]` | Glob patterns for where to search for `package.yml` files |
 
 By default, Boxwerk searches everywhere (`**/`) for `package.yml` files. Set `package_paths` to restrict the search to specific directories.
