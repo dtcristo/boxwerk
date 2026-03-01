@@ -4,9 +4,9 @@
   </h1>
 </div>
 
-Boxwerk is a Ruby package system with boundary enforcement at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) — each package gets its own `Ruby::Box`. When constants are resolved, only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
+Boxwerk is a Ruby package system with boundary enforcement at runtime using a [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for each package. When constants are resolved, only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
 
-Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files.
+Boxwerk reads standard [Packwerk](https://github.com/Shopify/packwerk) `package.yml` files and supports both dependency and privacy enforcement.
 
 ## Goals
 
