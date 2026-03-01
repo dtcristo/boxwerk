@@ -52,6 +52,9 @@ module Boxwerk
       # Scan default directories and register autoloads
       file_index = scan_and_register(box, package)
 
+      # Set BOXWERK_PACKAGE constant in the box for Boxwerk.package access
+      set_package_context(box, package)
+
       # Run optional per-package boot.rb, then scan additional dirs
       extra_index = run_package_boot(box, package)
       file_index.merge!(extra_index) if extra_index
@@ -142,34 +145,18 @@ module Boxwerk
     end
 
     # Runs the optional per-package boot.rb in the package's box context.
-    # Injects BOXWERK_PACKAGE (PackageContext) for the boot script to use.
     # Returns additional file index entries from configured autoload dirs.
     def run_package_boot(box, package)
       pkg_dir = package_dir(package)
       boot_script = File.join(pkg_dir, 'boot.rb')
       return nil unless File.exist?(boot_script)
 
-      # Build PackageContext with autoloader for this package
-      autoloader = PackageContext::Autoloader.new(pkg_dir)
-      context =
-        PackageContext.new(
-          name: package.name,
-          root_path: pkg_dir,
-          config: package.config,
-          autoloader: autoloader,
-        )
-
-      # Inject PackageContext into the box
-      box.const_set(:BOXWERK_PACKAGE, context)
-
-      # Set thread-local so Boxwerk.package works during boot.rb
-      Boxwerk.package = context
+      # Retrieve autoloader from the PackageContext already set on the box
+      context = box.const_get(:BOXWERK_PACKAGE)
+      autoloader = context.autoloader
 
       # Run boot.rb in the package's box
       box.require(boot_script)
-
-      # Clear thread-local after boot
-      Boxwerk.package = nil
 
       # Read back config and apply additional autoload dirs
       apply_boot_config(box, package, autoloader)
@@ -263,6 +250,32 @@ module Boxwerk
         all_packages_ref: all_packages_ref,
         package_name: package.name,
       )
+    end
+
+    # Sets the BOXWERK_PACKAGE constant in the box with a PackageContext
+    # and overrides Boxwerk.package in the box to return it.
+    def set_package_context(box, package)
+      pkg_dir = package_dir(package)
+      autoloader = PackageContext::Autoloader.new(pkg_dir)
+      context =
+        PackageContext.new(
+          name: package.name,
+          root_path: pkg_dir,
+          config: package.config,
+          autoloader: autoloader,
+        )
+      box.const_set(:BOXWERK_PACKAGE, context)
+
+      # Override Boxwerk.package in this box so it returns the box's
+      # own BOXWERK_PACKAGE. Monkey patch isolation ensures this only
+      # affects this box.
+      box.eval(<<~RUBY)
+        module Boxwerk
+          def self.package
+            BOXWERK_PACKAGE
+          end
+        end
+      RUBY
     end
 
     def package_dir(package)

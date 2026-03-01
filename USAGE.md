@@ -373,7 +373,7 @@ pkg.autoloader.collapse("lib/concerns")
 pkg.autoloader.ignore("lib/legacy")
 ```
 
-`Boxwerk.package` returns a `PackageContext` during `boot.rb` execution (thread-local, `nil` outside boot). The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
+`Boxwerk.package` returns a `PackageContext` accessible from anywhere inside a package box. The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
 
 ### Monkey Patch Isolation
 

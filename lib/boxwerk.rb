@@ -16,14 +16,11 @@ require_relative 'boxwerk/zeitwerk_scanner'
 module Boxwerk
   class << self
     # Returns the PackageContext for the current package.
-    # Available during boot.rb and at runtime inside a package box.
-    # Returns nil outside a package context.
+    # Each package box overrides this method to return its own
+    # BOXWERK_PACKAGE constant. Returns nil in root box or outside
+    # a package context.
     def package
-      Thread.current[:boxwerk_package_context]
-    end
-
-    def package=(context)
-      Thread.current[:boxwerk_package_context] = context
+      nil
     end
   end
 end
