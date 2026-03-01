@@ -347,12 +347,12 @@ class E2ERunner
       RUBY
       write_file(dir, 'script.rb', <<~RUBY)
         begin
-          _ = Greeter
-          puts "FAIL: Greeter should not be accessible in global context"
-          exit 1
-        rescue NameError
-          puts "PASS: global context has no package constants"
+          result = Greeter.hello
+          puts "PASS: global context can access all package constants (\#{result})"
           exit 0
+        rescue NameError
+          puts "FAIL: Greeter should be accessible in global context"
+          exit 1
         end
       RUBY
 
@@ -360,7 +360,7 @@ class E2ERunner
       assert_equal 0, status.exitstatus, 'global_flag: exit status'
       assert_match /PASS/,
                    out,
-                   'global_flag: no package constants in global context'
+                   'global_flag: global context accesses all package constants'
 
       # Also test -g alias
       out2, status2 = run_boxwerk(dir, 'run', '-g', 'script.rb')
@@ -431,13 +431,13 @@ class E2ERunner
         end
       RUBY
 
-      # Global context should not have access to package constants
+      # Global context should now have access to all package constants
       script = <<~STDIN
         begin
-          _ = Greeter
-          puts "FAIL"
+          result = Greeter.hello
+          puts "PASS: global resolves constants (\#{result})"
         rescue NameError
-          puts "PASS: no package constants"
+          puts "FAIL: no package constants"
         end
         exit
       STDIN
@@ -445,7 +445,7 @@ class E2ERunner
       assert_equal 0, status.exitstatus, 'console_global: exit status'
       assert_match /PASS/,
                    out,
-                   'console_global: no package constants in global context'
+                   'console_global: global resolves all package constants'
     end
   end
 

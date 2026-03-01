@@ -189,6 +189,7 @@ module Boxwerk
 
           if parsed[:global]
             box = Ruby::Box.root
+            install_global_resolver(result)
           else
             target_pkg =
               (
@@ -231,6 +232,7 @@ module Boxwerk
         result = perform_setup(packages: target_packages)
         if parsed[:global]
           box = Ruby::Box.root
+          install_global_resolver(result)
         else
           target_pkg =
             (
@@ -252,6 +254,7 @@ module Boxwerk
         target_packages = resolve_boot_targets(parsed)
         result = perform_setup(packages: target_packages)
         if parsed[:global]
+          install_global_resolver(result)
           pkg_label = 'global'
         else
           target_pkg =
@@ -387,6 +390,95 @@ module Boxwerk
           wrapped = "__dir__ = #{dir.inspect}\n" + content
           box.eval(wrapped)
         end
+      end
+
+      # Installs a resolver on Ruby::Box.root that searches ALL packages.
+      # Used for --global mode so the global context can resolve any constant.
+      def install_global_resolver(result)
+        boxes = result[:box_manager].boxes
+        file_indexes = result[:box_manager].instance_variable_get(:@file_indexes)
+
+        all_boxes =
+          result[:resolver]
+            .packages
+            .values
+            .filter_map do |pkg|
+              box = boxes[pkg.name]
+              next unless box
+              { box: box, file_index: file_indexes[pkg.name] || {} }
+            end
+
+        composite =
+          proc do |const_name|
+            name_str = const_name.to_s
+            found = false
+            value = nil
+
+            all_boxes.each do |entry|
+              box = entry[:box]
+              file_index = entry[:file_index]
+
+              has_constant =
+                file_index.key?(name_str) ||
+                  file_index.any? { |k, _| k.start_with?("#{name_str}::") } ||
+                  (
+                    begin
+                      box.const_get(const_name)
+                      true
+                    rescue NameError
+                      false
+                    end
+                  )
+
+              next unless has_constant
+
+              value =
+                begin
+                  box.const_get(const_name)
+                rescue NameError
+                  file = file_index[name_str]
+                  if file
+                    box.require(file)
+                    box.const_get(const_name)
+                  else
+                    child_key =
+                      file_index.keys.find do |k|
+                        k.start_with?("#{name_str}::")
+                      end
+                    if child_key
+                      box.require(file_index[child_key])
+                      box.const_get(const_name)
+                    else
+                      next
+                    end
+                  end
+                end
+
+              found = true
+              break
+            end
+
+            unless found
+              raise NameError.new(
+                "uninitialized constant #{name_str}",
+                const_name,
+              )
+            end
+            value
+          end
+
+        ruby_root = Ruby::Box.root
+        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        end
+        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
+        ruby_root.eval(<<~RUBY)
+          class Object
+            def self.const_missing(const_name)
+              BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
+            end
+          end
+        RUBY
       end
 
       # Installs a dependency resolver on Ruby::Box.root for the given

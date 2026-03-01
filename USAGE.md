@@ -243,7 +243,7 @@ This has important implications:
 - Code in `global/boot.rb` runs before any package boxes exist
 - Anything loaded **after** box creation is only visible in the box that loaded it
 
-Use `--global` / `-g` to run commands in the global context directly. This is useful for debugging gem loading or constant visibility issues.
+Use `--global` / `-g` to run commands in the global context directly. A composite resolver is installed on `Ruby::Box.root` so that **all** package constants are accessible — useful for scripts, debugging, or tools that need cross-package access without picking a single package.
 
 ## Global Gems
 
