@@ -68,7 +68,7 @@ bundle binstubs boxwerk
 RUBY_BOX=1 bin/boxwerk run main.rb
 ```
 
-See [USAGE.md](USAGE.md) for full documentation including CLI reference, package configuration, per-package gems, privacy enforcement, Bundler setup, and testing.
+See [USAGE.md](USAGE.md) for full documentation including CLI reference, Bundler setup, package configuration, per-package gems, privacy enforcement, and testing.
 
 ## CLI
 
