@@ -391,7 +391,7 @@ isolation.
 
 ### Box-Local Monkey-Patch Approach
 
-Rather than patching from the root box, we can **monkey-patch Bundler FROM WITHIN the child box**. Since code evaluated in a child box runs in that box's context, the patches only affect that box and don't leak:
+We can **monkey-patch Bundler FROM WITHIN the child box**. Since code evaluated in a child box runs in that box's context, the patches only affect that box and don't leak:
 
 1. **Eval patch code in package box** — In `BoxManager.boot`, after creating the box, eval a script that monkey-patches `Bundler::Runtime#setup` and `Gem` methods
 2. **Patches modify child box's `$LOAD_PATH`** — The monkey-patched code runs in the child box context, so `$LOAD_PATH` modifications affect the child box automatically (no detection needed)
