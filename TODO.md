@@ -8,7 +8,7 @@ Planned improvements for Boxwerk, ordered by priority.
 |---|------|----------|--------|
 | 1 | `Boxwerk.package` as box constant | High | Not started |
 | 2 | Immediate autoload in boot scripts (`autoloader.setup`) | High | Not started |
-| 3 | `global_eager_load` / `package_eager_load` config | High | Not started |
+| 3 | `eager_load_global` / `eager_load_packages` config | High | Not started |
 | 4 | Global context loads all package constants | High | Not started |
 | 5 | Selective package booting | High | Not started |
 | 6 | Work without gems entirely | High | Not started |
@@ -69,14 +69,14 @@ The `global/` directory at the project root is unaffected — it remains as-is.
 
 ---
 
-## 3. `global_eager_load` / `package_eager_load` Config
+## 3. `eager_load_global` / `eager_load_packages` Config
 
 **Priority: High**
 
 Two new `boxwerk.yml` options to control eager loading during boot:
 
-- **`global_eager_load`** (default: `true`) — When `true`, calls `Zeitwerk::Loader.eager_load_all` after `global/boot.rb` has run and eager-loads all files in `global/`. When `false`, skips both. The `global/boot.rb` script itself always runs regardless.
-- **`package_eager_load`** (default: `false`) — When `true`, eager-loads all constants in each package box after boot. When `false` (default), constants are lazy-loaded via autoload.
+- **`eager_load_global`** (default: `true`) — When `true`, calls `Zeitwerk::Loader.eager_load_all` after `global/boot.rb` has run and eager-loads all files in `global/`. When `false`, skips both. The `global/boot.rb` script itself always runs regardless. When `false` we're still able to lazy-load via autoload code from within `global/` from package boxes (although due to how Ruby::Box works, won't be visible as loaded in other packages).
+- **`eager_load_packages`** (default: `false`) — When `true`, eager-loads all constants in each package box after boot. When `false` (default), constants are lazy-loaded via autoload.
 
 These options do not affect `boot.rb` / `global/boot.rb` execution (always run) or automatic gem requiring from Gemfiles (always happens).
 
@@ -86,10 +86,10 @@ The call exists in `setup.rb#eager_load_zeitwerk`. It resolves pending Zeitwerk 
 
 ### Implementation Plan
 
-1. **Parse new config** — Read `global_eager_load` and `package_eager_load` from `boxwerk.yml` in `PackageResolver#load_boxwerk_config`. Pass through to `Setup.run`.
-2. **Guard `eager_load_zeitwerk`** — In `Setup.run`, only call `eager_load_zeitwerk` when `global_eager_load` is `true` (default).
-3. **Guard `global/` file loading** — In `run_global_boot`, only require non-boot global files when `global_eager_load` is `true`. `global/boot.rb` always runs.
-4. **Add package eager loading** — In `BoxManager.boot`, after all autoloads are registered and deps wired, optionally eager-load all constants in the box when `package_eager_load` is `true`.
+1. **Parse new config** — Read `eager_load_global` and `eager_load_packages` from `boxwerk.yml` in `PackageResolver#load_boxwerk_config`. Pass through to `Setup.run`.
+2. **Guard `eager_load_zeitwerk`** — In `Setup.run`, only call `eager_load_zeitwerk` when `eager_load_global` is `true` (default).
+3. **Guard `global/` file loading** — In `run_global_boot`, only require non-boot global files when `eager_load_global` is `true`. `global/boot.rb` always runs.
+4. **Add package eager loading** — In `BoxManager.boot`, after all autoloads are registered and deps wired, optionally eager-load all constants in the box when `eager_load_packages` is `true`.
 5. **Update USAGE.md** — Add config options to the `boxwerk.yml` section.
 6. **Tests** — Unit tests for both options in `setup_test.rb`.
 
