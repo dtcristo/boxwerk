@@ -34,7 +34,7 @@ Create packages with `package.yml` files:
 
 ```
 my_app/
-├── package.yml           # root package
+├── package.yml
 ├── main.rb
 ├── gems.rb
 └── packs/
@@ -88,7 +88,7 @@ See [TODO.md](TODO.md) for plans to address these and other planned features.
 
 - [`examples/minimal/`](examples/minimal/) — Three packages, dependency enforcement, no gems
 - [`examples/complex/`](examples/complex/) — Namespaced constants, privacy, per-package gems, tests
-- [`examples/rails/`](examples/rails/) — Rails with ActiveRecord, foundation package, privacy
+- [`examples/rails/`](examples/rails/) — Usage with Rails
 
 ## Development
 
