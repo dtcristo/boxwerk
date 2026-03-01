@@ -4,10 +4,10 @@ module Boxwerk
   # Finds the root package.yml directory and boots all packages.
   module Setup
     class << self
-      def run(start_dir: Dir.pwd, packages: nil)
+      def run(start_dir: Dir.pwd, packages: nil, config: {})
         root_path = find_root(start_dir)
 
-        resolver = Boxwerk::PackageResolver.new(root_path)
+        resolver = Boxwerk::PackageResolver.new(root_path, config_overrides: config)
         config = resolver.boxwerk_config
         eager_load_global = config.fetch('eager_load_global', true)
         eager_load_packages = config.fetch('eager_load_packages', false)

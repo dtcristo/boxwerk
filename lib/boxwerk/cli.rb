@@ -65,6 +65,9 @@ module Boxwerk
         puts '  -p, --package <name>         Run in a specific package box (default: .)'
         puts '      --all                    Run exec for all packages sequentially'
         puts '  -g, --global                 Run in the global context (no package)'
+        puts '      --package-paths <paths>  Comma-separated package path globs'
+        puts '      --[no-]eager-load-global Toggle global eager loading'
+        puts '      --[no-]eager-load-packages Toggle package eager loading'
         puts ''
         puts 'Examples:'
         puts '  boxwerk run main.rb'
@@ -75,10 +78,12 @@ module Boxwerk
         puts '  boxwerk console -p packs/finance'
         puts ''
         puts 'Setup:'
-        puts '  # Add gem \'boxwerk\' to your Gemfile, then:'
+        puts '  gem install boxwerk                  Install boxwerk'
+        puts '  RUBY_BOX=1 boxwerk run main.rb       Run your app'
+        puts ''
+        puts '  # Or with Bundler:'
         puts '  bundle install                       Install gems (including boxwerk)'
         puts '  bundle binstubs boxwerk              Create bin/boxwerk binstub'
-        puts '  bin/boxwerk install                  Install per-package gems'
         puts '  RUBY_BOX=1 bin/boxwerk run main.rb   Run your app'
         puts ''
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
@@ -90,6 +95,7 @@ module Boxwerk
         package_name = nil
         all = false
         global = false
+        config = {}
         remaining = []
         i = 0
 
@@ -108,6 +114,26 @@ module Boxwerk
           when '--global', '-g'
             global = true
             i += 1
+          when '--package-paths'
+            value = args[i + 1]
+            unless value
+              $stderr.puts 'Error: --package-paths requires a value'
+              exit 1
+            end
+            config['package_paths'] = value.split(',').map(&:strip)
+            i += 2
+          when '--eager-load-global'
+            config['eager_load_global'] = true
+            i += 1
+          when '--no-eager-load-global'
+            config['eager_load_global'] = false
+            i += 1
+          when '--eager-load-packages'
+            config['eager_load_packages'] = true
+            i += 1
+          when '--no-eager-load-packages'
+            config['eager_load_packages'] = false
+            i += 1
           else
             remaining = args[i..]
             break
@@ -118,6 +144,7 @@ module Boxwerk
           package: package_name,
           all: all,
           global: global,
+          config: config,
           remaining: remaining,
         }
       end
@@ -185,7 +212,8 @@ module Boxwerk
         else
           # Selective boot: only target + deps (global boots all)
           target_packages = resolve_boot_targets(parsed)
-          result = perform_setup(packages: target_packages)
+          result =
+            perform_setup(packages: target_packages, config: parsed[:config])
 
           if parsed[:global]
             box = Ruby::Box.root
@@ -229,7 +257,8 @@ module Boxwerk
         end
 
         target_packages = resolve_boot_targets(parsed)
-        result = perform_setup(packages: target_packages)
+        result =
+          perform_setup(packages: target_packages, config: parsed[:config])
         if parsed[:global]
           box = Ruby::Box.root
           install_global_resolver(result)
@@ -252,7 +281,8 @@ module Boxwerk
         parsed = parse_package_flag(args)
 
         target_packages = resolve_boot_targets(parsed)
-        result = perform_setup(packages: target_packages)
+        result =
+          perform_setup(packages: target_packages, config: parsed[:config])
         if parsed[:global]
           install_global_resolver(result)
           pkg_label = 'global'
@@ -345,8 +375,12 @@ module Boxwerk
         end
       end
 
-      def perform_setup(packages: nil)
-        Boxwerk::Setup.run(start_dir: Dir.pwd, packages: packages)
+      def perform_setup(packages: nil, config: {})
+        Boxwerk::Setup.run(
+          start_dir: Dir.pwd,
+          packages: packages,
+          config: config,
+        )
       rescue => e
         $stderr.puts "Error: #{e.message}"
         exit 1

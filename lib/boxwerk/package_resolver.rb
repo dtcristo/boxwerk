@@ -9,10 +9,10 @@ module Boxwerk
   class PackageResolver
     attr_reader :packages, :root
 
-    def initialize(root_path)
+    def initialize(root_path, config_overrides: {})
       @root_path = File.expand_path(root_path)
       @packages = {}
-      @config = load_boxwerk_config
+      @config = load_boxwerk_config.merge(config_overrides)
 
       discover_packages
     end

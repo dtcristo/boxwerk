@@ -161,11 +161,18 @@ Show usage or version.
 
 ### Options
 
-| Flag                  | Short | Applies to              | Description                                        |
-|-----------------------|-------|-------------------------|----------------------------------------------------|
-| `--package <name>`    | `-p`  | `exec`, `run`, `console`| Run in a specific package box (default: `.`)       |
-| `--all`               |       | `exec`                  | Run for all packages sequentially (subprocesses)   |
-| `--global`            | `-g`  | `exec`, `run`, `console`| Run in the global context (no package)             |
+| Flag                      | Short | Applies to              | Description                                        |
+|---------------------------|-------|-------------------------|----------------------------------------------------|
+| `--package <name>`        | `-p`  | `exec`, `run`, `console`| Run in a specific package box (default: `.`)       |
+| `--all`                   |       | `exec`                  | Run for all packages sequentially (subprocesses)   |
+| `--global`                | `-g`  | `exec`, `run`, `console`| Run in the global context (no package)             |
+| `--package-paths <paths>` |       | `exec`, `run`, `console`| Comma-separated package path globs (override `boxwerk.yml`) |
+| `--eager-load-global`     |       | `exec`, `run`, `console`| Enable global eager loading                        |
+| `--no-eager-load-global`  |       | `exec`, `run`, `console`| Disable global eager loading                       |
+| `--eager-load-packages`   |       | `exec`, `run`, `console`| Enable package eager loading                       |
+| `--no-eager-load-packages`|       | `exec`, `run`, `console`| Disable package eager loading                      |
+
+CLI config options override `boxwerk.yml` values. This enables quick configuration without creating a config file.
 
 ## Per-Package Gems
 
