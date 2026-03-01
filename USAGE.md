@@ -9,6 +9,8 @@ Complete usage guide for Boxwerk — runtime package isolation for Ruby.
 
 ## Installation
 
+### With Bundler
+
 Add `boxwerk` to your project's `gems.rb` or `Gemfile`:
 
 ```ruby
@@ -31,6 +33,22 @@ Run your application:
 ```bash
 RUBY_BOX=1 bin/boxwerk run main.rb
 ```
+
+### Without Bundler
+
+Boxwerk works without any Gemfile. Install it as a system gem:
+
+```bash
+gem install boxwerk
+```
+
+Run directly:
+
+```bash
+RUBY_BOX=1 boxwerk run main.rb
+```
+
+In this mode, no gems are loaded into the global context (except Boxwerk itself). Per-package gems are still supported if Bundler is available on the system.
 
 ## Package Configuration (package.yml)
 

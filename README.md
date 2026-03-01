@@ -29,20 +29,12 @@ Set `RUBY_BOX=1` before starting Ruby. See the [official documentation](https://
 
 ## Quick Start
 
-Add `boxwerk` to your `gems.rb`:
-
-```ruby
-source 'https://rubygems.org'
-gem 'boxwerk'
-```
-
 Create packages with `package.yml` files:
 
 ```
 my_app/
 ├── package.yml
 ├── main.rb
-├── gems.rb
 └── packs/
     ├── foo/
     │   ├── package.yml
@@ -63,12 +55,11 @@ dependencies:
 Install and run:
 
 ```bash
-bundle install
-bundle binstubs boxwerk
-RUBY_BOX=1 bin/boxwerk run main.rb
+gem install boxwerk
+RUBY_BOX=1 boxwerk run main.rb
 ```
 
-See [USAGE.md](USAGE.md) for full documentation including CLI reference, Bundler setup, package configuration, per-package gems, privacy enforcement, and testing.
+No Bundler or Gemfile required for basic usage. To use global or per-package gems, see [USAGE.md](USAGE.md).
 
 ## CLI
 

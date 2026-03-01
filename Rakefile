@@ -25,14 +25,19 @@ namespace :example do
       abort("Example not found: #{name}") unless File.directory?(dir)
 
       puts "==> example:#{name}"
-      sh(
-        { 'RUBY_BOX' => '1' },
-        File.join(dir, 'bin', 'boxwerk'),
-        'exec',
-        '--all',
-        'rake',
-        chdir: dir,
-      )
+      run_script = File.join(dir, 'run.sh')
+      if File.exist?(run_script)
+        sh({ 'RUBY_BOX' => '1' }, 'sh', run_script, chdir: dir)
+      else
+        sh(
+          { 'RUBY_BOX' => '1' },
+          File.join(dir, 'bin', 'boxwerk'),
+          'exec',
+          '--all',
+          'rake',
+          chdir: dir,
+        )
+      end
     end
   end
 end
