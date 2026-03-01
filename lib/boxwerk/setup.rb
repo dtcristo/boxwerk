@@ -4,7 +4,7 @@ module Boxwerk
   # Finds the root package.yml directory and boots all packages.
   module Setup
     class << self
-      def run(start_dir: Dir.pwd)
+      def run(start_dir: Dir.pwd, packages: nil)
         root_path = find_root(start_dir)
 
         resolver = Boxwerk::PackageResolver.new(root_path)
@@ -20,7 +20,20 @@ module Boxwerk
         eager_load_zeitwerk if eager_load_global
 
         @box_manager = Boxwerk::BoxManager.new(root_path)
-        @box_manager.boot_all(resolver, eager_load_packages: eager_load_packages)
+        if packages
+          packages.each do |pkg|
+            @box_manager.boot_package(
+              pkg,
+              resolver,
+              eager_load_packages: eager_load_packages,
+            )
+          end
+        else
+          @box_manager.boot_all(
+            resolver,
+            eager_load_packages: eager_load_packages,
+          )
+        end
 
         check_gem_conflicts(@box_manager.gem_resolver, resolver)
 

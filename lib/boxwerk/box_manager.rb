@@ -45,6 +45,26 @@ module Boxwerk
       end
     end
 
+    # Boot only the target package and its transitive dependencies.
+    def boot_package(target, resolver, eager_load_packages: false)
+      packages_to_boot = collect_transitive_deps(target, resolver, Set.new)
+      packages_to_boot << target unless packages_to_boot.include?(target)
+
+      # Boot in dependency order (deps first)
+      ordered =
+        resolver.topological_order.select { |p| packages_to_boot.include?(p) }
+      ordered.each { |package| boot(package, resolver) }
+
+      if eager_load_packages
+        ordered.each do |package|
+          box = @boxes[package.name]
+          next unless box
+          file_index = @file_indexes[package.name] || {}
+          eager_load_box(box, file_index)
+        end
+      end
+    end
+
     # Boot a single package: create box, set up gems, scan with Zeitwerk,
     # run boot.rb, register additional dirs, wire dependencies.
     def boot(package, resolver)
@@ -295,6 +315,20 @@ module Boxwerk
         next unless file
         box.require(file)
       end
+    end
+
+    # Recursively collects all transitive dependencies of a package.
+    def collect_transitive_deps(package, resolver, visited)
+      deps = Set.new
+      package.dependencies.each do |dep_name|
+        next if visited.include?(dep_name)
+        visited.add(dep_name)
+        dep = resolver.packages[dep_name]
+        next unless dep
+        deps.add(dep)
+        deps.merge(collect_transitive_deps(dep, resolver, visited))
+      end
+      deps
     end
 
     def package_dir(package)

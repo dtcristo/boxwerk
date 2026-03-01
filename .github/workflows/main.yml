@@ -25,7 +25,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Install example gems
+      - name: Install example gems and run tests
         run: |
           for dir in examples/*/; do
             echo "==> Installing gems for $dir"
@@ -35,5 +35,5 @@ jobs:
               (cd "$dir" && bin/boxwerk install)
             fi
           done
-      - name: Run tests
-        run: RUBY_BOX=1 bundle exec rake
+
+          RUBY_BOX=1 bundle exec rake

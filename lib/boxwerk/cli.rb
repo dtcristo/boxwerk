@@ -151,12 +151,9 @@ module Boxwerk
         command = parsed[:remaining][0]
         command_args = parsed[:remaining][1..] || []
 
-        result = perform_setup
-
         if parsed[:all]
-          # Run command for each package in a separate subprocess to
-          # ensure clean isolation (avoids at_exit conflicts from test
-          # frameworks like minitest registering tests globally).
+          # Boot all for --all (each subprocess boots its own target)
+          result = perform_setup
           root_path = Setup.send(:find_root, Dir.pwd)
           failed = []
 
@@ -164,7 +161,6 @@ module Boxwerk
             label = pkg.root? ? '.' : pkg.name
             pkg_name = pkg.root? ? '.' : pkg.name
             puts "==> #{label}"
-            # Clear BUNDLE_GEMFILE so the subprocess discovers it fresh
             env = { 'RUBY_BOX' => '1', 'BUNDLE_GEMFILE' => nil }
             success =
               system(
@@ -187,6 +183,10 @@ module Boxwerk
             exit 1
           end
         else
+          # Selective boot: only target + deps (global boots all)
+          target_packages = resolve_boot_targets(parsed)
+          result = perform_setup(packages: target_packages)
+
           if parsed[:global]
             box = Ruby::Box.root
           else
@@ -227,7 +227,8 @@ module Boxwerk
           exit 1
         end
 
-        result = perform_setup
+        target_packages = resolve_boot_targets(parsed)
+        result = perform_setup(packages: target_packages)
         if parsed[:global]
           box = Ruby::Box.root
         else
@@ -248,7 +249,8 @@ module Boxwerk
       def console_command(args)
         parsed = parse_package_flag(args)
 
-        result = perform_setup
+        target_packages = resolve_boot_targets(parsed)
+        result = perform_setup(packages: target_packages)
         if parsed[:global]
           pkg_label = 'global'
         else
@@ -316,8 +318,32 @@ module Boxwerk
         end
       end
 
-      def perform_setup
-        Boxwerk::Setup.run(start_dir: Dir.pwd)
+      # Determines which packages to boot based on parsed flags.
+      # Returns nil for --all or --global (boot all), or an array
+      # of target Package objects for selective booting.
+      def resolve_boot_targets(parsed)
+        return nil if parsed[:all] || parsed[:global]
+
+        # For a specific package, resolve it from package.yml discovery
+        # to get the Package object. Setup.run will boot it + deps.
+        if parsed[:package]
+          root_path = Setup.send(:find_root, Dir.pwd)
+          resolver = PackageResolver.new(root_path)
+          pkg = resolver.packages[parsed[:package]]
+          unless pkg
+            $stderr.puts "Error: Unknown package '#{parsed[:package]}'"
+            $stderr.puts "Available packages: #{resolver.packages.keys.join(', ')}"
+            exit 1
+          end
+          [pkg]
+        else
+          # Default: boot root package + deps
+          nil
+        end
+      end
+
+      def perform_setup(packages: nil)
+        Boxwerk::Setup.run(start_dir: Dir.pwd, packages: packages)
       rescue => e
         $stderr.puts "Error: #{e.message}"
         exit 1
