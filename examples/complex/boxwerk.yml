@@ -1,11 +1,10 @@
 # Limit package discovery to specific paths. Improves resolution performance
-# since there are fewer directories to search. Also lets you change the
-# default discovery directory. Default: ["**/"] (searches entire project).
+# since there are fewer directories to search.
+# Default: ["**/"] (searches entire project).
 package_paths:
   - "packs/*"
 
-# Eagerly require all constants in global/ and any dirs added via
-# Boxwerk.global.autoloader.push_dir into the root box before package boxes
+# Eagerly require all global constants into the root box before package boxes
 # are created. Ensures child boxes inherit fully resolved constants.
 # Default: true.
 eager_load_global: true
