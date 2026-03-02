@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ['David Cristofaro']
   spec.email = ['david@dtcristo.com']
 
-  spec.summary = 'Runtime package isolation for Ruby using Ruby::Box'
+  spec.summary = 'Ruby package system with Box-powered boundary enforcement'
   spec.description =
     'Boxwerk enforces package boundaries at runtime using Ruby::Box constant isolation. ' \
     'It reads standard Packwerk package.yml files but works standalone without requiring ' \

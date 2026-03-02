@@ -1,13 +1,8 @@
 # Changelog
 
-## [Unreleased] — v0.3.0
+## [Unreleased]
 
-Complete rewrite. Now reads standard Packwerk `package.yml` files.
-
-### Removed
-
-- Custom file-to-constant mapping (`Boxwerk.camelize`), replaced by Zeitwerk.
-- Namespace wrapping.
+Complete rewrite. Now reads standard Packwerk `package.yml` files. Too many changes to list.
 
 ## [v0.2.0] - 2026-01-06
 
