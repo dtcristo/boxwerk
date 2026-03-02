@@ -25,10 +25,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "4.0.1"
-      - name: Install dependencies
+      - name: Install development dependencies
         run: bundle install
       - name: Generate RDoc
-        run: bundle exec rdoc --output doc --title "Boxwerk API Documentation" lib/
+        run: rdoc --markup markdown lib/ README.md CHANGELOG.md USAGE.md
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
