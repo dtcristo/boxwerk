@@ -358,8 +358,8 @@ Files follow Zeitwerk conventions:
 ```
 global/
 ├── boot.rb           # Global boot script (optional)
-├── config.rb         → Config
-└── middleware.rb      → Middleware
+├── config.rb         # Config
+└── middleware.rb     # Middleware
 ```
 
 ```ruby
@@ -391,7 +391,7 @@ A `boot.rb` at the project root is a **root package** boot script — it runs in
 
 ## Per-Package Boot Scripts
 
-Each package can have an optional `boot.rb` that runs after the package's own constants are scanned and per-package gems are loaded, but before cross-package constants are wired. Use it to configure additional autoload dirs and collapse:
+Each package can have an optional `boot.rb` that runs after the package's own constants are scanned and per-package gems are loaded, but before cross-package constants are wired. It can be used to configure additional autoload dirs and collapse:
 
 ```ruby
 # packs/models/boot.rb
