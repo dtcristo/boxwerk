@@ -21,14 +21,13 @@ require_relative 'boxwerk/zeitwerk_scanner'
 module Boxwerk
   class << self
     # Returns the {PackageContext} for the currently executing package.
-    # Each package box overrides this method via +BOXWERK_PACKAGE+.
     # Returns +nil+ in the root box.
     # @return [PackageContext, nil]
     def package
       nil
     end
 
-    # Returns the {GlobalContext} for the root box.
+    # Returns the {GlobalContext}.
     # @return [GlobalContext]
     def global
       Ruby::Box.root.const_get(:BOXWERK_GLOBAL)
