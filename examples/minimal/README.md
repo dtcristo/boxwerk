@@ -1,6 +1,6 @@
 # Minimal Boxwerk Example
 
-Three packages demonstrating dependency enforcement — no Bundler required.
+Three packages demonstrating dependency enforcement — no Gemfile required.
 
 ## Dependency Graph
 

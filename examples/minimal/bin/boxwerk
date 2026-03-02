@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Load boxwerk directly from source (no Bundler required).
+# Load boxwerk directly from source (no Gemfile required).
 # Use exec to ensure exe/boxwerk runs as the top-level script,
 # which is required for Ruby::Box.root.eval to work correctly.
 boxwerk_exe = File.expand_path('../../../exe/boxwerk', __dir__)
