@@ -72,7 +72,7 @@ module Boxwerk
         puts 'Examples:'
         puts '  boxwerk run main.rb'
         puts '  boxwerk exec rake test'
-        puts '  boxwerk exec -p packs/util rake test'
+        puts '  boxwerk exec --package packs/util rake test'
         puts '  boxwerk exec --all rake test'
         puts '  boxwerk console'
         puts '  boxwerk console --global'
