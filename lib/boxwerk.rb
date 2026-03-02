@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'boxwerk/autoloader_mixin'
 require_relative 'boxwerk/box_manager'
 require_relative 'boxwerk/cli'
 require_relative 'boxwerk/constant_resolver'
@@ -14,23 +15,29 @@ require_relative 'boxwerk/setup'
 require_relative 'boxwerk/version'
 require_relative 'boxwerk/zeitwerk_scanner'
 
+# Boxwerk is a package isolation system for Ruby applications built on
+# Ruby::Box. It loads each package in its own +Ruby::Box+, enforcing
+# dependency and privacy boundaries declared in +package.yml+ files.
 module Boxwerk
   class << self
-    # Returns the PackageContext for the current package.
-    # Each package box overrides this method to return its own
-    # BOXWERK_PACKAGE constant. Returns nil in root box or outside
-    # a package context.
+    # Returns the {PackageContext} for the currently executing package.
+    # Each package box overrides this method via +BOXWERK_PACKAGE+.
+    # Returns +nil+ in the root box.
+    # @return [PackageContext, nil]
     def package
       nil
     end
 
-    # Returns the GlobalContext for the root box.
-    # Set during Setup.run and available in global/boot.rb and elsewhere.
+    # Returns the {GlobalContext} for the root box.
+    # Available from +global/boot.rb+ and any package boot script.
+    # @return [GlobalContext, nil]
     def global
       @global_context
     end
 
-    # Sets the GlobalContext (called by Setup.run).
+    private
+
+    # Sets the GlobalContext. Called internally by {Setup}.
     def global=(ctx)
       @global_context = ctx
     end

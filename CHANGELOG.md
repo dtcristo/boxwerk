@@ -110,6 +110,14 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - `GlobalContext::Autoloader` — public `autoload_dirs`, `collapse_dirs`,
   `ignore_dirs` readers removed; `GlobalContext#dir_info` added as the info
   command entry point.
+- `AutoloaderMixin` — shared module extracted for `GlobalContext::Autoloader`
+  and `PackageContext::Autoloader`; public API now strictly limited to
+  `push_dir`, `collapse`, `ignore`, `setup`; all internal methods private;
+  `Boxwerk.global=` made private; RDoc comments added to public API.
+- `PackageContext::Autoloader` — new constructor `new(root_path, box:, default_autoload_dirs: [])`;
+  `set_defaults` removed; `user_autoload_dirs`, `push_setup_count`,
+  `collapse_setup_count`, `user_collapse_dirs`, `user_ignore_dirs`,
+  `accumulated_file_index`, `all_collapse_dirs`, `find_root_for` all made private.
 
 ### Removed
 

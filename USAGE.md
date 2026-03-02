@@ -405,11 +405,11 @@ Methods:
 ```ruby
 Boxwerk.global.autoloader.push_dir("lib")       # Register lazy autoloads
 Boxwerk.global.autoloader.collapse("lib/utils")  # Collapse namespace
+Boxwerk.global.autoloader.ignore("lib/utils")    # Ignore from autoloading
 Boxwerk.global.autoloader.setup                  # Register any pending dirs
-Boxwerk.global.autoloader.eager_load!            # Eagerly require all registered dirs
 ```
 
-`push_dir` and `collapse` auto-call `setup` (lazy autoload registration), so constants are accessible immediately in `boot.rb` via the autoload mechanism. Files are NOT eagerly required by `push_dir`. When `eager_load_global: true`, Boxwerk calls `eager_load!` after `global/boot.rb` so child boxes inherit the constants eagerly.
+`push_dir` and `collapse` auto-call `setup` (lazy autoload registration), so constants are accessible immediately in `boot.rb` via the autoload mechanism. Files are NOT eagerly required by `push_dir`. When `eager_load_global: true`, Boxwerk eagerly requires all registered dirs after `global/boot.rb` so child boxes inherit the constants eagerly.
 
 ### Root-Level `boot.rb`
 
@@ -459,6 +459,19 @@ Helper.configure(ENV["API_KEY"])
 `setup` can be called multiple times — each call registers only the dirs added since the last call.
 
 `Boxwerk.package` returns a `PackageContext` accessible from anywhere inside a package box. The `BOXWERK_PACKAGE` constant is also set in each package box for direct access.
+
+### Autoloader Public API
+
+Both `Boxwerk.global.autoloader` and `Boxwerk.package.autoloader` expose the same four methods:
+
+| Method | Description |
+|---|---|
+| `push_dir(dir)` | Add a dir to autoload roots; registers lazy autoloads immediately |
+| `collapse(dir)` | Collapse a subdir into its parent namespace; registers immediately |
+| `ignore(dir)` | Exclude a dir from autoloading entirely |
+| `setup` | Register any pending dirs (auto-called by `push_dir` and `collapse`) |
+
+All methods return `self`, allowing chaining.
 
 ### Monkey Patch Isolation
 

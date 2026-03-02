@@ -355,7 +355,7 @@ module Boxwerk
         # Global section
         global = Boxwerk.global
         global_boot = File.join(root_path, 'global', 'boot.rb')
-        global_dir_info = global&.dir_info || {}
+        global_dir_info = global&.__send__(:dir_info) || {}
         global_autoload_dirs =
           (global_dir_info[:autoload] || []).map { |d| normalize_dir_display(d, root_path) }
         global_collapse_dirs =

@@ -14,7 +14,7 @@ module Boxwerk
 
         # Create GlobalContext and expose it as Boxwerk.global before boot.rb runs
         global_context = GlobalContext.new(root_path)
-        Boxwerk.global = global_context
+        Boxwerk.__send__(:global=, global_context)
 
         # Run global boot in root box (after gems, before package boxes).
         run_global_boot(root_path, eager_load: eager_load_global, global_context: global_context)
@@ -69,7 +69,7 @@ module Boxwerk
         @resolver = nil
         @box_manager = nil
         @booted = false
-        Boxwerk.global = nil
+        Boxwerk.__send__(:global=, nil)
       end
 
       private
@@ -111,7 +111,7 @@ module Boxwerk
         # This works regardless of eager_load_global so global constants can
         # be used in boot.rb even when eager loading is disabled.
         if File.directory?(global_dir)
-          global_context&.record_scanned_dir('global/')
+          global_context&.__send__(:record_scanned_dir, 'global/')
           entries = ZeitwerkScanner.scan(global_dir)
           global_entries = entries.reject { |e| e.file == global_boot }
           ZeitwerkScanner.register_autoloads(root_box, global_entries) if global_entries.any?
@@ -127,7 +127,7 @@ module Boxwerk
         # Eager-load AFTER boot.rb so boot scripts run first.
         if eager_load
           global_entries&.each { |e| root_box.require(e.file) if e.file }
-          global_context&.autoloader&.eager_load!
+          global_context&.autoloader&.__send__(:eager_load!)
         end
       end
 
