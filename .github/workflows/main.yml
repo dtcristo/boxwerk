@@ -24,9 +24,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
-      - name: Install example gems and run tests
+      - name: Install dependencies, install example gems, and run tests
         run: |
+          bundle install
+
           for dir in examples/*/; do
             if [ -f "$dir/bin/boxwerk" ]; then
               echo "==> Installing gems for $dir"

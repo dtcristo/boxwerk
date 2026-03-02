@@ -32,14 +32,11 @@ module Boxwerk
     # Available from +global/boot.rb+ and any package boot script.
     # @return [GlobalContext, nil]
     def global
-      @global_context
-    end
+      return nil unless defined?(Ruby::Box)
 
-    private
-
-    # Sets the GlobalContext. Called internally by {Setup}.
-    def global=(ctx)
-      @global_context = ctx
+      Ruby::Box.root.const_get(:BOXWERK_GLOBAL)
+    rescue NameError
+      nil
     end
   end
 end
