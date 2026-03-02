@@ -392,7 +392,7 @@ puts "Booting #{Config::SHOP_NAME}..."
 
 #### `Boxwerk.global.autoloader`
 
-Use `Boxwerk.global.autoloader` in `global/boot.rb` (or anywhere in global context) to register additional root-level autoload directories. Constants loaded this way are available in all package boxes.
+Use `Boxwerk.global.autoloader` in `global/boot.rb`, a package `boot.rb`, or anywhere in the application to register additional root-level autoload directories. Constants loaded this way are available in all package boxes.
 
 ```ruby
 # global/boot.rb

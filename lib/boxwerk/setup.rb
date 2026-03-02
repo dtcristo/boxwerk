@@ -14,7 +14,9 @@ module Boxwerk
 
         # Create GlobalContext and expose it as Boxwerk.global before boot.rb runs
         global_context = GlobalContext.new(root_path)
-        Ruby::Box.root.const_set(:BOXWERK_GLOBAL, global_context)
+        root_box = Ruby::Box.root
+        root_box.__send__(:remove_const, :BOXWERK_GLOBAL) if root_box.const_defined?(:BOXWERK_GLOBAL, false)
+        root_box.const_set(:BOXWERK_GLOBAL, global_context)
 
         # Run global boot in root box (after gems, before package boxes).
         run_global_boot(root_path, eager_load: eager_load_global, global_context: global_context)
@@ -69,7 +71,10 @@ module Boxwerk
         @resolver = nil
         @box_manager = nil
         @booted = false
-        Ruby::Box.root.eval('remove_const(:BOXWERK_GLOBAL) rescue nil') if defined?(Ruby::Box)
+        if defined?(Ruby::Box)
+          root_box = Ruby::Box.root
+          root_box.__send__(:remove_const, :BOXWERK_GLOBAL) if root_box.const_defined?(:BOXWERK_GLOBAL, false)
+        end
       end
 
       private

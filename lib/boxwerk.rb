@@ -29,14 +29,9 @@ module Boxwerk
     end
 
     # Returns the {GlobalContext} for the root box.
-    # Available from +global/boot.rb+ and any package boot script.
-    # @return [GlobalContext, nil]
+    # @return [GlobalContext]
     def global
-      return nil unless defined?(Ruby::Box)
-
       Ruby::Box.root.const_get(:BOXWERK_GLOBAL)
-    rescue NameError
-      nil
     end
   end
 end

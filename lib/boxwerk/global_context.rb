@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Runtime context for the root box, accessible via +Boxwerk.global+.
-  # Available during +global/boot.rb+ execution and throughout the application.
+  # Runtime context for the root box, accessible via +Boxwerk.global+ from
+  # any box context (global boot, package boot, or application code).
   class GlobalContext
     # @return [GlobalContext::Autoloader] Autoloader configuration for the root box.
     attr_reader :autoloader

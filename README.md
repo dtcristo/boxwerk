@@ -8,6 +8,8 @@ Boxwerk is a tool for creating modular Ruby and Rails applications. It enables y
 
 As your application grows, Boxwerk helps prevent accidental coupling, enforces modularity, and makes it easier to understand and modify code without breaking other parts of the system.
 
+**[Usage Guide](USAGE.md)** · **[API Documentation](https://dtcristo.github.io/boxwerk/)** · **[Changelog](CHANGELOG.md)**
+
 ## Features
 
 - Boxwerk reads standard Packwerk `package.yml` files, supporting both dependency and privacy enforcement. Packwerk itself is not required.
