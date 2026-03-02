@@ -21,8 +21,8 @@ Packwerk `package.yml` files without requiring Packwerk.
 - **`Boxwerk.package`** — returns a `PackageContext` in per-package `boot.rb`
   with `name`, `root?`, `config`, `root_path`, and `autoloader`.
 - **`Boxwerk.global`** — returns a `GlobalContext` (stored as `BOXWERK_GLOBAL`
-  in the root box) in `global/boot.rb`; mirrors how `Boxwerk.package` uses
-  `BOXWERK_PACKAGE`.
+  in the root box) from any box context — global boot, package boot, or
+  application code.
 - **Autoloader API** — `push_dir`, `collapse`, `ignore`, `setup` on both
   `PackageContext::Autoloader` and `GlobalContext::Autoloader`; shared via
   `AutoloaderMixin`. `push_dir` and `collapse` auto-call `setup` so constants
