@@ -27,4 +27,18 @@ class OrderTest < Minitest::Test
     line = Orders::LineItem.new(menu_item: item, quantity: 3)
     assert_equal 900, line.total_cents
   end
+
+  # Isolation: orders depends only on packs/menu.
+  # Constants from packages that are not direct dependencies are blocked.
+  #
+  # Note: qualified access via a shared namespace (e.g. Menu::Recipe) is not
+  # blocked at the box level once the parent module is resolved — this is a
+  # known limitation of the Ruby::Box approach.
+  def test_cannot_access_loyalty
+    assert_raises(NameError) { Loyalty }
+  end
+
+  def test_cannot_access_kitchen
+    assert_raises(NameError) { Kitchen }
+  end
 end

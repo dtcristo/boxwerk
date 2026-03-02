@@ -175,6 +175,8 @@ Show usage or version.
 
 CLI config options override `boxwerk.yml` values. This enables quick configuration without creating a config file.
 
+Package names passed to `--package` are normalized: leading `./` and trailing `/` are stripped, so `./packs/loyalty`, `packs/loyalty/`, and `packs/loyalty` all refer to the same package.
+
 ## Per-Package Gems
 
 Each package can have its own `Gemfile`/`gems.rb` and corresponding lockfile. Different packages can use different versions of the same gem.
@@ -379,6 +381,26 @@ An optional `global/boot.rb` script runs in the root box after global files are 
 require 'dotenv/load'
 puts "Booting #{Config::SHOP_NAME}..."
 ```
+
+#### `Boxwerk.global.autoloader`
+
+Use `Boxwerk.global.autoloader` in `global/boot.rb` (or anywhere in global context) to register additional root-level autoload directories. Constants loaded this way are available in all package boxes.
+
+```ruby
+# global/boot.rb
+# Load shared utilities from a custom lib/ dir
+Boxwerk.global.autoloader.push_dir(File.expand_path('../lib', __dir__))
+```
+
+Methods mirror per-package autoloader:
+
+```ruby
+Boxwerk.global.autoloader.push_dir("lib")       # Add autoload root
+Boxwerk.global.autoloader.collapse("lib/utils")  # Collapse namespace
+Boxwerk.global.autoloader.setup                  # Register immediately
+```
+
+`push_dir` and `collapse` auto-call `setup`, so constants are available right away. Depending on `eager_load_global`, new dirs are also eager-loaded.
 
 ### Root-Level `boot.rb`
 

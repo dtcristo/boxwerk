@@ -12,8 +12,12 @@ module Boxwerk
         eager_load_global = config.fetch('eager_load_global', true)
         eager_load_packages = config.fetch('eager_load_packages', false)
 
+        # Create GlobalContext and expose it as Boxwerk.global before boot.rb runs
+        global_context = GlobalContext.new(root_path)
+        Boxwerk.global = global_context
+
         # Run global boot in root box (after gems, before package boxes).
-        run_global_boot(root_path, eager_load: eager_load_global)
+        run_global_boot(root_path, eager_load: eager_load_global, global_context: global_context)
 
         # Eager-load all Zeitwerk-managed constants in root box so child
         # boxes inherit fully resolved constants (not pending autoloads).
@@ -65,6 +69,7 @@ module Boxwerk
         @resolver = nil
         @box_manager = nil
         @booted = false
+        Boxwerk.global = nil
       end
 
       private
@@ -95,7 +100,7 @@ module Boxwerk
       #
       # Root-level boot.rb is NOT handled here — it runs in the root
       # package box via BoxManager (like any other package boot.rb).
-      def run_global_boot(root_path, eager_load: true)
+      def run_global_boot(root_path, eager_load: true, global_context: nil)
         root_box = Ruby::Box.root
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
@@ -113,6 +118,12 @@ module Boxwerk
 
         # Run global/boot.rb in root box (always, regardless of eager_load)
         root_box.require(global_boot) if File.exist?(global_boot)
+
+        # After global/boot.rb, re-setup the global autoloader to pick up
+        # any dirs added via Boxwerk.global.autoloader.push_dir during boot
+        # that haven't been registered yet. Since push_dir auto-calls setup,
+        # this is mainly a safety net for dirs added outside of push_dir.
+        global_context&.autoloader&.setup
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)

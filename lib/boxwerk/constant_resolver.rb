@@ -155,6 +155,9 @@ module Boxwerk
     # Searches all packages (via lazy ref) for one whose file_index
     # contains the given constant name. Returns a hash with :package_name
     # and :private (boolean), or nil if not found.
+    #
+    # For packages that weren't booted (not in file_indexes), does a
+    # lightweight file-system scan so hints work with selective booting.
     def self.find_hint(name_str, all_packages_ref)
       return nil unless all_packages_ref
 
@@ -168,9 +171,18 @@ module Boxwerk
         next if pkg.name == self_name
         next if dep_names.include?(pkg.name)
 
-        pkg_file_index = file_indexes[pkg.name] || {}
-        next unless pkg_file_index.key?(name_str) ||
-          pkg_file_index.any? { |k, _| k.start_with?("#{name_str}::") }
+        pkg_file_index = file_indexes[pkg.name]
+
+        if pkg_file_index
+          # Package was booted — use its file index directly
+          next unless pkg_file_index.key?(name_str) ||
+            pkg_file_index.any? { |k, _| k.start_with?("#{name_str}::") }
+        else
+          # Package was not booted — do a lightweight file-system scan
+          pkg_file_index = scan_package_for_hint(pkg, root_path)
+          next unless pkg_file_index.key?(name_str) ||
+            pkg_file_index.any? { |k, _| k.start_with?("#{name_str}::") }
+        end
 
         pub_consts = PrivacyChecker.public_constants(pkg, root_path)
         is_private =
@@ -184,6 +196,41 @@ module Boxwerk
         return { package_name: pkg.name, private: is_private }
       end
       nil
+    end
+
+    # Lightweight file-system scan to build a constant → file map for a
+    # package without booting its box. Used for NameError hints.
+    #
+    # Does NOT use Zeitwerk::Loader (which registers dirs globally and
+    # would conflict if called twice for the same dir). Instead performs
+    # a plain Dir.glob walk with Zeitwerk::Inflector for naming.
+    def self.scan_package_for_hint(pkg, root_path)
+      pkg_dir =
+        if pkg.root?
+          root_path
+        else
+          File.join(root_path, pkg.name)
+        end
+
+      lib_dir = pkg.root? ? nil : File.join(pkg_dir, 'lib')
+      pub_dir = PrivacyChecker.public_path_for(pkg, root_path)
+
+      inflector = Zeitwerk::Inflector.new
+      result = {}
+
+      [lib_dir, pub_dir].compact.each do |dir|
+        next unless File.directory?(dir)
+
+        Dir.glob(File.join(dir, '**', '*.rb')).sort.each do |abspath|
+          relative = abspath.delete_prefix("#{dir}/").delete_suffix('.rb')
+          parts = relative.split('/')
+          cnames = parts.map { |part| inflector.camelize(part, abspath) }
+          full_path = cnames.join('::')
+          result[full_path] ||= abspath
+        end
+      end
+
+      result
     end
   end
 end

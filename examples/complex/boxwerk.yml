@@ -1,2 +1,8 @@
 package_paths:
   - "packs/*"
+
+# Eager-load Zeitwerk-managed constants and global/ files into root box.
+eager_load_global: true
+
+# Eager-load all constants in each package box after boot.
+eager_load_packages: true

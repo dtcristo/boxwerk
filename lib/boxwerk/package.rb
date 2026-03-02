@@ -51,6 +51,13 @@ module Boxwerk
         else
           relative_path(pkg_dir, root_path)
         end
+
+      # Normalize dependency names declared in the package.yml
+      if config['dependencies']
+        config = config.dup
+        config['dependencies'] = config['dependencies'].map { |d| normalize(d) }
+      end
+
       new(name: name, config: config)
     end
 
@@ -65,6 +72,16 @@ module Boxwerk
           'dependencies' => all_package_names.reject { |n| n == '.' },
         },
       )
+    end
+
+    # Normalizes a package name: strips leading ./ and trailing /.
+    # Allows users to write packs/loyalty/, ./packs/loyalty, or packs/loyalty
+    # interchangeably in package.yml dependencies and CLI --package flag.
+    def self.normalize(name)
+      name = name.to_s.strip
+      name = name.sub(%r{\A\./}, '')
+      name = name.sub(%r{/\z}, '')
+      name
     end
 
     def self.relative_path(path, base)

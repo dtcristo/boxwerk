@@ -46,9 +46,17 @@ module Boxwerk
     end
 
     # Boot only the target package and its transitive dependencies.
+    # If the target (or any dep) has no enforce_dependencies, boot all
+    # packages since it may need to access constants from any of them.
     def boot_package(target, resolver, eager_load_packages: false)
       packages_to_boot = collect_transitive_deps(target, resolver, Set.new)
       packages_to_boot << target unless packages_to_boot.include?(target)
+
+      # If any package in the set doesn't enforce dependencies, it can
+      # access constants from all packages — boot everything.
+      if packages_to_boot.any? { |p| !p.enforce_dependencies? }
+        packages_to_boot = resolver.topological_order.to_set
+      end
 
       # Boot in dependency order (deps first)
       ordered =
@@ -193,8 +201,10 @@ module Boxwerk
     end
 
     # Reads autoload configuration from the PackageContext autoloader
-    # and registers additional autoloads. Skips entries already
-    # registered by autoloader.setup during boot.rb execution.
+    # and returns the merged file index. Dirs already registered via
+    # autoloader.setup (auto-called by push_dir/collapse during boot.rb)
+    # are included via accumulated_file_index. Any remaining unregistered
+    # dirs are registered here.
     def apply_boot_config(box, package, autoloader)
       pkg_dir = package_dir(package)
       all_entries = []
@@ -211,10 +221,18 @@ module Boxwerk
         all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
       end
 
-      return nil if all_entries.empty?
+      new_index =
+        if all_entries.empty?
+          {}
+        else
+          ZeitwerkScanner.register_autoloads(box, all_entries)
+          ZeitwerkScanner.build_file_index(all_entries)
+        end
 
-      ZeitwerkScanner.register_autoloads(box, all_entries)
-      ZeitwerkScanner.build_file_index(all_entries)
+      # Merge any file index entries accumulated during auto-setup calls
+      accumulated = autoloader.accumulated_file_index
+      combined = accumulated.merge(new_index)
+      combined.empty? ? nil : combined
     end
 
     # Installs a const_missing handler on the box that searches dependency
@@ -262,8 +280,6 @@ module Boxwerk
         }
       end
 
-      return if deps_config.empty?
-
       # Pass references for lazy hint lookup — other packages may not
       # have been booted yet when this runs.
       dep_names = search_packages.map(&:name).to_set
@@ -274,6 +290,10 @@ module Boxwerk
         dep_names: dep_names,
         self_name: package.name,
       }
+
+      # Always install a resolver so that NameError hints work even when
+      # there are no declared dependencies.
+      return if deps_config.empty? && package_resolver.packages.size <= 1
 
       ConstantResolver.install_dependency_resolver(
         box,

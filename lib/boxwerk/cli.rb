@@ -152,7 +152,8 @@ module Boxwerk
       # Resolves the target box for a command given parsed flags.
       def resolve_target_box(result, package_name)
         if package_name
-          box = result[:box_manager].boxes[package_name]
+          normalized = Package.normalize(package_name)
+          box = result[:box_manager].boxes[normalized]
           unless box
             $stderr.puts "Error: Unknown package '#{package_name}'"
             $stderr.puts "Available packages: #{result[:resolver].packages.keys.join(', ')}"
@@ -368,7 +369,8 @@ module Boxwerk
         if parsed[:package]
           root_path = Setup.send(:find_root, Dir.pwd)
           resolver = PackageResolver.new(root_path)
-          pkg = resolver.packages[parsed[:package]]
+          normalized = Package.normalize(parsed[:package])
+          pkg = resolver.packages[normalized]
           unless pkg
             $stderr.puts "Error: Unknown package '#{parsed[:package]}'"
             $stderr.puts "Available packages: #{resolver.packages.keys.join(', ')}"

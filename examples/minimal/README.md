@@ -2,14 +2,16 @@
 
 Three packages demonstrating dependency enforcement — no Bundler required.
 
+## Dependency Graph
+
 ```
-.                    → depends on foo, bar
-packs/foo            → no dependencies
-packs/bar            → depends on baz
-packs/baz            → no dependencies
+.
+├── packs/foo
+└── packs/bar
+    └── packs/baz
 ```
 
-Root can access `Foo` and `Bar` (direct dependencies) but not `Baz` (transitive).
+Root can access `Foo` and `Bar` (direct dependencies) but not `Baz` (transitive only).
 
 ## Run
 

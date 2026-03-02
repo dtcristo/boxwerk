@@ -20,4 +20,18 @@ class CardTest < Minitest::Test
     refute_nil card.member_name
     refute_empty card.member_name
   end
+
+  # Isolation: loyalty has no dependencies.
+  # Constants from all other packages must not be accessible.
+  def test_cannot_access_menu
+    assert_raises(NameError) { Menu }
+  end
+
+  def test_cannot_access_orders
+    assert_raises(NameError) { Orders }
+  end
+
+  def test_cannot_access_kitchen
+    assert_raises(NameError) { Kitchen }
+  end
 end

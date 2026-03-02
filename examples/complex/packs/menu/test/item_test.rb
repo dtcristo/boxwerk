@@ -26,4 +26,18 @@ class ItemTest < Minitest::Test
       )
     assert_equal 'grind → brew → steam → pour', recipe.instruction
   end
+
+  # Isolation: menu has no dependencies, so constants from other packages
+  # must not be accessible.
+  def test_cannot_access_orders
+    assert_raises(NameError) { Orders }
+  end
+
+  def test_cannot_access_loyalty
+    assert_raises(NameError) { Loyalty }
+  end
+
+  def test_cannot_access_kitchen
+    assert_raises(NameError) { Kitchen }
+  end
 end

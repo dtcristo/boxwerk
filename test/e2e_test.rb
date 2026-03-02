@@ -53,6 +53,9 @@ class E2ERunner
     test_bundle_exec_reexec
     test_exec_project_binstub
     test_autoloader_setup_in_boot
+    test_global_autoloader
+    test_package_name_normalization
+    test_nameerror_hint_child_package
 
     puts ''
     puts '=' * 60
@@ -566,7 +569,112 @@ class E2ERunner
     end
   end
 
-  # --- Helpers ---
+  def test_global_autoloader
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/svc'])
+      create_package(dir, 'svc')
+
+      # Add a lib dir at the root with a global utility
+      write_file(dir, 'lib/utils.rb', <<~RUBY)
+        module Utils
+          def self.ping = 'pong'
+        end
+      RUBY
+
+      # global/boot.rb pushes the lib dir via Boxwerk.global.autoloader
+      write_file(dir, 'global/boot.rb', <<~RUBY)
+        Boxwerk.global.autoloader.push_dir(File.expand_path('../lib', __dir__))
+      RUBY
+
+      write_file(dir, 'packs/svc/lib/svc.rb', <<~RUBY)
+        class Svc
+          def self.ping = Utils.ping
+        end
+      RUBY
+
+      write_file(dir, 'main.rb', <<~RUBY)
+        puts Svc.ping
+      RUBY
+
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
+      assert_equal 0, status.exitstatus, 'global_autoloader: exit status'
+      assert_match(/pong/, out, 'global_autoloader: constant available in package')
+    end
+  end
+
+  def test_package_name_normalization
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/svc'])
+      create_package(dir, 'svc')
+
+      write_file(dir, 'packs/svc/lib/svc.rb', <<~RUBY)
+        class Svc
+          def self.name_check = 'ok'
+        end
+      RUBY
+
+      write_file(dir, 'main.rb', <<~RUBY)
+        puts Svc.name_check
+      RUBY
+
+      # Script in the package dir (exec chdirs to the package)
+      write_file(dir, 'packs/svc/check.rb', <<~RUBY)
+        puts Svc.name_check
+      RUBY
+
+      # Both ./packs/svc and packs/svc/ should be treated the same
+      out1, status1 = run_boxwerk(dir, 'exec', '-p', './packs/svc', 'check.rb')
+      out2, status2 = run_boxwerk(dir, 'exec', '-p', 'packs/svc/', 'check.rb')
+
+      assert_equal 0, status1.exitstatus, 'package_name_normalization: ./packs/svc exit status'
+      assert_equal 0, status2.exitstatus, 'package_name_normalization: packs/svc/ exit status'
+      assert_match(/ok/, out1, 'package_name_normalization: ./packs/svc output')
+      assert_match(/ok/, out2, 'package_name_normalization: packs/svc/ output')
+    end
+  end
+
+  def test_nameerror_hint_child_package
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/a', 'packs/b'])
+      create_package(dir, 'a', dependencies: [])
+      create_package(dir, 'b', dependencies: [])
+
+      # packs/b defines B::Service
+      write_file(dir, 'packs/b/lib/b/service.rb', <<~RUBY)
+        module B
+          class Service
+            def self.call = 'b_service'
+          end
+        end
+      RUBY
+
+      # packs/a does not depend on packs/b
+      write_file(dir, 'packs/a/lib/a.rb', <<~RUBY)
+        module A
+        end
+      RUBY
+
+      # Script in packs/a context — exec chdirs to the package dir
+      write_file(dir, 'packs/a/check.rb', <<~RUBY)
+        begin
+          B
+        rescue NameError => e
+          puts e.message
+        end
+      RUBY
+
+      out, status =
+        run_boxwerk(dir, 'exec', '-p', 'packs/a', 'check.rb')
+      assert_equal 0, status.exitstatus, 'nameerror_hint_child: exit status'
+      assert_match(
+        /packs\/b/,
+        out,
+        'nameerror_hint_child: hint mentions packs/b',
+      )
+    end
+  end
+
+
 
   def with_project
     Dir.mktmpdir { |dir| yield dir }

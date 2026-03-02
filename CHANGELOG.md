@@ -40,7 +40,22 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - Zeitwerk-based file scanning and inflection (`ZeitwerkScanner`).
 - `irb` and `zeitwerk` gem dependencies.
 - `ARCHITECTURE.md`, `TODO.md`, `AGENTS.md`.
-- E2E test suite (57 tests) alongside unit/integration tests (69 tests).
+- E2E test suite (71 tests) alongside unit/integration tests (118 tests).
+- `Boxwerk.global` API — `Boxwerk.global.autoloader` in `global/boot.rb`
+  registers extra root-level autoload dirs whose constants are available in
+  all package boxes. Supports `push_dir`, `collapse`, `setup`.
+- `autoloader.setup` can be called in a per-package `boot.rb` to make newly
+  added dirs available immediately (no longer requires explicit call — `push_dir`
+  and `collapse` now auto-call `setup`).
+- Package name normalization — leading `./` and trailing `/` are stripped from
+  package names passed to `--package` and in `package.yml` dependencies.
+- NameError hints now work when running in a child package context (e.g.
+  `boxwerk exec -p packs/orders`) — hints reference the package name even
+  for packages not booted in that run.
+- Packages without `enforce_dependencies: true` correctly access all constants
+  when run via selective boot (`-p`).
+- `examples/complex` — demonstrates `eager_load_global`, `eager_load_packages`,
+  `Boxwerk.global.autoloader.push_dir`, and package isolation tests.
 
 ### Removed
 

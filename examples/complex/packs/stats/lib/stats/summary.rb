@@ -11,9 +11,7 @@ module Stats
 
       if Orders.orders.any?
         total = Orders.orders.sum(&:total_cents)
-        puts "  Revenue:        #{format("#{Config::CURRENCY}%.2f", total / 100.0)}".colorize(
-               :yellow,
-             )
+        puts "  Revenue:        #{CurrencyFormatter.format(total)}".colorize(:yellow)
       end
     end
   end

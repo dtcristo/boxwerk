@@ -27,8 +27,9 @@ module Boxwerk
     # collects configuration. Actual autoload registration is handled by
     # BoxManager via ZeitwerkScanner.
     #
-    # Call `setup` in boot.rb to make pushed/collapsed dirs available
-    # immediately (before boot.rb finishes).
+    # Autoload registration happens immediately when push_dir or collapse
+    # is called from within boot.rb, making added constants available for
+    # use later in the same script. Explicit `setup` calls are not required.
     class Autoloader
       attr_reader :autoload_dirs, :collapse_dirs, :ignore_dirs
 
@@ -43,10 +44,12 @@ module Boxwerk
 
       def push_dir(dir)
         @autoload_dirs << dir
+        setup
       end
 
       def collapse(dir)
         @collapse_dirs << dir
+        setup
       end
 
       def ignore(dir)
@@ -55,7 +58,8 @@ module Boxwerk
 
       # Immediately scan and register autoloads for any dirs added via
       # push_dir or collapse since the last setup call (or the beginning).
-      # This makes constants available during boot.rb execution.
+      # Called automatically by push_dir/collapse so constants are available
+      # immediately in boot.rb without an explicit setup call.
       def setup
         return unless @box
 
@@ -78,7 +82,16 @@ module Boxwerk
         return if all_entries.empty?
 
         ZeitwerkScanner.register_autoloads(@box, all_entries)
-        ZeitwerkScanner.build_file_index(all_entries)
+        file_index = ZeitwerkScanner.build_file_index(all_entries)
+        # Accumulate entries so apply_boot_config can merge into file_indexes
+        @accumulated_file_index ||= {}
+        @accumulated_file_index.merge!(file_index)
+        file_index
+      end
+
+      # Returns file index accumulated from all setup calls (for BoxManager).
+      def accumulated_file_index
+        @accumulated_file_index || {}
       end
 
       # Number of push_dir entries already registered via setup.
