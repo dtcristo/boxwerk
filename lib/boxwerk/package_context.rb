@@ -30,16 +30,11 @@ module Boxwerk
     # Autoload registration happens immediately when push_dir or collapse
     # is called from within boot.rb, making added constants available for
     # use later in the same script. Explicit `setup` calls are not required.
-    #
-    # autoload_dirs/collapse_dirs/ignore_dirs return default dirs (lib/, public/)
-    # first, followed by any dirs added via push_dir/collapse/ignore in boot.rb.
     class Autoloader
       def initialize(root_path, box: nil)
         @root_path = root_path
         @box = box
         @default_autoload_dirs = []
-        @default_collapse_dirs = []
-        @default_ignore_dirs = []
         @user_autoload_dirs = []
         @user_collapse_dirs = []
         @user_ignore_dirs = []
@@ -47,18 +42,12 @@ module Boxwerk
       end
 
       # Called by BoxManager after scanning to inject default dirs.
-      def set_defaults(autoload_dirs: [], collapse_dirs: [], ignore_dirs: [])
+      def set_defaults(autoload_dirs: [])
         @default_autoload_dirs = autoload_dirs
-        @default_collapse_dirs = collapse_dirs
-        @default_ignore_dirs = ignore_dirs
       end
 
-      def autoload_dirs = @default_autoload_dirs + @user_autoload_dirs
-      def collapse_dirs = @default_collapse_dirs + @user_collapse_dirs
-      def ignore_dirs   = @default_ignore_dirs + @user_ignore_dirs
-
-      # All collapse dirs (default + user) for cleanup after boot.rb
-      def all_collapse_dirs = @default_collapse_dirs + @user_collapse_dirs
+      # All collapse dirs for cleanup after boot.rb (used by BoxManager).
+      def all_collapse_dirs = @user_collapse_dirs
 
       # For internal use by BoxManager — only user-added dirs (not defaults).
       def user_autoload_dirs = @user_autoload_dirs

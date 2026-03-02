@@ -355,19 +355,13 @@ module Boxwerk
         # Global section
         global = Boxwerk.global
         global_boot = File.join(root_path, 'global', 'boot.rb')
+        global_dir_info = global&.dir_info || {}
         global_autoload_dirs =
-          (global&.default_dirs || []) +
-            (global&.autoloader&.autoload_dirs || []).map do |d|
-              normalize_dir_display(d, root_path)
-            end
+          (global_dir_info[:autoload] || []).map { |d| normalize_dir_display(d, root_path) }
         global_collapse_dirs =
-          (global&.autoloader&.collapse_dirs || []).map do |d|
-            normalize_dir_display(d, root_path)
-          end
+          (global_dir_info[:collapse] || []).map { |d| normalize_dir_display(d, root_path) }
         global_ignore_dirs =
-          (global&.autoloader&.ignore_dirs || []).map do |d|
-            normalize_dir_display(d, root_path)
-          end
+          (global_dir_info[:ignore] || []).map { |d| normalize_dir_display(d, root_path) }
         root_gems =
           gem_resolver.gems_for(resolver.root)&.select { |g| !g.autorequire.nil? }
         global_has_content =
@@ -377,24 +371,12 @@ module Boxwerk
           puts 'Global'
           puts ''
           puts "  boot: global/boot.rb" if File.exist?(global_boot)
-          if global_autoload_dirs.any?
-            puts '  autoload_dirs:'
-            global_autoload_dirs.each do |dir|
-              suffix = eager_global ? ' (eager)' : ''
-              puts "    #{dir}#{suffix}"
-            end
-          end
-          if global_collapse_dirs.any?
-            puts '  collapse_dirs:'
-            global_collapse_dirs.each { |dir| puts "    #{dir}" }
-          end
-          if global_ignore_dirs.any?
-            puts '  ignore_dirs:'
-            global_ignore_dirs.each { |dir| puts "    #{dir}" }
-          end
+          autoload_label = eager_global ? 'eager_load' : 'autoload'
+          print_dir_section('  ', autoload_label, global_autoload_dirs)
+          print_dir_section('  ', 'collapse', global_collapse_dirs)
+          print_dir_section('  ', 'ignore', global_ignore_dirs)
           if root_gems&.any?
-            puts '  gems:'
-            root_gems.each { |g| puts "    #{g.name} (#{g.version})" }
+            print_inline_or_multiline('  ', 'gems', root_gems.map { |g| "#{g.name} (#{g.version})" })
           end
           puts ''
         end
@@ -424,16 +406,21 @@ module Boxwerk
         root_path = Setup.send(:find_root, Dir.pwd)
 
         resolver = PackageResolver.new(root_path)
-        installed = 0
+        has_gemfile = false
 
-        resolver.topological_order.each do |pkg|
+        # Install root (global) gems first, then packages in dependency order
+        ordered =
+          [resolver.root] + resolver.topological_order.reject(&:root?)
+        ordered.each do |pkg|
           pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
           gemfile =
             %w[gems.rb Gemfile].find { |f| File.exist?(File.join(pkg_dir, f)) }
           next unless gemfile
 
-          label = pkg.root? ? '.' : pkg.name
-          puts "Installing gems for #{label}..."
+          has_gemfile = true
+          label = pkg.root? ? 'global gems' : "gems for #{pkg.name}"
+          print "Installing #{label}..."
+          $stdout.flush
           Dir.chdir(pkg_dir) do
             # Clear Bundler env vars so each package uses its own Gemfile,
             # not the parent process's BUNDLE_GEMFILE or BUNDLE_PATH.
@@ -442,18 +429,15 @@ module Boxwerk
                 system('bundle', 'install', '--retry', '3', '--quiet')
               end
             unless success
-              $stderr.puts "  Error: bundle install failed in #{label}"
+              $stderr.puts " Error: bundle install failed in #{pkg.root? ? '.' : pkg.name}"
               exit 1
             end
           end
-          installed += 1
+          puts 'Done!'
+          puts ''
         end
 
-        if installed == 0
-          puts 'No packages with a Gemfile or gems.rb found.'
-        else
-          puts "Installed gems for #{installed} package#{'s' unless installed == 1}."
-        end
+        puts 'No packages with a Gemfile or gems.rb found.' unless has_gemfile
       end
 
       # Determines which packages to boot based on parsed flags.
@@ -767,16 +751,14 @@ module Boxwerk
         flags << 'dependencies' if pkg.enforce_dependencies?
         flags << 'privacy' if pkg.config['enforce_privacy']
         if flags.any?
-          puts '    enforcements:'
-          flags.each { |f| puts "      #{f}" }
+          print_inline_or_multiline('    ', 'enforcements', flags)
         else
           puts '    enforcements: none'
         end
 
         deps = pkg.dependencies
         if deps.any?
-          puts '    dependencies:'
-          deps.each { |d| puts "      #{d}" }
+          print_inline_or_multiline('    ', 'dependencies', deps)
         else
           puts '    dependencies: none'
         end
@@ -784,38 +766,26 @@ module Boxwerk
         pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
         puts "    boot: boot.rb" if File.exist?(File.join(pkg_dir, 'boot.rb'))
 
-        # Autoload dirs: default (lib/, public/) + user push_dirs from boot.rb
-        box = box_manager.boxes[pkg.name]
-        al = box&.const_get(:BOXWERK_PACKAGE)&.autoloader
-        autoload_dirs = al&.autoload_dirs || []
-        collapse_dirs = al&.collapse_dirs || []
-        ignore_dirs = al&.ignore_dirs || []
+        # Autoload dirs from box_manager dir info
+        dirs = box_manager.package_dirs_info[pkg.name] || {}
+        autoload_dirs = dirs[:autoload] || []
+        collapse_dirs = dirs[:collapse] || []
+        ignore_dirs   = dirs[:ignore] || []
 
-        if autoload_dirs.any?
-          puts '    autoload_dirs:'
-          autoload_dirs.each do |d|
-            suffix = eager_packages ? ' (eager)' : ''
-            puts "      #{normalize_dir_display(d, pkg_dir)}#{suffix}"
-          end
-        end
-        if collapse_dirs.any?
-          puts '    collapse_dirs:'
-          collapse_dirs.each { |d| puts "      #{normalize_dir_display(d, pkg_dir)}" }
-        end
-        if ignore_dirs.any?
-          puts '    ignore_dirs:'
-          ignore_dirs.each { |d| puts "      #{normalize_dir_display(d, pkg_dir)}" }
-        end
+        autoload_label = eager_packages ? 'eager_load' : 'autoload'
+        print_dir_section('    ', autoload_label, autoload_dirs)
+        print_dir_section('    ', 'collapse', collapse_dirs)
+        print_dir_section('    ', 'ignore', ignore_dirs)
 
         # pack_public sigil constants
         pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
         if pack_public&.any?
-          puts "    pack_public: #{pack_public.sort.join(', ')}"
+          print_inline_or_multiline('    ', 'pack_public constants', pack_public.sort)
         end
 
         private_consts = PrivacyChecker.private_constants_list(pkg)
         if private_consts.any?
-          puts "    private constants: #{private_consts.sort.join(', ')}"
+          print_inline_or_multiline('    ', 'private constants', private_consts.sort)
         end
 
         # Direct gems — last; root gems shown in Global section
@@ -823,8 +793,7 @@ module Boxwerk
           gems = gem_resolver.gems_for(pkg)
           direct_gems = gems&.select { |g| !g.autorequire.nil? }
           if direct_gems&.any?
-            puts '    gems:'
-            direct_gems.each { |g| puts "      #{g.name} (#{g.version})" }
+            print_inline_or_multiline('    ', 'gems', direct_gems.map { |g| "#{g.name} (#{g.version})" })
           end
         end
 
@@ -842,6 +811,32 @@ module Boxwerk
             expanded
           end
         rel.end_with?('/') ? rel : "#{rel}/"
+      end
+
+      # Prints a labeled section with items, inline if one item, multiline if many.
+      #   indent:  e.g. "    "
+      #   label:   e.g. "enforcements"
+      #   items:   array of strings
+      def print_inline_or_multiline(indent, label, items)
+        if items.length == 1
+          puts "#{indent}#{label}: #{items.first}"
+        else
+          puts "#{indent}#{label}:"
+          items.each { |item| puts "#{indent}  #{item}" }
+        end
+      end
+
+      # Prints a dir section (autoload, collapse, ignore).
+      # Dirs are already normalized relative strings.
+      def print_dir_section(indent, label, dirs)
+        return if dirs.empty?
+
+        if dirs.length == 1
+          puts "#{indent}#{label}: #{dirs.first}"
+        else
+          puts "#{indent}#{label}:"
+          dirs.each { |dir| puts "#{indent}  #{dir}" }
+        end
       end
     end
   end

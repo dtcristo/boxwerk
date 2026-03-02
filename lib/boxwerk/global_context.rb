@@ -24,13 +24,21 @@ module Boxwerk
       @default_dirs
     end
 
+    # Returns dir info for the global context (used by the info command).
+    def dir_info
+      al_info = @autoloader&.dir_info || {}
+      {
+        autoload: @default_dirs + (al_info[:autoload] || []),
+        collapse: al_info[:collapse] || [],
+        ignore:   al_info[:ignore] || [],
+      }
+    end
+
     # Autoload configuration for the root box. Supports push_dir, collapse,
     # setup, and eager_load. Registrations happen lazily (autoload entries only)
     # until eager_load! is called. Constants are available via lazy autoload
     # throughout the boot process without requiring eager loading.
     class Autoloader
-      attr_reader :autoload_dirs, :collapse_dirs, :ignore_dirs
-
       def initialize(root_path)
         @root_path = root_path
         @autoload_dirs = []
@@ -38,6 +46,11 @@ module Boxwerk
         @ignore_dirs = []
         @setup_index = { push: 0, collapse: 0 }
         @accumulated_entries = []
+      end
+
+      # Returns dir info (used by GlobalContext#dir_info for the info command).
+      def dir_info
+        { autoload: @autoload_dirs.dup, collapse: @collapse_dirs.dup, ignore: @ignore_dirs.dup }
       end
 
       def push_dir(dir)

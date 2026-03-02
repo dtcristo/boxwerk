@@ -20,8 +20,8 @@ with constants resolved lazily at runtime. Reads standard Packwerk
   `help`, `version`) work without `RUBY_BOX=1`.
 - `boxwerk info` boots the application (requires `RUBY_BOX=1`) to show
   runtime autoload dirs, collapse/ignore dirs, eager load status, boot
-  script presence, and per-package gems. Autoload dirs show `(eager)` when
-  relevant eager load option is enabled. Global section includes path gems
+  script presence, and per-package gems. Sections use `eager_load` label
+  when eager loading is enabled. Global section includes path gems
   (e.g. `boxwerk`) when present in the Gemfile.
 - Example restructured: `example/` → `examples/simple/` with per-package
   gems, unit tests, and privacy demos. `examples/rails/` added as a plan.
@@ -91,6 +91,25 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - `examples/complex` — new `packs/analytics` package demonstrating
   `collapse_dirs` and `ignore_dirs` via boot.rb; package has its own Rakefile
   and test suite testing isolation constraints.
+- `boxwerk info` — output improved: single-line display when only one item;
+  `autoload_dirs`/`collapse_dirs`/`ignore_dirs` renamed to `autoload`/`collapse`/
+  `ignore`; autoload section label changed to `eager_load` when eager loading is
+  enabled; `pack_public constants` supports multiline when multiple.
+- `boxwerk install` — installs global gems first (root package); prints
+  `Installing global gems...` for root; prints `Done!` and blank line after each;
+  removed final count summary line.
+- Missing lockfile warning: when a package has a Gemfile but no lockfile,
+  Boxwerk now prints a warning directing users to `boxwerk install` instead of
+  silently skipping gems.
+- Global eager load order fixed: `global/` dir constants and any dirs added via
+  `Boxwerk.global.autoloader.push_dir` are now eager-loaded **after**
+  `global/boot.rb` runs, not before.
+- `PackageContext::Autoloader` — public `autoload_dirs`, `collapse_dirs`,
+  `ignore_dirs` getters removed (private internals); dir info is now tracked in
+  `BoxManager#package_dirs_info` for use by the info command.
+- `GlobalContext::Autoloader` — public `autoload_dirs`, `collapse_dirs`,
+  `ignore_dirs` readers removed; `GlobalContext#dir_info` added as the info
+  command entry point.
 
 ### Removed
 

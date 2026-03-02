@@ -147,16 +147,16 @@ RUBY_BOX=1 boxwerk info
 Output sections:
 - **Config** — `boxwerk.yml` settings with defaults filled in
 - **Dependency Graph** — tree view; circular dependencies are marked `(circular)`
-- **Global** — boot script, autoload dirs (with `(eager)` suffix when eager loading), gems
-- **Packages** — each package with enforcements, dependencies, autoload dirs, `pack_public` constants, explicit private constants, and direct gems
+- **Global** — boot script, autoload or `eager_load` dirs (label is `eager_load` when eager loading enabled), gems
+- **Packages** — each package with enforcements, dependencies, `autoload`/`eager_load` dirs, `collapse` dirs, `ignore` dirs, `pack_public` constants, explicit private constants, and direct gems
 
 Requires `RUBY_BOX=1` (boots the application to gather runtime autoload information).
 
-Autoload dirs are shown as `(eager)` when `eager_load_global` / `eager_load_packages` is enabled.
+When eager loading is enabled (`eager_load_global` / `eager_load_packages`), the autoload section label becomes `eager_load`.
 
 #### `boxwerk install`
 
-Run `bundle install` for every package that has a `Gemfile` or `gems.rb`. Processes packages in topological order.
+Run `bundle install` for every package that has a `Gemfile` or `gems.rb`. Installs global (root) gems first, then packages.
 
 ```bash
 bin/boxwerk install

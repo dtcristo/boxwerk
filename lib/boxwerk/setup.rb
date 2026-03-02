@@ -104,6 +104,7 @@ module Boxwerk
         root_box = Ruby::Box.root
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
+        global_entries = nil
 
         # Always register lazy autoloads for global/ dir so constants are
         # accessible in boot.rb (autoload fires on access in root box context).
@@ -112,13 +113,8 @@ module Boxwerk
         if File.directory?(global_dir)
           global_context&.record_scanned_dir('global/')
           entries = ZeitwerkScanner.scan(global_dir)
-          non_boot = entries.reject { |e| e.file == global_boot }
-          ZeitwerkScanner.register_autoloads(root_box, non_boot) if non_boot.any?
-
-          # Eagerly require all global/ files only when eager_load_global is true.
-          if eager_load
-            non_boot.each { |entry| root_box.require(entry.file) if entry.file }
-          end
+          global_entries = entries.reject { |e| e.file == global_boot }
+          ZeitwerkScanner.register_autoloads(root_box, global_entries) if global_entries.any?
         end
 
         # Run global/boot.rb in root box (always, regardless of eager_load)
@@ -128,8 +124,11 @@ module Boxwerk
         # Boxwerk.global.autoloader.push_dir during boot.
         global_context&.autoloader&.setup
 
-        # Eagerly require any dirs added via push_dir if eager_load_global is true.
-        global_context&.autoloader&.eager_load! if eager_load
+        # Eager-load AFTER boot.rb so boot scripts run first.
+        if eager_load
+          global_entries&.each { |e| root_box.require(e.file) if e.file }
+          global_context&.autoloader&.eager_load!
+        end
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)

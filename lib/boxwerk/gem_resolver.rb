@@ -54,6 +54,8 @@ module Boxwerk
 
       lockfile_path = find_lockfile(gemfile_path)
       unless lockfile_path && File.exist?(lockfile_path)
+        pkg_label = package.root? ? '.' : package.name
+        warn "Boxwerk: No lockfile found for #{pkg_label}. Run 'boxwerk install' to install gems."
         @package_gems[package.name] = nil
         return nil
       end

@@ -19,7 +19,7 @@ module Boxwerk
   # autoload calls execute in the root box context (where Zeitwerk was
   # loaded), not the target package box.
   class BoxManager
-    attr_reader :boxes, :gem_resolver, :file_indexes, :default_autoload_dirs
+    attr_reader :boxes, :gem_resolver, :file_indexes, :default_autoload_dirs, :package_dirs_info
 
     def initialize(root_path)
       @root_path = root_path
@@ -27,6 +27,7 @@ module Boxwerk
       @file_indexes = {} # package name -> {const_name => abs_path}
       @gem_resolver = GemResolver.new(root_path)
       @default_autoload_dirs = {} # package name -> [relative dir strings]
+      @package_dirs_info = {} # package name -> { autoload: [...], collapse: [...], ignore: [...] }
     end
 
     # Boot all packages in topological order.
@@ -94,6 +95,9 @@ module Boxwerk
       file_index.merge!(extra_index) if extra_index
 
       @file_indexes[package.name] = file_index
+
+      # Record all dir info for use by the info command
+      record_package_dirs(box, package, default_dirs)
 
       # Wire dependency constants into this box
       wire_dependency_constants(box, package, resolver)
@@ -384,6 +388,29 @@ module Boxwerk
         @root_path
       else
         File.join(@root_path, package.name)
+      end
+    end
+
+    # Records all autoload/collapse/ignore dirs for a package after boot.
+    # Used by the info command.
+    def record_package_dirs(box, package, default_dirs)
+      al = box.const_get(:BOXWERK_PACKAGE)&.autoloader rescue nil
+      pkg_dir = package_dir(package)
+      @package_dirs_info[package.name] = {
+        autoload: default_dirs + (al&.user_autoload_dirs&.map { |d| normalize_for_info(d, pkg_dir) } || []),
+        collapse: (al&.user_collapse_dirs&.map { |d| normalize_for_info(d, pkg_dir) } || []),
+        ignore:   (al&.user_ignore_dirs&.map { |d| normalize_for_info(d, pkg_dir) } || []),
+      }
+    end
+
+    # Converts an absolute path to a relative dir string (with trailing slash),
+    # or returns the relative string as-is.
+    def normalize_for_info(dir, base_path)
+      if dir.start_with?('/')
+        rel = dir.delete_prefix("#{base_path}/")
+        rel == dir ? dir : "#{rel.chomp('/')}/"
+      else
+        "#{dir.chomp('/')}/"
       end
     end
 
