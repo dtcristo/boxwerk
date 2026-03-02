@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module Boxwerk
-
-
   # Resolves constants from dependency packages without namespace wrapping.
   #
   # When package A depends on package B, B's constants are accessible

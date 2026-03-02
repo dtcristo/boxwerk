@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module Boxwerk
-
-
   # Lightweight Gemfile parser that extracts autorequire directives.
   #
   # Evaluates a Gemfile in a sandbox that only captures `gem` calls,

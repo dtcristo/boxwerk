@@ -4,8 +4,6 @@ require 'yaml'
 require 'pathname'
 
 module Boxwerk
-
-
   # Discovers packages by scanning for package.yml files and provides
   # ordering for boot. Supports boxwerk.yml configuration for package_paths.
   class PackageResolver

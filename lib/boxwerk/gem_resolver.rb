@@ -3,8 +3,6 @@
 require 'bundler'
 
 module Boxwerk
-
-
   # Resolves per-package gem dependencies from lockfiles.
   #
   # Parses lockfiles with Bundler::LockfileParser and resolves gem load paths
