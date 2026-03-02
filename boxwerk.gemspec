@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
     'the Packwerk gem.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 4.0.1'
+  spec.required_ruby_version = '>= 4.0'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.metadata['homepage_uri'] = spec.homepage
@@ -38,6 +38,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'irb', '~> 1.16'
+  spec.add_dependency 'bundler', '~> 4.0'
+  spec.add_dependency 'irb', '~> 1.17'
   spec.add_dependency 'zeitwerk', '~> 2.7'
 end
