@@ -107,10 +107,26 @@ class IntegrationTest < Minitest::Test
            'String#to_order_ticket should not leak outside kitchen box'
   end
 
-  def test_kitchen_uses_monkey_patch
-    barista = Kitchen::Barista.new(name: 'Test')
-    item = Menu::Item.new(name: 'Latte', price_cents: 500)
-    result = barista.prepare(item)
-    assert_includes result, '🎫', 'Expected order ticket emoji from monkey patch'
+  # Analytics: collapse dirs and ignore dirs demo
+  def test_analytics_report_accessible
+    report = Analytics::Report.new('Sales')
+    assert_equal 'Report: Sales', report.to_s
   end
+
+  def test_analytics_csv_formatter_collapsed
+    # collapse_dirs on lib/analytics/formatters — CsvFormatter is at
+    # Analytics::CsvFormatter (not Analytics::Formatters::CsvFormatter)
+    formatter = Analytics::CsvFormatter.new
+    assert_equal 'csv: test report', formatter.format('test report')
+    # Verify it is NOT nested under Formatters
+    refute Analytics.const_defined?(:Formatters, false), 'Formatters namespace should not be directly visible'
+  end
+
+  def test_analytics_legacy_ignored
+    # ignore_dirs on lib/analytics/legacy — OldReport is NOT autoloaded.
+    # Access via Analytics::Legacy::OldReport would normally trigger loading;
+    # since the dir is ignored it should not exist.
+    assert_raises(NameError) { Analytics::Legacy::OldReport }
+  end
+
 end

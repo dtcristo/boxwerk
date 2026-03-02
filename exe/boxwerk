@@ -14,8 +14,8 @@ boxwerk_exe = File.expand_path(__FILE__)
 
 # Commands that don't need Ruby::Box (no package boot required).
 NO_BOX_COMMANDS = %w[install help --help -h version --version -v].freeze
-# Subset that don't need Bundler or project gems at all.
-STANDALONE_COMMANDS = %w[help --help -h version --version -v].freeze
+# Subset that don't need Bundler at all — safe to run without any gems installed.
+STANDALONE_COMMANDS = %w[install help --help -h version --version -v].freeze
 
 if NO_BOX_COMMANDS.include?(ARGV[0])
   $LOAD_PATH.unshift(boxwerk_lib)

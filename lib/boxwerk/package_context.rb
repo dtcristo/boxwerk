@@ -30,30 +30,53 @@ module Boxwerk
     # Autoload registration happens immediately when push_dir or collapse
     # is called from within boot.rb, making added constants available for
     # use later in the same script. Explicit `setup` calls are not required.
+    #
+    # autoload_dirs/collapse_dirs/ignore_dirs return default dirs (lib/, public/)
+    # first, followed by any dirs added via push_dir/collapse/ignore in boot.rb.
     class Autoloader
-      attr_reader :autoload_dirs, :collapse_dirs, :ignore_dirs
-
       def initialize(root_path, box: nil)
         @root_path = root_path
         @box = box
-        @autoload_dirs = []
-        @collapse_dirs = []
-        @ignore_dirs = []
+        @default_autoload_dirs = []
+        @default_collapse_dirs = []
+        @default_ignore_dirs = []
+        @user_autoload_dirs = []
+        @user_collapse_dirs = []
+        @user_ignore_dirs = []
         @setup_index = { push: 0, collapse: 0 }
       end
 
+      # Called by BoxManager after scanning to inject default dirs.
+      def set_defaults(autoload_dirs: [], collapse_dirs: [], ignore_dirs: [])
+        @default_autoload_dirs = autoload_dirs
+        @default_collapse_dirs = collapse_dirs
+        @default_ignore_dirs = ignore_dirs
+      end
+
+      def autoload_dirs = @default_autoload_dirs + @user_autoload_dirs
+      def collapse_dirs = @default_collapse_dirs + @user_collapse_dirs
+      def ignore_dirs   = @default_ignore_dirs + @user_ignore_dirs
+
+      # All collapse dirs (default + user) for cleanup after boot.rb
+      def all_collapse_dirs = @default_collapse_dirs + @user_collapse_dirs
+
+      # For internal use by BoxManager — only user-added dirs (not defaults).
+      def user_autoload_dirs = @user_autoload_dirs
+      def user_collapse_dirs = @user_collapse_dirs
+      def user_ignore_dirs   = @user_ignore_dirs
+
       def push_dir(dir)
-        @autoload_dirs << dir
+        @user_autoload_dirs << dir
         setup
       end
 
       def collapse(dir)
-        @collapse_dirs << dir
+        @user_collapse_dirs << dir
         setup
       end
 
       def ignore(dir)
-        @ignore_dirs << dir
+        @user_ignore_dirs << dir
       end
 
       # Immediately scan and register autoloads for any dirs added via
@@ -65,19 +88,20 @@ module Boxwerk
 
         all_entries = []
 
-        @autoload_dirs[@setup_index[:push]..].each do |dir|
+        @user_autoload_dirs[@setup_index[:push]..].each do |dir|
           abs_dir = File.expand_path(dir, @root_path)
           next unless File.directory?(abs_dir)
           all_entries.concat(ZeitwerkScanner.scan(abs_dir))
         end
-        @setup_index[:push] = @autoload_dirs.length
+        @setup_index[:push] = @user_autoload_dirs.length
 
-        @collapse_dirs[@setup_index[:collapse]..].each do |dir|
+        @user_collapse_dirs[@setup_index[:collapse]..].each do |dir|
           abs_dir = File.expand_path(dir, @root_path)
           next unless File.directory?(abs_dir)
-          all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
+          root_dir = find_root_for(abs_dir)
+          all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir, root_dir: root_dir))
         end
-        @setup_index[:collapse] = @collapse_dirs.length
+        @setup_index[:collapse] = @user_collapse_dirs.length
 
         return if all_entries.empty?
 
@@ -99,6 +123,13 @@ module Boxwerk
 
       # Number of collapse entries already registered via setup.
       def collapse_setup_count = @setup_index[:collapse]
+
+      # Returns the absolute root autoload dir that contains abs_dir, or nil.
+      def find_root_for(abs_dir)
+        (@default_autoload_dirs + @user_autoload_dirs)
+          .map { |d| File.expand_path(d, @root_path) }
+          .find { |root| abs_dir.start_with?("#{root}/") }
+      end
     end
   end
 end

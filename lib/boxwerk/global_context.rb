@@ -29,12 +29,13 @@ module Boxwerk
     # until eager_load! is called. Constants are available via lazy autoload
     # throughout the boot process without requiring eager loading.
     class Autoloader
-      attr_reader :autoload_dirs, :collapse_dirs
+      attr_reader :autoload_dirs, :collapse_dirs, :ignore_dirs
 
       def initialize(root_path)
         @root_path = root_path
         @autoload_dirs = []
         @collapse_dirs = []
+        @ignore_dirs = []
         @setup_index = { push: 0, collapse: 0 }
         @accumulated_entries = []
       end
@@ -47,6 +48,10 @@ module Boxwerk
       def collapse(dir)
         @collapse_dirs << dir
         setup
+      end
+
+      def ignore(dir)
+        @ignore_dirs << dir
       end
 
       # Register lazy autoloads for any dirs added since the last setup call.

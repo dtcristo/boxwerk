@@ -364,6 +364,10 @@ module Boxwerk
           (global&.autoloader&.collapse_dirs || []).map do |d|
             normalize_dir_display(d, root_path)
           end
+        global_ignore_dirs =
+          (global&.autoloader&.ignore_dirs || []).map do |d|
+            normalize_dir_display(d, root_path)
+          end
         root_gems =
           gem_resolver.gems_for(resolver.root)&.select { |g| !g.autorequire.nil? }
         global_has_content =
@@ -373,13 +377,24 @@ module Boxwerk
           puts 'Global'
           puts ''
           puts "  boot: global/boot.rb" if File.exist?(global_boot)
-          global_autoload_dirs.each do |dir|
-            suffix = eager_global ? ' (eager)' : ''
-            puts "  autoload: #{dir}#{suffix}"
+          if global_autoload_dirs.any?
+            puts '  autoload_dirs:'
+            global_autoload_dirs.each do |dir|
+              suffix = eager_global ? ' (eager)' : ''
+              puts "    #{dir}#{suffix}"
+            end
           end
-          global_collapse_dirs.each { |dir| puts "  collapse: #{dir}" }
+          if global_collapse_dirs.any?
+            puts '  collapse_dirs:'
+            global_collapse_dirs.each { |dir| puts "    #{dir}" }
+          end
+          if global_ignore_dirs.any?
+            puts '  ignore_dirs:'
+            global_ignore_dirs.each { |dir| puts "    #{dir}" }
+          end
           if root_gems&.any?
-            puts "  gems: #{root_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')}"
+            puts '  gems:'
+            root_gems.each { |g| puts "    #{g.name} (#{g.version})" }
           end
           puts ''
         end
@@ -749,33 +764,48 @@ module Boxwerk
         puts label
 
         flags = []
-        flags << 'enforce_dependencies' if pkg.enforce_dependencies?
-        flags << 'enforce_privacy' if pkg.config['enforce_privacy']
-        puts "    enforcements: #{flags.any? ? flags.join(', ') : 'none'}"
+        flags << 'dependencies' if pkg.enforce_dependencies?
+        flags << 'privacy' if pkg.config['enforce_privacy']
+        if flags.any?
+          puts '    enforcements:'
+          flags.each { |f| puts "      #{f}" }
+        else
+          puts '    enforcements: none'
+        end
 
         deps = pkg.dependencies
-        puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
+        if deps.any?
+          puts '    dependencies:'
+          deps.each { |d| puts "      #{d}" }
+        else
+          puts '    dependencies: none'
+        end
 
         pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
         puts "    boot: boot.rb" if File.exist?(File.join(pkg_dir, 'boot.rb'))
 
         # Autoload dirs: default (lib/, public/) + user push_dirs from boot.rb
-        default_dirs = box_manager.default_autoload_dirs[pkg.name] || []
         box = box_manager.boxes[pkg.name]
         al = box&.const_get(:BOXWERK_PACKAGE)&.autoloader
-        user_autoload =
-          (al&.autoload_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
-        user_collapse =
-          (al&.collapse_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
-        user_ignore =
-          (al&.ignore_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
+        autoload_dirs = al&.autoload_dirs || []
+        collapse_dirs = al&.collapse_dirs || []
+        ignore_dirs = al&.ignore_dirs || []
 
-        (default_dirs + user_autoload).each do |dir|
-          suffix = eager_packages ? ' (eager)' : ''
-          puts "    autoload: #{dir}#{suffix}"
+        if autoload_dirs.any?
+          puts '    autoload_dirs:'
+          autoload_dirs.each do |d|
+            suffix = eager_packages ? ' (eager)' : ''
+            puts "      #{normalize_dir_display(d, pkg_dir)}#{suffix}"
+          end
         end
-        user_collapse.each { |dir| puts "    collapse: #{dir}" }
-        user_ignore.each { |dir| puts "    ignore: #{dir}" }
+        if collapse_dirs.any?
+          puts '    collapse_dirs:'
+          collapse_dirs.each { |d| puts "      #{normalize_dir_display(d, pkg_dir)}" }
+        end
+        if ignore_dirs.any?
+          puts '    ignore_dirs:'
+          ignore_dirs.each { |d| puts "      #{normalize_dir_display(d, pkg_dir)}" }
+        end
 
         # pack_public sigil constants
         pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
@@ -793,8 +823,8 @@ module Boxwerk
           gems = gem_resolver.gems_for(pkg)
           direct_gems = gems&.select { |g| !g.autorequire.nil? }
           if direct_gems&.any?
-            gem_list = direct_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
-            puts "    gems: #{gem_list}"
+            puts '    gems:'
+            direct_gems.each { |g| puts "      #{g.name} (#{g.version})" }
           end
         end
 

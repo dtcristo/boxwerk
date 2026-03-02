@@ -4,9 +4,29 @@
 ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../gems.rb', __dir__)
 
 require 'rubygems'
-require 'bundler/setup'
 
-# Gem.bin_path resolves incorrectly under Ruby::Box for path: gems.
-# Use Gem.loaded_specs which has the correct full_gem_path.
-spec = Gem.loaded_specs['boxwerk']
-load File.join(spec.full_gem_path, spec.bindir, 'boxwerk')
+# For the install command, skip bundler/setup so boxwerk install can be run
+# on a fresh project before gems are installed. Find boxwerk via the lockfile.
+if ARGV.first == 'install'
+  require 'bundler'
+  gemfile = ENV['BUNDLE_GEMFILE']
+  lock = gemfile.end_with?('gems.rb') ? gemfile.sub('gems.rb', 'gems.locked') : "#{gemfile}.lock"
+  content = File.read(lock)
+  # PATH section in lockfile: remote: ../..  → boxwerk root relative to gemfile dir
+  if content =~ /^PATH\n\s+remote:\s+(.+)\n/
+    boxwerk_root = File.expand_path($1.strip, File.dirname(gemfile))
+    load File.join(boxwerk_root, 'exe', 'boxwerk')
+    exit
+  end
+  # Fallback: system-installed gem
+  require 'bundler/setup'
+  spec = Gem.loaded_specs['boxwerk']
+  load File.join(spec.full_gem_path, spec.bindir, 'boxwerk')
+else
+  require 'bundler/setup'
+
+  # Gem.bin_path resolves incorrectly under Ruby::Box for path: gems.
+  # Use Gem.loaded_specs which has the correct full_gem_path.
+  spec = Gem.loaded_specs['boxwerk']
+  load File.join(spec.full_gem_path, spec.bindir, 'boxwerk')
+end

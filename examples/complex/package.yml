@@ -5,3 +5,4 @@ dependencies:
   - packs/loyalty
   - packs/kitchen
   - packs/stats
+  - packs/analytics

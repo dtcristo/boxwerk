@@ -81,14 +81,16 @@ module Boxwerk
       # Auto-require gems declared in the package Gemfile
       auto_require_gems(box, package)
 
-      # Scan default directories and register autoloads
-      file_index = scan_and_register(box, package)
+      # Scan default directories and register autoloads. Returns default dirs
+      # so they can be injected into the PackageContext autoloader.
+      file_index, default_dirs = scan_and_register(box, package)
 
-      # Set BOXWERK_PACKAGE constant in the box for Boxwerk.package access
-      set_package_context(box, package)
+      # Set BOXWERK_PACKAGE constant in the box for Boxwerk.package access.
+      # Pass default_dirs so Boxwerk.package.autoloader.autoload_dirs reflects them.
+      set_package_context(box, package, default_dirs: default_dirs)
 
       # Run optional per-package boot.rb, then scan additional dirs
-      extra_index = run_package_boot(box, package)
+      extra_index = run_package_boot(box, package, file_index)
       file_index.merge!(extra_index) if extra_index
 
       @file_indexes[package.name] = file_index
@@ -145,10 +147,11 @@ module Boxwerk
     end
 
     # Scans package directories with ZeitwerkScanner and registers autoloads
-    # in the box. Returns a file index for use by ConstantResolver.
+    # in the box. Returns [file_index, default_dirs] where default_dirs is
+    # the list of relative dir strings scanned (e.g. ['lib/', 'public/']).
     def scan_and_register(box, package)
       all_entries = []
-      dirs = @default_autoload_dirs[package.name] ||= []
+      default_al_dirs = []
 
       # Always compute public path for file scanning. Privacy enforcement
       # controls access, not discovery — files in public/ are always scanned.
@@ -156,7 +159,7 @@ module Boxwerk
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)
-        dirs << 'lib/'
+        default_al_dirs << 'lib/'
         entries = ZeitwerkScanner.scan(lib_path)
         # Exclude constants under public_path (scanned separately)
         if pub_path && pub_path.start_with?(lib_path)
@@ -173,17 +176,19 @@ module Boxwerk
       if pub_path && File.directory?(pub_path)
         pub_rel = package.config['public_path'] || 'public/'
         pub_rel = "#{pub_rel}/" unless pub_rel.end_with?('/')
-        dirs << pub_rel
+        default_al_dirs << pub_rel
         all_entries.concat(ZeitwerkScanner.scan(pub_path))
       end
 
       ZeitwerkScanner.register_autoloads(box, all_entries)
-      ZeitwerkScanner.build_file_index(all_entries)
+      @default_autoload_dirs[package.name] = default_al_dirs
+
+      [ZeitwerkScanner.build_file_index(all_entries), default_al_dirs]
     end
 
     # Runs the optional per-package boot.rb in the package's box context.
     # Returns additional file index entries from configured autoload dirs.
-    def run_package_boot(box, package)
+    def run_package_boot(box, package, file_index)
       pkg_dir = package_dir(package)
       boot_script = File.join(pkg_dir, 'boot.rb')
       return nil unless File.exist?(boot_script)
@@ -196,28 +201,30 @@ module Boxwerk
       box.require(boot_script)
 
       # Read back config and apply additional autoload dirs
-      apply_boot_config(box, package, autoloader)
+      apply_boot_config(box, package, autoloader, file_index)
     end
 
     # Reads autoload configuration from the PackageContext autoloader
     # and returns the merged file index. Dirs already registered via
     # autoloader.setup (auto-called by push_dir/collapse during boot.rb)
     # are included via accumulated_file_index. Any remaining unregistered
-    # dirs are registered here.
-    def apply_boot_config(box, package, autoloader)
+    # dirs are registered here. Also applies ignore_dirs and collapse
+    # cleanup (removes intermediate namespaces registered during scan_and_register).
+    def apply_boot_config(box, package, autoloader, file_index)
       pkg_dir = package_dir(package)
       all_entries = []
 
-      autoloader.autoload_dirs[autoloader.push_setup_count..].each do |dir|
+      autoloader.user_autoload_dirs[autoloader.push_setup_count..].each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
         all_entries.concat(ZeitwerkScanner.scan(abs_dir))
       end
 
-      autoloader.collapse_dirs[autoloader.collapse_setup_count..].each do |dir|
+      autoloader.user_collapse_dirs[autoloader.collapse_setup_count..].each do |dir|
         abs_dir = File.expand_path(dir, pkg_dir)
         next unless File.directory?(abs_dir)
-        all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir))
+        root_dir = autoloader.find_root_for(abs_dir)
+        all_entries.concat(ZeitwerkScanner.scan_files_only(abs_dir, root_dir: root_dir))
       end
 
       new_index =
@@ -227,6 +234,23 @@ module Boxwerk
           ZeitwerkScanner.register_autoloads(box, all_entries)
           ZeitwerkScanner.build_file_index(all_entries)
         end
+
+      # Remove intermediate namespaces for collapsed dirs (e.g. Analytics::Formatters)
+      autoloader.all_collapse_dirs.each do |dir|
+        abs_dir = File.expand_path(dir, pkg_dir)
+        next unless File.directory?(abs_dir)
+        root_dir = autoloader.find_root_for(abs_dir)
+        next unless root_dir
+        remove_namespace_for_dir(box, abs_dir, root_dir, file_index)
+      end
+
+      # Remove constants registered for ignored dirs
+      autoloader.user_ignore_dirs.each do |dir|
+        abs_dir = File.expand_path(dir, pkg_dir)
+        next unless File.directory?(abs_dir)
+        root_dir = autoloader.find_root_for(abs_dir)
+        remove_namespace_for_dir(box, abs_dir, root_dir, file_index)
+      end
 
       # Merge any file index entries accumulated during auto-setup calls
       accumulated = autoloader.accumulated_file_index
@@ -304,9 +328,13 @@ module Boxwerk
 
     # Sets the BOXWERK_PACKAGE constant in the box with a PackageContext
     # and overrides Boxwerk.package in the box to return it.
-    def set_package_context(box, package)
+    # default_dirs: relative autoload dir strings from scan_and_register
+    # (e.g. ['lib/', 'public/']), injected into the autoloader so that
+    # Boxwerk.package.autoloader.autoload_dirs includes them.
+    def set_package_context(box, package, default_dirs: [])
       pkg_dir = package_dir(package)
       autoloader = PackageContext::Autoloader.new(pkg_dir, box: box)
+      autoloader.set_defaults(autoload_dirs: default_dirs)
       context =
         PackageContext.new(
           name: package.name,
@@ -365,6 +393,29 @@ module Boxwerk
       else
         File.join(@root_path, package.name, 'lib')
       end
+    end
+
+    # Removes a directory's namespace constant (and its children) from the box.
+    # Used for collapse (removes intermediate namespace) and ignore (removes namespace).
+    # Also removes matching entries from file_index.
+    def remove_namespace_for_dir(box, abs_dir, root_dir, file_index)
+      inflector = Zeitwerk::Inflector.new
+      rel = abs_dir.delete_prefix("#{root_dir}/")
+      parts = rel.split('/')
+      ns_cnames = parts.map { |p| inflector.camelize(p, root_dir) }
+      parent_ns = ns_cnames[0...-1].join('::')
+      ns_cname = ns_cnames.last
+      ns_full = ns_cnames.join('::')
+
+      # Remove the constant from the box (works for both autoloads and defined constants)
+      if parent_ns.empty?
+        box.eval("remove_const(:#{ns_cname}) rescue nil")
+      else
+        box.eval("#{parent_ns}.send(:remove_const, :#{ns_cname}) rescue nil")
+      end
+
+      # Remove all file_index entries under this namespace
+      file_index.reject! { |k, _| k == ns_full || k.start_with?("#{ns_full}::") }
     end
   end
 end

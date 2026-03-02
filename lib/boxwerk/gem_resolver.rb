@@ -165,8 +165,13 @@ module Boxwerk
       lockfile_content = File.read(lockfile_path)
       parser = Bundler::LockfileParser.new(lockfile_content)
 
+      seen = Set.new
       gems = []
       parser.specs.each do |spec|
+        # Deduplicate by name — lockfiles can have multiple platform-specific
+        # variants of the same gem (e.g. sqlite3 for x86_64-linux and arm64-darwin).
+        next unless seen.add?(spec.name)
+
         paths = resolve_gem_paths(spec.name, spec.version.to_s)
         gems << GemInfo.new(
           name: spec.name,

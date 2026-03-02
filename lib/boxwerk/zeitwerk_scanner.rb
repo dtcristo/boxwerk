@@ -64,12 +64,20 @@ module Boxwerk
       files.each { |f| register_autoload(box, f.parent, f.cname, f.file) }
     end
 
-    # Scans files directly in a directory (non-recursive), treating each
-    # as a top-level constant. Used for collapsed directories where
-    # lib/concerns/taggable.rb should map to Taggable (not Concerns::Taggable).
-    def self.scan_files_only(dir)
+    # Scans files in a collapsed directory, computing the parent namespace
+    # from the path between root_dir and the collapsed dir. E.g. if root_dir
+    # is lib/ and dir is lib/analytics/formatters/, files map to Analytics::*.
+    def self.scan_files_only(dir, root_dir: nil)
       inflector = Zeitwerk::Inflector.new
       entries = []
+
+      parent_cnames =
+        if root_dir && dir.start_with?("#{root_dir}/")
+          rel = dir.delete_prefix("#{root_dir}/")
+          rel.split('/')[0...-1].map { |p| inflector.camelize(p, root_dir) }
+        else
+          []
+        end
 
       Dir
         .glob(File.join(dir, '**', '*.rb'))
@@ -77,10 +85,11 @@ module Boxwerk
         .each do |abspath|
           relative = abspath.delete_prefix("#{dir}/").delete_suffix('.rb')
           parts = relative.split('/')
-          cnames = parts.map { |part| inflector.camelize(part, dir) }
-          full_path = cnames.join('::')
-          cname = cnames.last
-          parent = cnames[0...-1].join('::')
+          file_cnames = parts.map { |part| inflector.camelize(part, dir) }
+          all_cnames = parent_cnames + file_cnames
+          full_path = all_cnames.join('::')
+          cname = all_cnames.last
+          parent = all_cnames[0...-1].join('::')
 
           entries << Entry.new(
             type: :file,
