@@ -2,6 +2,7 @@ PATH
   remote: ../..
   specs:
     boxwerk (0.3.0)
+      bundler (~> 4.0)
       irb (~> 1.16)
       zeitwerk (~> 2.7)
 
