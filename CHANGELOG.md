@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased] — 2026-03-02
+
 ## [v0.3.0] — 2026-03-02
 
 Complete architecture rewrite. Each package now runs in its own `Ruby::Box`
@@ -57,7 +59,7 @@ Packwerk `package.yml` files without requiring Packwerk.
 - Custom file-to-constant mapping (`Boxwerk.camelize`), replaced by Zeitwerk.
 - Namespace wrapping.
 
-## [v0.2.0] - 2026-01-06
+## [v0.2.0] — 2026-01-06
 
 ### Changed
 - Simplified implementation (~370 lines removed)
@@ -69,7 +71,7 @@ Packwerk `package.yml` files without requiring Packwerk.
 - Removed `Gemfile.lock` from git (library best practice)
 - Removed `sig/boxwerk.rbs`
 
-## [v0.1.0] - 2026-01-05
+## [v0.1.0] — 2026-01-05
 
 Initial release.
 

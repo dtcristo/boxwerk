@@ -241,7 +241,7 @@ Console always runs IRB in `Ruby::Box.root` rather than the target package box. 
 
 ### --all Flag
 
-The `--all` flag runs `exec` for each package in a separate subprocess. This is necessary because test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.
+The `--all` / `-a` flag runs `exec` for each package in a separate subprocess. This is necessary because test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.
 
 ### --global Flag
 
