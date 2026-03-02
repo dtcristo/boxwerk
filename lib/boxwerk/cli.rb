@@ -84,7 +84,7 @@ module Boxwerk
         puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
       end
 
-      # Parses --package/-p, --all, and --global/-g flags from args, returning
+      # Parses --package/-p, --all/-a, and --global/-g flags from args, returning
       # { package: name_or_nil, all: bool, global: bool, remaining: [...] }.
       def parse_package_flag(args)
         package_name = nil
