@@ -110,6 +110,7 @@ module Boxwerk
         # This works regardless of eager_load_global so global constants can
         # be used in boot.rb even when eager loading is disabled.
         if File.directory?(global_dir)
+          global_context&.record_scanned_dir('global/')
           entries = ZeitwerkScanner.scan(global_dir)
           non_boot = entries.reject { |e| e.file == global_boot }
           ZeitwerkScanner.register_autoloads(root_box, non_boot) if non_boot.any?

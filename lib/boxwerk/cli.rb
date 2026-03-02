@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rbconfig'
+require 'stringio'
 
 module Boxwerk
   # Command-line interface. Delegates to Setup for package boot.
@@ -56,7 +57,7 @@ module Boxwerk
         puts '  exec <command> [args...]     Execute a command in the boxed environment'
         puts '  run <script.rb> [args...]    Run a Ruby script in a package box'
         puts '  console [irb-args...]        Start an IRB console in a package box'
-        puts '  info                         Show package structure and dependencies'
+        puts '  RUBY_BOX=1 info              Boot and show runtime autoload structure'
         puts '  install                      Install gems for all packages'
         puts '  help                         Show this help message'
         puts '  version                      Show version'
@@ -318,9 +319,22 @@ module Boxwerk
       }.freeze
 
       def info_command
-        root_path = Setup.send(:find_root, Dir.pwd)
+        # Boot the application, suppressing stdout from boot scripts
+        result = nil
+        orig_stdout = $stdout
+        $stdout = StringIO.new
+        begin
+          result = perform_setup
+        ensure
+          $stdout = orig_stdout
+        end
 
-        resolver = PackageResolver.new(root_path)
+        root_path = result[:root_path]
+        resolver = result[:resolver]
+        box_manager = result[:box_manager]
+        config = BOXWERK_CONFIG_DEFAULTS.merge(resolver.boxwerk_config)
+        eager_global = config.fetch('eager_load_global', true)
+        eager_packages = config.fetch('eager_load_packages', false)
         gem_resolver = GemResolver.new(root_path)
 
         puts "boxwerk #{Boxwerk::VERSION}"
@@ -329,9 +343,7 @@ module Boxwerk
         # Config — always shown with defaults filled in
         puts 'Config'
         puts ''
-        merged_config =
-          BOXWERK_CONFIG_DEFAULTS.merge(resolver.boxwerk_config)
-        merged_config.each { |k, v| puts "  #{k}: #{v.inspect}" }
+        config.each { |k, v| puts "  #{k}: #{v.inspect}" }
         puts ''
 
         # Dependency Graph
@@ -340,20 +352,34 @@ module Boxwerk
         print_dependency_tree(resolver)
         puts ''
 
-        # Global section — only boot script + gems; hidden if nothing to show
+        # Global section
+        global = Boxwerk.global
         global_boot = File.join(root_path, 'global', 'boot.rb')
+        global_autoload_dirs =
+          (global&.default_dirs || []) +
+            (global&.autoloader&.autoload_dirs || []).map do |d|
+              normalize_dir_display(d, root_path)
+            end
+        global_collapse_dirs =
+          (global&.autoloader&.collapse_dirs || []).map do |d|
+            normalize_dir_display(d, root_path)
+          end
         root_gems =
-          gem_resolver
-            .gems_for(resolver.root)
-            &.select { |g| !g.autorequire.nil? }
-        global_has_content = File.exist?(global_boot) || root_gems&.any?
+          gem_resolver.gems_for(resolver.root)&.select { |g| !g.autorequire.nil? }
+        global_has_content =
+          File.exist?(global_boot) || global_autoload_dirs.any? || root_gems&.any?
+
         if global_has_content
           puts 'Global'
           puts ''
           puts "  boot: global/boot.rb" if File.exist?(global_boot)
+          global_autoload_dirs.each do |dir|
+            suffix = eager_global ? ' (eager)' : ''
+            puts "  autoload: #{dir}#{suffix}"
+          end
+          global_collapse_dirs.each { |dir| puts "  collapse: #{dir}" }
           if root_gems&.any?
-            gem_list = root_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
-            puts "  gems: #{gem_list}"
+            puts "  gems: #{root_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')}"
           end
           puts ''
         end
@@ -361,9 +387,10 @@ module Boxwerk
         # Packages — root (.) first, then others
         puts 'Packages'
         puts ''
-        ordered = resolver.topological_order
-        root_first = [resolver.root] + ordered.reject(&:root?)
-        root_first.each { |pkg| print_package_info(pkg, gem_resolver, root_path) }
+        root_first = [resolver.root] + resolver.topological_order.reject(&:root?)
+        root_first.each do |pkg|
+          print_package_info(pkg, box_manager, gem_resolver, root_path, eager_packages)
+        end
 
         # Gem conflicts
         conflicts = gem_resolver.check_conflicts(resolver)
@@ -717,7 +744,7 @@ module Boxwerk
         end
       end
 
-      def print_package_info(pkg, gem_resolver, root_path)
+      def print_package_info(pkg, box_manager, gem_resolver, root_path, eager_packages)
         label = pkg.root? ? '  .' : "  #{pkg.name}"
         puts label
 
@@ -729,23 +756,28 @@ module Boxwerk
         deps = pkg.dependencies
         puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
 
-        # boot.rb presence
-        pkg_dir =
-          pkg.root? ? root_path : File.join(root_path, pkg.name)
+        pkg_dir = pkg.root? ? root_path : File.join(root_path, pkg.name)
         puts "    boot: boot.rb" if File.exist?(File.join(pkg_dir, 'boot.rb'))
 
-        # Static autoload dirs (default dirs BoxManager scans)
-        lib_dir = pkg.root? ? nil : File.join(pkg_dir, 'lib')
-        if lib_dir && File.directory?(lib_dir)
-          puts "    autoload: lib/"
-        end
-        if pkg.config['enforce_privacy']
-          public_path = pkg.config['public_path'] || 'public/'
-          pub_dir = File.join(pkg_dir, public_path)
-          puts "    autoload: #{public_path}" if File.directory?(pub_dir)
-        end
+        # Autoload dirs: default (lib/, public/) + user push_dirs from boot.rb
+        default_dirs = box_manager.default_autoload_dirs[pkg.name] || []
+        box = box_manager.boxes[pkg.name]
+        al = box&.const_get(:BOXWERK_PACKAGE)&.autoloader
+        user_autoload =
+          (al&.autoload_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
+        user_collapse =
+          (al&.collapse_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
+        user_ignore =
+          (al&.ignore_dirs || []).map { |d| normalize_dir_display(d, pkg_dir) }
 
-        # pack_public sigil constants (independent of public_path dir)
+        (default_dirs + user_autoload).each do |dir|
+          suffix = eager_packages ? ' (eager)' : ''
+          puts "    autoload: #{dir}#{suffix}"
+        end
+        user_collapse.each { |dir| puts "    collapse: #{dir}" }
+        user_ignore.each { |dir| puts "    ignore: #{dir}" }
+
+        # pack_public sigil constants
         pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
         if pack_public&.any?
           puts "    pack_public constants: #{pack_public.sort.join(', ')}"
@@ -756,7 +788,7 @@ module Boxwerk
           puts "    private constants: #{private_consts.sort.join(', ')}"
         end
 
-        # Direct gems — last; root gems are shown in Global section
+        # Direct gems — last; root gems shown in Global section
         unless pkg.root?
           gems = gem_resolver.gems_for(pkg)
           direct_gems = gems&.select { |g| !g.autorequire.nil? }
@@ -767,6 +799,19 @@ module Boxwerk
         end
 
         puts ''
+      end
+
+      # Normalizes a dir path for display: relative to base if possible,
+      # otherwise absolute. Always has a trailing slash.
+      def normalize_dir_display(dir, base)
+        expanded = File.expand_path(dir, base)
+        rel =
+          if expanded.start_with?("#{base}/")
+            expanded.delete_prefix("#{base}/")
+          else
+            expanded
+          end
+        rel.end_with?('/') ? rel : "#{rel}/"
       end
     end
   end

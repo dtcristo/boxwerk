@@ -19,13 +19,14 @@ module Boxwerk
   # autoload calls execute in the root box context (where Zeitwerk was
   # loaded), not the target package box.
   class BoxManager
-    attr_reader :boxes, :gem_resolver, :file_indexes
+    attr_reader :boxes, :gem_resolver, :file_indexes, :default_autoload_dirs
 
     def initialize(root_path)
       @root_path = root_path
       @boxes = {} # package name -> Ruby::Box
       @file_indexes = {} # package name -> {const_name => abs_path}
       @gem_resolver = GemResolver.new(root_path)
+      @default_autoload_dirs = {} # package name -> [relative dir strings]
     end
 
     # Boot all packages in topological order.
@@ -147,6 +148,7 @@ module Boxwerk
     # in the box. Returns a file index for use by ConstantResolver.
     def scan_and_register(box, package)
       all_entries = []
+      dirs = @default_autoload_dirs[package.name] ||= []
 
       # Always compute public path for file scanning. Privacy enforcement
       # controls access, not discovery — files in public/ are always scanned.
@@ -154,6 +156,7 @@ module Boxwerk
 
       lib_path = package_lib_path(package)
       if lib_path && File.directory?(lib_path)
+        dirs << 'lib/'
         entries = ZeitwerkScanner.scan(lib_path)
         # Exclude constants under public_path (scanned separately)
         if pub_path && pub_path.start_with?(lib_path)
@@ -168,6 +171,9 @@ module Boxwerk
       # Scan public_path as a separate autoload root so that
       # public/invoice.rb maps to Invoice (not Public::Invoice).
       if pub_path && File.directory?(pub_path)
+        pub_rel = package.config['public_path'] || 'public/'
+        pub_rel = "#{pub_rel}/" unless pub_rel.end_with?('/')
+        dirs << pub_rel
         all_entries.concat(ZeitwerkScanner.scan(pub_path))
       end
 

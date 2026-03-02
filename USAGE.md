@@ -138,19 +138,21 @@ IRB autocomplete is disabled (box-scoped constants are not visible to the comple
 
 #### `boxwerk info`
 
-Show the project structure and package details: config, dependency tree, global section, per-package enforcements/dependencies/gems/constants. Also reports gem version conflicts.
+Boot the application and show runtime autoload structure: config, dependency tree, global section, per-package enforcements/dependencies/autoload dirs/gems/constants. Also reports gem version conflicts.
 
 ```bash
-boxwerk info
+RUBY_BOX=1 boxwerk info
 ```
 
 Output sections:
-- **Config** — `boxwerk.yml` settings (if present)
+- **Config** — `boxwerk.yml` settings with defaults filled in
 - **Dependency Graph** — tree view; circular dependencies are marked `(circular)`
-- **Global** — root package (`.`) details including direct gems
-- **Packages** — each package with enforcements, dependencies, direct gems, `public_path`, `pack_public` constants, and explicit private constants
+- **Global** — boot script, autoload dirs (with `(eager)` suffix when eager loading), gems
+- **Packages** — each package with enforcements, dependencies, autoload dirs, `pack_public` constants, explicit private constants, and direct gems
 
-Does not require `RUBY_BOX=1`.
+Requires `RUBY_BOX=1` (boots the application to gather runtime autoload information).
+
+Autoload dirs are shown as `(eager)` when `eager_load_global` / `eager_load_packages` is enabled.
 
 #### `boxwerk install`
 

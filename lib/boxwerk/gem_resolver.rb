@@ -159,6 +159,8 @@ module Boxwerk
     end
 
     # Parses a lockfile and returns [GemInfo] with resolved load paths.
+    # Path gems (like `boxwerk`) that can't be found in gem dirs are included
+    # with empty load_paths so they appear in display output.
     def resolve_gems_from_lockfile(lockfile_path)
       lockfile_content = File.read(lockfile_path)
       parser = Bundler::LockfileParser.new(lockfile_content)
@@ -166,12 +168,10 @@ module Boxwerk
       gems = []
       parser.specs.each do |spec|
         paths = resolve_gem_paths(spec.name, spec.version.to_s)
-        next unless paths
-
         gems << GemInfo.new(
           name: spec.name,
           version: spec.version.to_s,
-          load_paths: paths,
+          load_paths: paths || [],
         )
       end
 

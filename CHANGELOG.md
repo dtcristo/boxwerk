@@ -16,8 +16,13 @@ with constants resolved lazily at runtime. Reads standard Packwerk
   `ConstantResolver`, `GemResolver`, `PackageResolver`, `PrivacyChecker`.
 - `exe/boxwerk` boots into `Ruby::Box.root`, loads gems via Bundler, then
   delegates to CLI. Re-execs when launched via `bundle exec` to prevent
-  double gem loading. Commands that don't need Ruby::Box (`install`, `info`,
+  double gem loading. Commands that don't need Ruby::Box (`install`,
   `help`, `version`) work without `RUBY_BOX=1`.
+- `boxwerk info` boots the application (requires `RUBY_BOX=1`) to show
+  runtime autoload dirs, collapse/ignore dirs, eager load status, boot
+  script presence, and per-package gems. Autoload dirs show `(eager)` when
+  relevant eager load option is enabled. Global section includes path gems
+  (e.g. `boxwerk`) when present in the Gemfile.
 - Example restructured: `example/` → `examples/simple/` with per-package
   gems, unit tests, and privacy demos. `examples/rails/` added as a plan.
 - Requires Ruby >= 4.0.1 (was 4.0.0).

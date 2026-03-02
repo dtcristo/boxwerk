@@ -10,6 +10,18 @@ module Boxwerk
     def initialize(root_path)
       @root_path = root_path
       @autoloader = Autoloader.new(root_path)
+      @default_dirs = []
+    end
+
+    # Records a directory scanned by setup (e.g. global/) so it appears
+    # in autoload info without needing to go through the autoloader.
+    def record_scanned_dir(rel_path)
+      @default_dirs << rel_path
+    end
+
+    # Returns dirs scanned by setup (not via autoloader push_dir).
+    def default_dirs
+      @default_dirs
     end
 
     # Autoload configuration for the root box. Supports push_dir, collapse,
