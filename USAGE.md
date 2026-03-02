@@ -25,7 +25,7 @@ Install and set up:
 ```bash
 bundle install                       # Install gems (including boxwerk)
 bundle binstubs boxwerk              # Create bin/boxwerk binstub
-bin/boxwerk install                  # Install per-package gems
+bin/boxwerk install                  # Install per-package gems (works without pre-installed project gems)
 ```
 
 Run your application:
@@ -162,7 +162,7 @@ Run `bundle install` for every package that has a `Gemfile` or `gems.rb`. Proces
 bin/boxwerk install
 ```
 
-Does not require `RUBY_BOX=1`.
+Does not require `RUBY_BOX=1`. Works without pre-installing global project gems first — the binstub skips `bundler/setup` for this command so you can run it as the first step after cloning a project.
 
 #### `boxwerk help` / `boxwerk version`
 
@@ -435,21 +435,24 @@ pkg.root_path      # => absolute path to the package directory
 pkg.autoloader     # => autoload configuration object
 
 pkg.autoloader.push_dir("models")
-pkg.autoloader.collapse("lib/concerns")
-pkg.autoloader.ignore("lib/legacy")
+pkg.autoloader.collapse("lib/concerns")  # Promotes lib/concerns/* to parent namespace
+pkg.autoloader.ignore("lib/legacy")      # Excludes lib/legacy/* from autoloading
 ```
+
+`collapse` removes the intermediate namespace directory from the constant hierarchy. For example, collapsing `lib/analytics/formatters` means files in that directory are accessible as `Analytics::CsvFormatter` rather than `Analytics::Formatters::CsvFormatter`. The `Formatters` intermediate constant is removed from the box.
+
+`ignore` prevents files in the directory from being autoloaded. Accessing any constant from that directory raises `NameError`.
 
 ### `autoloader.setup`
 
-By default, directories added via `push_dir` and `collapse` are registered **after** `boot.rb` finishes. Call `autoloader.setup` to register them immediately, making constants available during boot:
+`push_dir` and `collapse` automatically call `setup`, registering constants immediately so they are available during `boot.rb` execution. You can also call `autoloader.setup` explicitly to ensure dirs are registered at a specific point:
 
 ```ruby
 # packs/svc/boot.rb
 pkg = Boxwerk.package
 pkg.autoloader.push_dir("extras")
-pkg.autoloader.setup
 
-# Helper is now available (defined in packs/svc/extras/helper.rb)
+# Helper is available immediately (push_dir auto-called setup)
 Helper.configure(ENV["API_KEY"])
 ```
 

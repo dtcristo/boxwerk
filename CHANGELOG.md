@@ -74,6 +74,23 @@ with constants resolved lazily at runtime. Reads standard Packwerk
   so constants are accessible via autoload in `boot.rb` without crashing.
 - `boxwerk install` uses `Bundler.with_unbundled_env` and `--retry 3` to
   fix CI gem installation when `BUNDLE_GEMFILE` is inherited from parent.
+- `boxwerk install` works without pre-installed global project gems — the
+  binstub skips `bundler/setup` for the install command, so it can be the
+  first command run after cloning.
+- `PackageContext::Autoloader` — `collapse` now properly removes intermediate
+  namespace constants (e.g. `Formatters`) from the box after boot.rb runs;
+  `ignore` removes the namespace constant and its children; `autoload_dirs`,
+  `collapse_dirs`, and `ignore_dirs` return default dirs (lib/, public/)
+  alongside any user-configured dirs.
+- `GlobalContext::Autoloader` — `ignore_dirs` and `ignore` method added.
+- `boxwerk info` — output reformatted: enforcements, dependencies, gems, and
+  autoload_dirs are now multiline; `autoload` renamed to `autoload_dirs`;
+  `collapse_dirs` and `ignore_dirs` shown in package sections.
+- Gem deduplication in `GemResolver` — lockfiles with multiple platform
+  variants of the same gem (e.g. sqlite3) no longer produce duplicates.
+- `examples/complex` — new `packs/analytics` package demonstrating
+  `collapse_dirs` and `ignore_dirs` via boot.rb; package has its own Rakefile
+  and test suite testing isolation constraints.
 
 ### Removed
 
