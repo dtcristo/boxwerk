@@ -67,6 +67,24 @@ module Boxwerk
         constants
       end
 
+      # Returns the set of constants with pack_public: true sigil in package lib/.
+      # These are individual files opted-in to public access without a public_path dir.
+      def pack_public_constants(package, root_path)
+        lib = package_lib_path(package, root_path)
+        return nil unless lib && File.directory?(lib)
+
+        constants = Set.new
+        Dir
+          .glob(File.join(lib, '**', '*.rb'))
+          .each do |file|
+            if publicized_file?(file)
+              const_name = constant_name_from_path(file, lib)
+              constants.add(const_name) if const_name
+            end
+          end
+        constants.empty? ? nil : constants
+      end
+
       # Returns the set of explicitly private constant names.
       # Strips leading :: prefix.
       def private_constants_list(package)

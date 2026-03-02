@@ -13,8 +13,9 @@ module Boxwerk
     end
 
     # Autoload configuration for the root box. Supports push_dir, collapse,
-    # and setup. Registrations happen immediately in Ruby::Box.root so
-    # constants are available throughout the boot process.
+    # setup, and eager_load. Registrations happen lazily (autoload entries only)
+    # until eager_load! is called. Constants are available via lazy autoload
+    # throughout the boot process without requiring eager loading.
     class Autoloader
       attr_reader :autoload_dirs, :collapse_dirs
 
@@ -23,6 +24,7 @@ module Boxwerk
         @autoload_dirs = []
         @collapse_dirs = []
         @setup_index = { push: 0, collapse: 0 }
+        @accumulated_entries = []
       end
 
       def push_dir(dir)
@@ -35,9 +37,10 @@ module Boxwerk
         setup
       end
 
-      # Immediately register autoloads for any dirs added since the last
-      # setup call. Called automatically by push_dir/collapse, but can also
-      # be called explicitly to force eager loading of registered dirs.
+      # Register lazy autoloads for any dirs added since the last setup call.
+      # Called automatically by push_dir/collapse so constants are available
+      # via autoload in boot.rb without explicit setup. Does NOT eagerly require
+      # files — call eager_load! to require all registered entries.
       def setup
         all_entries = []
 
@@ -57,10 +60,18 @@ module Boxwerk
 
         return if all_entries.empty?
 
+        ZeitwerkScanner.register_autoloads(Ruby::Box.root, all_entries)
+        @accumulated_entries.concat(all_entries)
+      end
+
+      # Eagerly require all files registered via push_dir/collapse so child
+      # boxes inherit the constants (not just pending autoload entries).
+      # Called after global/boot.rb when eager_load_global is true.
+      def eager_load!
+        return if @accumulated_entries.empty?
+
         root_box = Ruby::Box.root
-        ZeitwerkScanner.register_autoloads(root_box, all_entries)
-        # Also require each file eagerly so child boxes inherit the constants
-        all_entries.each { |e| root_box.require(e.file) if e.file }
+        @accumulated_entries.each { |e| root_box.require(e.file) if e.file }
       end
 
       # Number of push_dir entries already registered via setup.

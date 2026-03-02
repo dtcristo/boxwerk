@@ -315,16 +315,45 @@ module Boxwerk
         root_path = Setup.send(:find_root, Dir.pwd)
 
         resolver = PackageResolver.new(root_path)
+        gem_resolver = GemResolver.new(root_path)
 
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
+
+        config = resolver.boxwerk_config
+        if config.any?
+          puts 'Config'
+          puts ''
+          config.each { |k, v| puts "  #{k}: #{v.inspect}" }
+          puts ''
+        end
+
         puts 'Dependency Graph'
         puts ''
         print_dependency_tree(resolver)
         puts ''
+
+        puts 'Global'
+        puts ''
+        print_package_info(resolver.root, gem_resolver, root_path)
+
         puts 'Packages'
         puts ''
-        print_package_details(resolver, root_path)
+        resolver.topological_order.reject(&:root?).each do |pkg|
+          print_package_info(pkg, gem_resolver, root_path, show_deps: true)
+        end
+
+        # Show gem conflicts
+        conflicts = gem_resolver.check_conflicts(resolver)
+        if conflicts.any?
+          puts 'Gem Conflicts'
+          puts ''
+          conflicts.each do |c|
+            puts "  ⚠ #{c[:gem_name]}: #{c[:package_version]} in #{c[:package]} " \
+                   "vs #{c[:global_version]} in root (both loaded into memory)"
+          end
+          puts ''
+        end
       end
 
       def install_command
@@ -342,7 +371,12 @@ module Boxwerk
           label = pkg.root? ? '.' : pkg.name
           puts "Installing gems for #{label}..."
           Dir.chdir(pkg_dir) do
-            success = system('bundle', 'install', '--quiet')
+            # Clear Bundler env vars so each package uses its own Gemfile,
+            # not the parent process's BUNDLE_GEMFILE or BUNDLE_PATH.
+            success =
+              Bundler.with_unbundled_env do
+                system('bundle', 'install', '--retry', '3', '--quiet')
+              end
             unless success
               $stderr.puts "  Error: bundle install failed in #{label}"
               exit 1
@@ -638,60 +672,67 @@ module Boxwerk
         print_tree_children(root.dependencies, resolver, '')
       end
 
-      def print_tree_children(dep_names, resolver, prefix)
+      def print_tree_children(dep_names, resolver, prefix, ancestry = Set.new)
         dep_names.each_with_index do |dep_name, i|
           last = (i == dep_names.length - 1)
           connector = last ? '└── ' : '├── '
-          puts "#{prefix}#{connector}#{dep_name}"
 
-          pkg = resolver.packages[dep_name]
-          if pkg && pkg.dependencies.any?
-            child_prefix = prefix + (last ? '    ' : '│   ')
-            print_tree_children(pkg.dependencies, resolver, child_prefix)
+          if ancestry.include?(dep_name)
+            puts "#{prefix}#{connector}#{dep_name} (circular)"
+          else
+            puts "#{prefix}#{connector}#{dep_name}"
+            pkg = resolver.packages[dep_name]
+            if pkg && pkg.dependencies.any?
+              child_prefix = prefix + (last ? '    ' : '│   ')
+              print_tree_children(
+                pkg.dependencies,
+                resolver,
+                child_prefix,
+                ancestry | [dep_name],
+              )
+            end
           end
         end
       end
 
-      def print_package_details(resolver, root_path)
-        gem_resolver = GemResolver.new(root_path)
+      def print_package_info(pkg, gem_resolver, root_path, show_deps: true)
+        label = pkg.root? ? '  .' : "  #{pkg.name}"
+        puts label
 
-        resolver.topological_order.each do |pkg|
-          label = pkg.root? ? '.' : pkg.name
-          puts "  #{label}"
+        flags = []
+        flags << 'enforce_dependencies' if pkg.enforce_dependencies?
+        flags << 'enforce_privacy' if pkg.config['enforce_privacy']
+        puts "    enforcements: #{flags.any? ? flags.join(', ') : 'none'}"
 
-          flags = []
-          flags << 'enforce_dependencies' if pkg.enforce_dependencies?
-          flags << 'enforce_privacy' if pkg.config['enforce_privacy']
-          puts "    enforcements: #{flags.any? ? flags.join(', ') : 'none'}"
-
+        if show_deps
           deps = pkg.dependencies
           puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
-
-          gems = gem_resolver.gems_for(pkg)
-          if gems&.any?
-            gem_list = gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
-            puts "    gems: #{gem_list}"
-          end
-
-          if pkg.config['enforce_privacy']
-            public_path = pkg.config['public_path'] || 'public/'
-            puts "    public_path: #{public_path}"
-          end
-
-          puts ''
         end
 
-        # Show gem conflicts
-        conflicts = gem_resolver.check_conflicts(resolver)
-        if conflicts.any?
-          puts 'Gem Conflicts'
-          puts ''
-          conflicts.each do |c|
-            puts "  ⚠ #{c[:gem_name]}: #{c[:package_version]} in #{c[:package]} " \
-                   "vs #{c[:global_version]} in root (both loaded into memory)"
-          end
-          puts ''
+        # Only direct gems (autorequire not nil = in Gemfile)
+        gems = gem_resolver.gems_for(pkg)
+        direct_gems = gems&.select { |g| !g.autorequire.nil? }
+        if direct_gems&.any?
+          gem_list = direct_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
+          puts "    gems: #{gem_list}"
         end
+
+        if pkg.config['enforce_privacy']
+          public_path = pkg.config['public_path'] || 'public/'
+          puts "    public_path: #{public_path}"
+
+          pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
+          if pack_public&.any?
+            puts "    pack_public constants: #{pack_public.sort.join(', ')}"
+          end
+        end
+
+        private_consts = PrivacyChecker.private_constants_list(pkg)
+        if private_consts.any?
+          puts "    private constants: #{private_consts.sort.join(', ')}"
+        end
+
+        puts ''
       end
     end
   end

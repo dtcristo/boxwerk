@@ -3,7 +3,7 @@ PATH
   specs:
     boxwerk (0.3.0)
       bundler (~> 4.0)
-      irb (~> 1.16)
+      irb (~> 1.17)
       zeitwerk (~> 2.7)
 
 GEM

@@ -105,25 +105,30 @@ module Boxwerk
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
 
-        # Require global/ files in root box so they are defined before
-        # child boxes are created (not just registered as autoloads).
-        # Only when eager_load_global is true; global/boot.rb always runs.
-        if eager_load && File.directory?(global_dir)
+        # Always register lazy autoloads for global/ dir so constants are
+        # accessible in boot.rb (autoload fires on access in root box context).
+        # This works regardless of eager_load_global so global constants can
+        # be used in boot.rb even when eager loading is disabled.
+        if File.directory?(global_dir)
           entries = ZeitwerkScanner.scan(global_dir)
-          entries.each do |entry|
-            next unless entry.file && entry.file != global_boot
-            root_box.require(entry.file)
+          non_boot = entries.reject { |e| e.file == global_boot }
+          ZeitwerkScanner.register_autoloads(root_box, non_boot) if non_boot.any?
+
+          # Eagerly require all global/ files only when eager_load_global is true.
+          if eager_load
+            non_boot.each { |entry| root_box.require(entry.file) if entry.file }
           end
         end
 
         # Run global/boot.rb in root box (always, regardless of eager_load)
         root_box.require(global_boot) if File.exist?(global_boot)
 
-        # After global/boot.rb, re-setup the global autoloader to pick up
-        # any dirs added via Boxwerk.global.autoloader.push_dir during boot
-        # that haven't been registered yet. Since push_dir auto-calls setup,
-        # this is mainly a safety net for dirs added outside of push_dir.
+        # After boot.rb, register lazy autoloads for any dirs added via
+        # Boxwerk.global.autoloader.push_dir during boot.
         global_context&.autoloader&.setup
+
+        # Eagerly require any dirs added via push_dir if eager_load_global is true.
+        global_context&.autoloader&.eager_load! if eager_load
       end
 
       def check_gem_conflicts(gem_resolver, package_resolver)

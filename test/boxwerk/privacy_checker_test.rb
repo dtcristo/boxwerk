@@ -93,6 +93,29 @@ module Boxwerk
       refute_includes consts, 'PrivateThing'
     end
 
+    def test_pack_public_constants_returns_sigil_only
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      lib_dir = File.join(pkg_dir, 'lib')
+      FileUtils.mkdir_p(lib_dir)
+
+      File.write(
+        File.join(lib_dir, 'publicized.rb'),
+        "# pack_public: true\nclass Publicized\nend\n",
+      )
+      File.write(File.join(lib_dir, 'normal.rb'), "class Normal\nend\n")
+
+      pkg = create_package('packs/a', 'enforce_privacy' => true)
+      consts = PrivacyChecker.pack_public_constants(pkg, @tmpdir)
+
+      assert_includes consts, 'Publicized'
+      refute_includes consts, 'Normal'
+    end
+
+    def test_pack_public_constants_nil_without_lib
+      pkg = create_package('packs/a', 'enforce_privacy' => true)
+      assert_nil PrivacyChecker.pack_public_constants(pkg, @tmpdir)
+    end
+
     def test_private_constants_list
       pkg =
         create_package(

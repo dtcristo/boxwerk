@@ -216,7 +216,21 @@ class E2ERunner
       assert_equal 0, status.exitstatus, 'info: exit status'
       assert_match /Dependency Graph/, out, 'info: shows dependency graph'
       assert_match %r{└── packs/core}, out, 'info: shows tree'
+      assert_match /Global/, out, 'info: shows Global section'
       assert_match /Packages/, out, 'info: shows packages section'
+      assert_match /packs\/core/, out, 'info: shows package'
+    end
+  end
+
+  def test_info_circular_dep
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/a'])
+      create_package(dir, 'a', dependencies: ['packs/b'])
+      create_package(dir, 'b', dependencies: ['packs/a'])
+
+      out, status = run_boxwerk(dir, 'info')
+      assert_equal 0, status.exitstatus, 'info_circular: exit status'
+      assert_match /circular/, out, 'info_circular: marks circular deps'
     end
   end
 

@@ -30,18 +30,13 @@ module Boxwerk
 
     # Boot all packages in topological order.
     def boot_all(resolver, eager_load_packages: false)
-      order = resolver.topological_order
+      resolver.topological_order.each do |package|
+        boot(package, resolver)
+        next unless eager_load_packages
 
-      order.each { |package| boot(package, resolver) }
-
-      # Optionally eager-load all constants in each package box
-      if eager_load_packages
-        order.each do |package|
-          box = @boxes[package.name]
-          next unless box
-          file_index = @file_indexes[package.name] || {}
-          eager_load_box(box, file_index)
-        end
+        box = @boxes[package.name]
+        file_index = @file_indexes[package.name] || {}
+        eager_load_box(box, file_index) if box
       end
     end
 
@@ -61,15 +56,13 @@ module Boxwerk
       # Boot in dependency order (deps first)
       ordered =
         resolver.topological_order.select { |p| packages_to_boot.include?(p) }
-      ordered.each { |package| boot(package, resolver) }
+      ordered.each do |package|
+        boot(package, resolver)
+        next unless eager_load_packages
 
-      if eager_load_packages
-        ordered.each do |package|
-          box = @boxes[package.name]
-          next unless box
-          file_index = @file_indexes[package.name] || {}
-          eager_load_box(box, file_index)
-        end
+        box = @boxes[package.name]
+        file_index = @file_indexes[package.name] || {}
+        eager_load_box(box, file_index) if box
       end
     end
 

@@ -1,8 +1,15 @@
+# Limit package discovery to specific paths. Improves resolution performance
+# since there are fewer directories to search. Also lets you change the
+# default discovery directory. Default: ["**/"] (searches entire project).
 package_paths:
   - "packs/*"
 
-# Eager-load Zeitwerk-managed constants and global/ files into root box.
+# Eagerly require all constants in global/ and any dirs added via
+# Boxwerk.global.autoloader.push_dir into the root box before package boxes
+# are created. Ensures child boxes inherit fully resolved constants.
+# Default: true.
 eager_load_global: true
 
-# Eager-load all constants in each package box after boot.
+# Eagerly require all constants in each package box immediately after it boots.
+# Default: false.
 eager_load_packages: true

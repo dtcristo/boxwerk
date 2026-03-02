@@ -139,7 +139,7 @@ module Boxwerk
       assert_instance_of PackageResolver, result[:resolver]
     end
 
-    def test_eager_load_global_false_skips_global_files
+    def test_eager_load_global_false_uses_lazy_autoload
       create_package(@tmpdir)
       File.write(
         File.join(@tmpdir, 'boxwerk.yml'),
@@ -147,15 +147,22 @@ module Boxwerk
       )
       global_dir = File.join(@tmpdir, 'global')
       FileUtils.mkdir_p(global_dir)
-      File.write(
-        File.join(global_dir, 'eager_test.rb'),
-        "module EagerTest; VALUE = 99; end\n",
-      )
+      eager_test_file = File.join(global_dir, 'eager_test.rb')
+      File.write(eager_test_file, "module EagerTest; VALUE = 99; end\n")
 
       Setup.run(start_dir: @tmpdir)
 
-      # Global file should NOT be eagerly loaded
-      refute Ruby::Box.root.eval('defined?(EagerTest)')
+      # With eager_load_global: false, global files are registered as lazy
+      # autoloads (accessible on demand) but NOT eagerly required.
+      # The constant is autoload-registered so defined? returns "constant",
+      # but the file itself has NOT been required yet.
+      assert_equal 'constant',
+                   Ruby::Box.root.eval('defined?(EagerTest)'),
+                   'EagerTest should be autoload-registered'
+      refute $LOADED_FEATURES.include?(eager_test_file),
+             'eager_test.rb should NOT be eagerly required'
+      # Accessing the constant triggers the lazy autoload
+      assert_equal 99, Ruby::Box.root.eval('EagerTest::VALUE')
     end
 
     def test_eager_load_global_false_still_runs_boot
