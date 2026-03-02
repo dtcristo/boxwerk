@@ -101,9 +101,9 @@ boxwerk <command> [options] [args...]
 Run a Ruby script in a package box.
 
 ```bash
-boxwerk run main.rb                       # Run in root package box
-boxwerk run -p packs/finance main.rb      # Run in a specific package box
-boxwerk run -g main.rb                    # Run in global context (no package)
+boxwerk run main.rb                             # Run in root package box
+boxwerk run --package packs/finance main.rb     # Run in a specific package box
+boxwerk run --global main.rb                    # Run in global context (no package)
 ```
 
 #### `boxwerk exec <command> [args...]`
@@ -117,10 +117,9 @@ Execute a command in the boxed environment. Boxwerk looks for the command in thi
 Project binstubs take precedence, allowing custom command entry points (e.g. a `bin/rails` that sets `APP_PATH` and requires `rails/commands`).
 
 ```bash
-boxwerk exec rake test                   # Root package
-boxwerk exec -p packs/util rake test     # Specific package
-boxwerk exec --all rake test             # All packages sequentially
-boxwerk exec -g rake test                # Global context (debugging)
+boxwerk exec rake test                          # Root package
+boxwerk exec --package packs/util rake test     # Specific package
+boxwerk exec --all rake test                    # All packages sequentially
 ```
 
 With `--all`, each package runs in a separate subprocess for clean isolation (avoids `at_exit` conflicts from test frameworks like Minitest).
@@ -131,7 +130,8 @@ Start an IRB console with package constants accessible. IRB runs in `Ruby::Box.r
 
 ```bash
 boxwerk console                          # Root package context
-boxwerk console -p packs/finance         # Specific package context
+boxwerk console --package packs/finance  # Specific package context
+boxwerk console --global                 # Global context
 ```
 
 IRB autocomplete is disabled (box-scoped constants are not visible to the completer).
@@ -305,9 +305,9 @@ require "action_controller/railtie"
 Run tests through Boxwerk to enforce package isolation:
 
 ```bash
-boxwerk exec rake test                   # Root package tests
-boxwerk exec -p packs/finance rake test  # Specific package tests
-boxwerk exec --all rake test             # All packages sequentially
+boxwerk exec rake test                          # Root package tests
+boxwerk exec --package packs/finance rake test  # Specific package tests
+boxwerk exec --all rake test                    # All packages sequentially
 ```
 
 Each `--all` run spawns a separate subprocess per package for clean isolation — test frameworks like Minitest register tests globally via `at_exit`, which would conflict across packages in a single process.

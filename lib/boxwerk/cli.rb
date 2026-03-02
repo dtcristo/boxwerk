@@ -75,7 +75,7 @@ module Boxwerk
         puts '  boxwerk exec -p packs/util rake test'
         puts '  boxwerk exec --all rake test'
         puts '  boxwerk console'
-        puts '  boxwerk console -p packs/finance'
+        puts '  boxwerk console --global'
         puts ''
         puts 'Setup:'
         puts '  gem install boxwerk                  Install boxwerk'
