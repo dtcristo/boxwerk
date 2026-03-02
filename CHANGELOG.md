@@ -94,7 +94,7 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - `boxwerk info` — output improved: single-line display when only one item;
   `autoload_dirs`/`collapse_dirs`/`ignore_dirs` renamed to `autoload`/`collapse`/
   `ignore`; autoload section label changed to `eager_load` when eager loading is
-  enabled; `pack_public constants` supports multiline when multiple.
+  enabled; `pack_public` supports multiline when multiple.
 - `boxwerk install` — installs global gems first (root package); prints
   `Installing global gems...` for root; prints `Done!` and blank line after each;
   removed final count summary line.

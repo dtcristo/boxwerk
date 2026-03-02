@@ -780,7 +780,7 @@ module Boxwerk
         # pack_public sigil constants
         pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
         if pack_public&.any?
-          print_inline_or_multiline('    ', 'pack_public constants', pack_public.sort)
+          print_inline_or_multiline('    ', 'pack_public', pack_public.sort)
         end
 
         private_consts = PrivacyChecker.private_constants_list(pkg)
