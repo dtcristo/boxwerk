@@ -326,9 +326,9 @@ eager_load_global: true   # default: true
 eager_load_packages: false # default: false
 ```
 
-| Field                 | Type | Default   | Description                                               |
-|-----------------------|------|-----------|-----------------------------------------------------------|
-| `package_paths`       | list | `["**/"]` | Glob patterns for where to search for `package.yml` files |
+| Field                 | Type | Default   | Description                                                |
+|-----------------------|------|-----------|------------------------------------------------------------|
+| `package_paths`       | list | `["**/"]` | Glob patterns for where to search for `package.yml` files  |
 | `eager_load_global`   | bool | `true`    | Eager-load `global/` files and Zeitwerk constants at boot  |
 | `eager_load_packages` | bool | `false`   | Eager-load all constants in each package box after boot    |
 

@@ -71,7 +71,7 @@ boxwerk info                        Show package structure and dependencies
 boxwerk install                     Install gems for all packages
 ```
 
-Options: `-p <package>`, `-a`/`--all`, `-g` (global context). See [USAGE.md](USAGE.md) for details.
+Options: `--package <package>`, `--all`, `--global`. See [USAGE.md](USAGE.md) for details.
 
 ## Limitations
 
