@@ -29,6 +29,7 @@ jobs:
         run: |
           for dir in examples/*/; do
             echo "==> Installing gems for $dir"
+            (cd "$dir" && bundle install)
             if [ -f "$dir/bin/boxwerk" ]; then
               echo "==> Installing package gems for $dir"
               (cd "$dir" && bin/boxwerk install)
