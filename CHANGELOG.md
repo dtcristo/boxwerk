@@ -40,10 +40,11 @@ with constants resolved lazily at runtime. Reads standard Packwerk
 - Zeitwerk-based file scanning and inflection (`ZeitwerkScanner`).
 - `irb` and `zeitwerk` gem dependencies.
 - `ARCHITECTURE.md`, `TODO.md`, `AGENTS.md`.
-- E2E test suite (71 tests) alongside unit/integration tests (118 tests).
+- E2E test suite (73 tests) alongside unit/integration tests (120 tests).
 - `Boxwerk.global` API — `Boxwerk.global.autoloader` in `global/boot.rb`
   registers extra root-level autoload dirs whose constants are available in
-  all package boxes. Supports `push_dir`, `collapse`, `setup`.
+  all package boxes. Supports `push_dir`, `collapse`, `setup`, `eager_load!`.
+  `push_dir` registers lazy autoloads only; `eager_load!` triggers eager require.
 - `autoloader.setup` can be called in a per-package `boot.rb` to make newly
   added dirs available immediately (no longer requires explicit call — `push_dir`
   and `collapse` now auto-call `setup`).
@@ -56,6 +57,18 @@ with constants resolved lazily at runtime. Reads standard Packwerk
   when run via selective boot (`-p`).
 - `examples/complex` — demonstrates `eager_load_global`, `eager_load_packages`,
   `Boxwerk.global.autoloader.push_dir`, and package isolation tests.
+- `boxwerk info` — restructured: Global section (root package separate from
+  packages), Config section showing `boxwerk.yml` options, direct gems only
+  (no transitive deps), `public_path`, `pack_public` constants, and explicit
+  private constants per package. Circular dependency detection in tree.
+- `PrivacyChecker.pack_public_constants` — returns constants with
+  `pack_public: true` sigil separately from `public_path`-based constants.
+- `eager_load_packages` now eager loads each package immediately after it
+  boots (not in a second pass over all packages).
+- `eager_load_global: false` now registers lazy autoloads for `global/` dir
+  so constants are accessible via autoload in `boot.rb` without crashing.
+- `boxwerk install` uses `Bundler.with_unbundled_env` and `--retry 3` to
+  fix CI gem installation when `BUNDLE_GEMFILE` is inherited from parent.
 
 ### Removed
 

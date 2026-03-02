@@ -138,11 +138,17 @@ IRB autocomplete is disabled (box-scoped constants are not visible to the comple
 
 #### `boxwerk info`
 
-Show the dependency tree and package details: enforcements, dependencies, gems, and public paths. Also reports gem version conflicts between packages and the root `Gemfile`.
+Show the project structure and package details: config, dependency tree, global section, per-package enforcements/dependencies/gems/constants. Also reports gem version conflicts.
 
 ```bash
 boxwerk info
 ```
+
+Output sections:
+- **Config** — `boxwerk.yml` settings (if present)
+- **Dependency Graph** — tree view; circular dependencies are marked `(circular)`
+- **Global** — root package (`.`) details including direct gems
+- **Packages** — each package with enforcements, dependencies, direct gems, `public_path`, `pack_public` constants, and explicit private constants
 
 Does not require `RUBY_BOX=1`.
 
@@ -336,8 +342,8 @@ By default, Boxwerk searches everywhere (`**/`) for `package.yml` files. Set `pa
 
 ### Eager Loading
 
-- **`eager_load_global`** — When `true` (default), requires all files in `global/` and runs `Zeitwerk::Loader.eager_load_all` after `global/boot.rb`. This ensures gems with internal Zeitwerk autoloading (like Rails) have their constants resolved before child boxes are created. When `false`, skips both, but `global/boot.rb` still runs.
-- **`eager_load_packages`** — When `true`, eager-loads all constants in each package box after boot. When `false` (default), constants are lazy-loaded via autoload on first access.
+- **`eager_load_global`** — When `true` (default), requires all files in `global/` and any dirs registered via `Boxwerk.global.autoloader.push_dir`, then runs `Zeitwerk::Loader.eager_load_all`. This ensures constants are defined before child boxes are created. When `false`, global constants are registered as lazy autoloads (accessible on demand, e.g. in `global/boot.rb`) but not eagerly required.
+- **`eager_load_packages`** — When `true`, eager-loads all constants in each package box immediately after it boots. When `false` (default), constants are lazy-loaded via autoload on first access.
 
 ## Implicit Root Package
 
@@ -392,15 +398,16 @@ Use `Boxwerk.global.autoloader` in `global/boot.rb` (or anywhere in global conte
 Boxwerk.global.autoloader.push_dir(File.expand_path('../lib', __dir__))
 ```
 
-Methods mirror per-package autoloader:
+Methods:
 
 ```ruby
-Boxwerk.global.autoloader.push_dir("lib")       # Add autoload root
+Boxwerk.global.autoloader.push_dir("lib")       # Register lazy autoloads
 Boxwerk.global.autoloader.collapse("lib/utils")  # Collapse namespace
-Boxwerk.global.autoloader.setup                  # Register immediately
+Boxwerk.global.autoloader.setup                  # Register any pending dirs
+Boxwerk.global.autoloader.eager_load!            # Eagerly require all registered dirs
 ```
 
-`push_dir` and `collapse` auto-call `setup`, so constants are available right away. Depending on `eager_load_global`, new dirs are also eager-loaded.
+`push_dir` and `collapse` auto-call `setup` (lazy autoload registration), so constants are accessible immediately in `boot.rb` via the autoload mechanism. Files are NOT eagerly required by `push_dir`. When `eager_load_global: true`, Boxwerk calls `eager_load!` after `global/boot.rb` so child boxes inherit the constants eagerly.
 
 ### Root-Level `boot.rb`
 
