@@ -28,7 +28,7 @@ jobs:
       - name: Install development dependencies
         run: bundle install
       - name: Generate RDoc
-        run: rdoc --markup markdown lib/ README.md CHANGELOG.md USAGE.md
+        run: rdoc --markup markdown --main README.md --exclude 'box_manager|setup|cli|constant_resolver|gem_resolver|package_resolver|privacy_checker|zeitwerk_scanner|gemfile_require_parser' lib/ README.md CHANGELOG.md USAGE.md
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

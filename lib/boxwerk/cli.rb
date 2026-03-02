@@ -4,12 +4,6 @@ require 'rbconfig'
 require 'stringio'
 
 module Boxwerk
-  # Command-line interface. Delegates to Setup for package boot.
-  #
-  # Primary commands:
-  #   exec    — run any Ruby command (gem binstub) in the boxed environment
-  #   run     — run a Ruby script in a package box
-  #   console — start an IRB console in a package box
   module CLI
     class << self
       attr_accessor :exe_path

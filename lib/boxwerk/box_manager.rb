@@ -1,23 +1,6 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # BoxManager creates a Ruby::Box for each package and wires them together.
-  #
-  # Boot sequence for each package (in topological order):
-  #   1. Create Ruby::Box
-  #   2. Configure per-package gem load paths (if Gemfile present)
-  #   3. Auto-require gems from Gemfile (non-root packages)
-  #   4. Scan default directories with Zeitwerk (lib/ + public/)
-  #   5. Register autoload entries in the box
-  #   6. Run optional per-package boot.rb in the box
-  #   7. Scan any additional autoload dirs configured in boot.rb
-  #   8. Wire dependency constants, enforcing:
-  #      - Constant privacy (public_path, private_constants)
-  #
-  # Zeitwerk is used for file scanning and inflection only. Autoload
-  # registration is done directly via box.eval because Zeitwerk's own
-  # autoload calls execute in the root box context (where Zeitwerk was
-  # loaded), not the target package box.
   class BoxManager
     attr_reader :boxes, :gem_resolver, :file_indexes, :default_autoload_dirs, :package_dirs_info
 

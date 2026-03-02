@@ -3,6 +3,8 @@
 require 'zeitwerk'
 
 module Boxwerk
+
+
   # Uses Zeitwerk's file system scanner and inflector to discover constants
   # in a directory. Zeitwerk's autoload registration cannot be used directly
   # inside Ruby::Box (autoloads register in the box where the code was

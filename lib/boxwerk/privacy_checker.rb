@@ -3,6 +3,8 @@
 require 'zeitwerk'
 
 module Boxwerk
+
+
   # Enforces privacy rules at runtime.
   # Reads enforce_privacy, public_path, and private_constants from package.yml.
   # Files with `# pack_public: true` sigil are treated as public.
