@@ -311,6 +311,12 @@ module Boxwerk
         start_console_in_box(Ruby::Box.root, parsed[:remaining], pkg_label)
       end
 
+      BOXWERK_CONFIG_DEFAULTS = {
+        'package_paths' => ['**/'],
+        'eager_load_global' => true,
+        'eager_load_packages' => false,
+      }.freeze
+
       def info_command
         root_path = Setup.send(:find_root, Dir.pwd)
 
@@ -320,30 +326,46 @@ module Boxwerk
         puts "boxwerk #{Boxwerk::VERSION}"
         puts ''
 
-        config = resolver.boxwerk_config
-        if config.any?
-          puts 'Config'
-          puts ''
-          config.each { |k, v| puts "  #{k}: #{v.inspect}" }
-          puts ''
-        end
+        # Config — always shown with defaults filled in
+        puts 'Config'
+        puts ''
+        merged_config =
+          BOXWERK_CONFIG_DEFAULTS.merge(resolver.boxwerk_config)
+        merged_config.each { |k, v| puts "  #{k}: #{v.inspect}" }
+        puts ''
 
+        # Dependency Graph
         puts 'Dependency Graph'
         puts ''
         print_dependency_tree(resolver)
         puts ''
 
-        puts 'Global'
-        puts ''
-        print_package_info(resolver.root, gem_resolver, root_path)
-
-        puts 'Packages'
-        puts ''
-        resolver.topological_order.reject(&:root?).each do |pkg|
-          print_package_info(pkg, gem_resolver, root_path, show_deps: true)
+        # Global section — only boot script + gems; hidden if nothing to show
+        global_boot = File.join(root_path, 'global', 'boot.rb')
+        root_gems =
+          gem_resolver
+            .gems_for(resolver.root)
+            &.select { |g| !g.autorequire.nil? }
+        global_has_content = File.exist?(global_boot) || root_gems&.any?
+        if global_has_content
+          puts 'Global'
+          puts ''
+          puts "  boot: global/boot.rb" if File.exist?(global_boot)
+          if root_gems&.any?
+            gem_list = root_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
+            puts "  gems: #{gem_list}"
+          end
+          puts ''
         end
 
-        # Show gem conflicts
+        # Packages — root (.) first, then others
+        puts 'Packages'
+        puts ''
+        ordered = resolver.topological_order
+        root_first = [resolver.root] + ordered.reject(&:root?)
+        root_first.each { |pkg| print_package_info(pkg, gem_resolver, root_path) }
+
+        # Gem conflicts
         conflicts = gem_resolver.check_conflicts(resolver)
         if conflicts.any?
           puts 'Gem Conflicts'
@@ -695,7 +717,7 @@ module Boxwerk
         end
       end
 
-      def print_package_info(pkg, gem_resolver, root_path, show_deps: true)
+      def print_package_info(pkg, gem_resolver, root_path)
         label = pkg.root? ? '  .' : "  #{pkg.name}"
         puts label
 
@@ -704,32 +726,44 @@ module Boxwerk
         flags << 'enforce_privacy' if pkg.config['enforce_privacy']
         puts "    enforcements: #{flags.any? ? flags.join(', ') : 'none'}"
 
-        if show_deps
-          deps = pkg.dependencies
-          puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
-        end
+        deps = pkg.dependencies
+        puts "    dependencies: #{deps.any? ? deps.join(', ') : 'none'}"
 
-        # Only direct gems (autorequire not nil = in Gemfile)
-        gems = gem_resolver.gems_for(pkg)
-        direct_gems = gems&.select { |g| !g.autorequire.nil? }
-        if direct_gems&.any?
-          gem_list = direct_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
-          puts "    gems: #{gem_list}"
-        end
+        # boot.rb presence
+        pkg_dir =
+          pkg.root? ? root_path : File.join(root_path, pkg.name)
+        puts "    boot: boot.rb" if File.exist?(File.join(pkg_dir, 'boot.rb'))
 
+        # Static autoload dirs (default dirs BoxManager scans)
+        lib_dir = pkg.root? ? nil : File.join(pkg_dir, 'lib')
+        if lib_dir && File.directory?(lib_dir)
+          puts "    autoload: lib/"
+        end
         if pkg.config['enforce_privacy']
           public_path = pkg.config['public_path'] || 'public/'
-          puts "    public_path: #{public_path}"
+          pub_dir = File.join(pkg_dir, public_path)
+          puts "    autoload: #{public_path}" if File.directory?(pub_dir)
+        end
 
-          pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
-          if pack_public&.any?
-            puts "    pack_public constants: #{pack_public.sort.join(', ')}"
-          end
+        # pack_public sigil constants (independent of public_path dir)
+        pack_public = PrivacyChecker.pack_public_constants(pkg, root_path)
+        if pack_public&.any?
+          puts "    pack_public constants: #{pack_public.sort.join(', ')}"
         end
 
         private_consts = PrivacyChecker.private_constants_list(pkg)
         if private_consts.any?
           puts "    private constants: #{private_consts.sort.join(', ')}"
+        end
+
+        # Direct gems — last; root gems are shown in Global section
+        unless pkg.root?
+          gems = gem_resolver.gems_for(pkg)
+          direct_gems = gems&.select { |g| !g.autorequire.nil? }
+          if direct_gems&.any?
+            gem_list = direct_gems.map { |g| "#{g.name} (#{g.version})" }.join(', ')
+            puts "    gems: #{gem_list}"
+          end
         end
 
         puts ''

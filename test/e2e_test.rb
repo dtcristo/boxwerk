@@ -214,9 +214,10 @@ class E2ERunner
 
       out, status = run_boxwerk(dir, 'info')
       assert_equal 0, status.exitstatus, 'info: exit status'
+      assert_match /Config/, out, 'info: shows Config section'
+      assert_match /eager_load_global/, out, 'info: shows config defaults'
       assert_match /Dependency Graph/, out, 'info: shows dependency graph'
       assert_match %r{└── packs/core}, out, 'info: shows tree'
-      assert_match /Global/, out, 'info: shows Global section'
       assert_match /Packages/, out, 'info: shows packages section'
       assert_match /packs\/core/, out, 'info: shows package'
     end
