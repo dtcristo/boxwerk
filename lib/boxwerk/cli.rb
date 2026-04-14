@@ -431,7 +431,7 @@ module Boxwerk
           puts ''
         end
 
-        puts 'No packages with a Gemfile or gems.rb found.' unless has_gemfile
+        puts 'No packages with a gems.rb/Gemfile found.' unless has_gemfile
       end
 
       # Determines which packages to boot based on parsed flags.

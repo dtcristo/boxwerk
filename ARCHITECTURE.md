@@ -193,7 +193,7 @@ Privacy is checked at constant resolution time in the `const_missing` handler. A
 
 `GemResolver` enables different packages to use different versions of the same gem:
 
-1. Check if the package has a `gems.rb` or `Gemfile` (and corresponding lockfile)
+1. Check if the package has a `gems.rb`/`Gemfile` (and corresponding lockfile)
 2. Parse the lockfile with `Bundler::LockfileParser` to get gem specs
 3. Parse the Gemfile with `GemfileRequireParser` to extract autorequire directives
 4. Find the actual gem installation paths by searching all `Gem.path` directories

@@ -11,10 +11,10 @@ Complete usage guide for Boxwerk — runtime package isolation for Ruby.
 
 ### With Bundler
 
-Add `boxwerk` to your project's `gems.rb` or `Gemfile`:
+Add `boxwerk` to your project's `gems.rb`/`Gemfile`:
 
 ```ruby
-# gems.rb
+# Gemfile
 source 'https://rubygems.org'
 
 gem 'boxwerk'
@@ -156,7 +156,7 @@ When eager loading is enabled (`eager_load_global` / `eager_load_packages`), the
 
 #### `boxwerk install`
 
-Run `bundle install` for every package that has a `Gemfile` or `gems.rb`. Installs global (root) gems first, then packages.
+Run `bundle install` for every package that has a `gems.rb`/`Gemfile`. Installs global (root) gems first, then packages.
 
 ```bash
 bin/boxwerk install
@@ -187,7 +187,7 @@ Package names passed to `--package` are normalized: leading `./` and trailing `/
 
 ## Per-Package Gems
 
-Each package can have its own `Gemfile`/`gems.rb` and corresponding lockfile. Different packages can use different versions of the same gem.
+Each package can have its own `gems.rb`/`Gemfile` and corresponding lockfile. Different packages can use different versions of the same gem.
 
 ```
 packs/billing/
@@ -202,7 +202,7 @@ packs/billing/
 
 - **Global gems** (root `Gemfile`) are loaded in the global context and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
 - **Per-package gems** are resolved from lockfiles and added to each box's `$LOAD_PATH` independently
-- **Auto-required:** Gems declared in a package's `Gemfile`/`gems.rb` are automatically required in the package box (like Bundler's default behaviour). No manual `require` needed
+- **Auto-required:** Gems declared in a package's `gems.rb`/`Gemfile` are automatically required in the package box (like Bundler's default behaviour). No manual `require` needed
 - **`require: false`** — Gems declared with `require: false` are added to `$LOAD_PATH` but not auto-required
 - **Custom require:** `gem 'foo', require: 'foo/bar'` auto-requires `foo/bar` instead of `foo`
 - **Gems do NOT leak** across package boundaries — package A cannot see package B's gems, even if A depends on B
@@ -283,19 +283,19 @@ Use `--global` / `-g` to run commands in the global context directly. A composit
 
 ## Global Gems
 
-Gems in the root `Gemfile`/`gems.rb` are loaded in `Ruby::Box.root` during boot:
+Gems in the root `gems.rb`/`Gemfile` are loaded in `Ruby::Box.root` during boot:
 
 1. `Bundler.setup` + `Bundler.require` run in the global context
 2. All loaded gems become available in child boxes via `$LOADED_FEATURES` snapshot
 3. Use `require: false` to keep a gem on `$LOAD_PATH` without loading it at boot
 
 ```ruby
-# gems.rb
+# Gemfile
 gem 'activesupport'                  # loaded globally, available everywhere
 gem 'pry', require: false            # on $LOAD_PATH but not loaded
 ```
 
-> **Note:** The root `gems.rb`/`Gemfile` is always for global gems shared across all packages. If your top-level package needs "package private" gems, use an implicit root (no `package.yml` at root) and create a `packs/main` package as your entry point with its own `gems.rb`.
+> **Note:** The root `gems.rb`/`Gemfile` is always for global gems shared across all packages. If your top-level package needs "package private" gems, use an implicit root (no `package.yml` at root) and create a `packs/main` package as your entry point with its own `Gemfile`.
 
 ### Gems with Internal Autoloading
 

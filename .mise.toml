@@ -1,5 +1,5 @@
 [tools]
-ruby = "4.0.1"
+ruby = "4.0.0"
 
 [env]
 RUBY_BOX = 1

@@ -10,8 +10,8 @@ complex/
 ├── global/
 │   ├── boot.rb              # Boot script (runs in global context before packages)
 │   └── config.rb            # Config module (autoloaded in global context)
-├── main.rb                   # Entry point
-├── gems.rb                  # Global gems (colorize, dotenv, minitest, rake)
+├── main.rb                  # Entry point
+├── Gemfile                  # Global gems (colorize, dotenv, minitest, rake)
 ├── .env                     # Environment variables
 ├── test/
 │   └── integration_test.rb  # Cross-package integration tests

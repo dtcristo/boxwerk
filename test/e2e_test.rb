@@ -251,7 +251,7 @@ class E2ERunner
       create_package(dir, 'a')
       out, status = run_boxwerk(dir, 'install')
       assert_equal 0, status.exitstatus, 'install_no_gemfiles: exit status'
-      assert_match /No packages with a Gemfile or gems\.rb found/,
+      assert_match /No packages with a gems\.rb\/Gemfile found/,
                    out,
                    'install_no_gemfiles: output'
     end
@@ -507,7 +507,7 @@ class E2ERunner
 
       # Simulate Bundler being loaded (as with bundle exec or binstub)
       # by pre-requiring bundler via RUBYOPT. The re-exec should strip this.
-      gemfile = File.expand_path('../gems.rb', __dir__)
+      gemfile = File.expand_path('../Gemfile', __dir__)
       env = {
         'RUBY_BOX' => '1',
         'RUBYOPT' => '-rbundler/setup',
@@ -696,7 +696,7 @@ class E2ERunner
   end
 
   def run_boxwerk(dir, *args)
-    gemfile = File.expand_path('../../gems.rb', __dir__)
+    gemfile = File.expand_path('../../Gemfile', __dir__)
     env = { 'RUBY_BOX' => '1' }
     cmd = [@boxwerk_bin, *args]
     stdout, stderr, status = Open3.capture3(env, *cmd, chdir: dir)
