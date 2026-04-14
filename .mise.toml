@@ -1,6 +1,5 @@
 [tools]
-ruby = "4.0.0"
+ruby = "4.0.2"
 
 [env]
-RUBY_BOX = 1
 RUBYOPT = "-W:no-experimental"

@@ -92,7 +92,7 @@ See [TODO.md](TODO.md) for plans to address these and other planned features.
 ## Development
 
 ```bash
-bundle install                        # Install dependencies
+bin/setup                             # Install root + example gems
 RUBY_BOX=1 bundle exec rake           # Run all tests (unit, e2e, examples)
 bundle exec rake format               # Format code
 ```

@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 IFS=$'\n\t'
-set -vx
 
 bundle install
+
+for example_dir in examples/*; do
+  [[ -x "$example_dir/bin/boxwerk" ]] || continue
+
+  echo "==> ${example_dir}: installing gems"
+  (
+    cd "$example_dir"
+    bin/boxwerk install
+  )
+done

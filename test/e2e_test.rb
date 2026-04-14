@@ -219,7 +219,7 @@ class E2ERunner
       assert_match /Dependency Graph/, out, 'info: shows dependency graph'
       assert_match %r{└── packs/core}, out, 'info: shows tree'
       assert_match /Packages/, out, 'info: shows packages section'
-      assert_match /packs\/core/, out, 'info: shows package'
+      assert_match %r{packs/core}, out, 'info: shows package'
     end
   end
 
@@ -251,7 +251,7 @@ class E2ERunner
       create_package(dir, 'a')
       out, status = run_boxwerk(dir, 'install')
       assert_equal 0, status.exitstatus, 'install_no_gemfiles: exit status'
-      assert_match /No packages with a gems\.rb\/Gemfile found/,
+      assert_match %r{No packages with a gems\.rb/Gemfile found},
                    out,
                    'install_no_gemfiles: output'
     end
@@ -483,7 +483,9 @@ class E2ERunner
         exit
       STDIN
       out, status = run_boxwerk_with_stdin(dir, script, 'console')
-      assert_equal 0, status.exitstatus, 'console_single_name_error: exit status'
+      assert_equal 0,
+                   status.exitstatus,
+                   'console_single_name_error: exit status'
       # Should see exactly one "uninitialized constant" error message
       error_count = out.scan(/uninitialized constant/).length
       assert_equal 1,
@@ -613,7 +615,11 @@ class E2ERunner
 
       out, status = run_boxwerk(dir, 'run', 'main.rb')
       assert_equal 0, status.exitstatus, 'global_autoloader: exit status'
-      assert_match(/pong/, out, 'global_autoloader: constant available in package')
+      assert_match(
+        /pong/,
+        out,
+        'global_autoloader: constant available in package',
+      )
     end
   end
 
@@ -641,8 +647,12 @@ class E2ERunner
       out1, status1 = run_boxwerk(dir, 'exec', '-p', './packs/svc', 'check.rb')
       out2, status2 = run_boxwerk(dir, 'exec', '-p', 'packs/svc/', 'check.rb')
 
-      assert_equal 0, status1.exitstatus, 'package_name_normalization: ./packs/svc exit status'
-      assert_equal 0, status2.exitstatus, 'package_name_normalization: packs/svc/ exit status'
+      assert_equal 0,
+                   status1.exitstatus,
+                   'package_name_normalization: ./packs/svc exit status'
+      assert_equal 0,
+                   status2.exitstatus,
+                   'package_name_normalization: packs/svc/ exit status'
       assert_match(/ok/, out1, 'package_name_normalization: ./packs/svc output')
       assert_match(/ok/, out2, 'package_name_normalization: packs/svc/ output')
     end
@@ -650,7 +660,7 @@ class E2ERunner
 
   def test_nameerror_hint_child_package
     with_project do |dir|
-      create_root_package(dir, dependencies: ['packs/a', 'packs/b'])
+      create_root_package(dir, dependencies: %w[packs/a packs/b])
       create_package(dir, 'a', dependencies: [])
       create_package(dir, 'b', dependencies: [])
 
@@ -678,18 +688,15 @@ class E2ERunner
         end
       RUBY
 
-      out, status =
-        run_boxwerk(dir, 'exec', '-p', 'packs/a', 'check.rb')
+      out, status = run_boxwerk(dir, 'exec', '-p', 'packs/a', 'check.rb')
       assert_equal 0, status.exitstatus, 'nameerror_hint_child: exit status'
       assert_match(
-        /packs\/b/,
+        %r{packs/b},
         out,
         'nameerror_hint_child: hint mentions packs/b',
       )
     end
   end
-
-
 
   def with_project
     Dir.mktmpdir { |dir| yield dir }
