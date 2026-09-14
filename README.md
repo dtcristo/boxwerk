@@ -1,7 +1,13 @@
 <div align="center">
   <h1>
-    📦 Boxwerk
+    Boxwerk
   </h1>
+  <img src="images/boxwerk.png" alt="Boxwerk logo" width="200" />
+  <p>
+    <strong>
+      Packwerk boundaries, enforced at runtime
+    </strong>
+  </p>
 </div>
 
 Boxwerk is a tool for creating modular Ruby and Rails applications. It enables you to organize code into packages of Ruby files with clear boundaries and explicit dependencies. Boxwerk is heavily inspired by [Packwerk](https://github.com/Shopify/packwerk) but provides more robust enforcement at runtime using [`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html), ensuring that only public constants from direct dependencies are accessible. Violations raise `NameError`, turning architectural rules into runtime guarantees.
