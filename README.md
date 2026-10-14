@@ -1,8 +1,8 @@
 <div align="center">
+  <img src="images/boxwerk.png" alt="Boxwerk logo" width="200" />
   <h1>
     Boxwerk
   </h1>
-  <img src="images/boxwerk.png" alt="Boxwerk logo" width="200" />
   <p>
     <strong>
       Packwerk boundaries, enforced at runtime
