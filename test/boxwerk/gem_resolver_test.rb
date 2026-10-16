@@ -263,10 +263,9 @@ module Boxwerk
       gem_resolver = GemResolver.new(@tmpdir)
       pkg_resolver = PackageResolver.new(@tmpdir)
 
-      # json 99.99.99 is in the lockfile but not installed. find_gem_spec
-      # falls back to any installed json version, so the gem resolves with
-      # version "99.99.99" (from lockfile) — triggering a global override
-      # conflict since root has the real version.
+      # json 99.99.99 is in the lockfile but not installed, so it resolves
+      # with no load paths but keeps its locked version — triggering a global
+      # override conflict since root has the real version.
       conflicts = gem_resolver.check_conflicts(pkg_resolver)
       assert_equal 1, conflicts.length
       assert_equal :global_override, conflicts.first[:type]
@@ -407,6 +406,82 @@ module Boxwerk
       assert_equal 1, gems.length
       # Gemfile entry with no require option → autorequire is :default
       assert_equal :default, gems.first.autorequire
+    end
+
+    # Other installed versions of a locked gem's dependency must not reach
+    # the load path; the lockfile already pins the whole closure.
+    def test_resolves_only_locked_versions
+      write_locked_package(<<~SPECS)
+        app (1.0)
+          lib (~> 1.0)
+        lib (1.0)
+      SPECS
+      resolver =
+        resolver_with_installed(
+          ["app", "1.0", { "lib" => "~> 1.0" }],
+          %w[lib 1.5],
+          %w[lib 1.0],
+        )
+
+      paths = resolver.resolve_for(Package.new(name: 'packs/a', config: {}))
+
+      assert_equal [gem_lib('app-1.0'), gem_lib('lib-1.0')], paths
+    end
+
+    def test_skips_locked_version_that_is_not_installed
+      write_locked_package(<<~SPECS)
+        lib (1.2)
+      SPECS
+      resolver = resolver_with_installed(%w[lib 1.0], %w[lib 1.5])
+      pkg = Package.new(name: 'packs/a', config: {})
+
+      # Kernel#warn writes to its defining box's $stderr, which capture_io
+      # cannot swap, so record warnings on the resolver.
+      warnings = []
+      resolver.define_singleton_method(:warn) { |message| warnings << message }
+
+      assert_empty resolver.resolve_for(pkg)
+      assert_equal ["Boxwerk: gem 'lib' (1.2) not installed, skipping"], warnings
+    end
+
+    private
+
+    def write_locked_package(specs)
+      pkg_dir = File.join(@tmpdir, 'packs', 'a')
+      FileUtils.mkdir_p(pkg_dir)
+      File.write(File.join(pkg_dir, 'Gemfile'), "gem 'app'\n")
+      File.write(File.join(pkg_dir, 'Gemfile.lock'), <<~LOCK)
+        GEM
+          remote: https://rubygems.org/
+          specs:
+        #{specs.gsub(/^/, '    ')}
+        PLATFORMS
+          ruby
+
+        DEPENDENCIES
+          app
+      LOCK
+    end
+
+    # A resolver that sees only the given [name, version, deps] gems as installed.
+    def resolver_with_installed(*installed)
+      specs =
+        installed.map do |name, version, deps = {}|
+          Gem::Specification.new do |s|
+            s.name = name
+            s.version = version
+            deps.each { |dep, req| s.add_runtime_dependency(dep, req) }
+            s.loaded_from =
+              File.join(@tmpdir, 'home', 'specifications', "#{name}-#{version}.gemspec")
+          end
+        end
+      resolver = GemResolver.new(@tmpdir)
+      resolver.define_singleton_method(:all_gem_specs) { specs }
+      resolver
+    end
+
+    def gem_lib(dir)
+      File.join(@tmpdir, 'home', 'gems', dir, 'lib')
     end
   end
 end

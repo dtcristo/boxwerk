@@ -19,6 +19,11 @@
 - `bin/setup` now installs gems for the example apps too, so the repository
   test suite works after a fresh clone.
 
+### Fixed
+
+- Per-package gem load paths contain only the lockfile's exact versions.
+  Other installed versions of a dependency could come first and win.
+
 ## [v0.3.0] — 2026-03-02
 
 Complete architecture rewrite. Each package now runs in its own `Ruby::Box`
