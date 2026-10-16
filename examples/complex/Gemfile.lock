@@ -2,7 +2,7 @@ PATH
   remote: ../..
   specs:
     boxwerk (0.3.0)
-      bundler (~> 4.0)
+      bundler (~> 4.0, >= 4.0.23)
       irb (~> 1.17)
       zeitwerk (~> 2.7)
 
@@ -54,6 +54,7 @@ DEPENDENCIES
 
 CHECKSUMS
   boxwerk (0.3.0)
+  bundler (4.0.23) sha256=407ba8a1d928f412847f819aa5f8b6aef7c59fb51feb517112af8a165487287b
   colorize (1.1.0) sha256=30b5237f0603f6662ab8d1fc2bd4a96142b806c6415d79e45ef5fdc6a0cfc837
   date (3.5.1) sha256=750d06384d7b9c15d562c76291407d89e368dda4d4fff957eb94962d325a0dc0
   dotenv (3.2.0) sha256=e375b83121ea7ca4ce20f214740076129ab8514cd81378161f11c03853fe619d
@@ -74,4 +75,4 @@ CHECKSUMS
   zeitwerk (2.7.5) sha256=d8da92128c09ea6ec62c949011b00ed4a20242b255293dd66bf41545398f73dd
 
 BUNDLED WITH
-  4.0.3
+  4.0.23

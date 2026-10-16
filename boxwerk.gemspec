@@ -19,7 +19,8 @@ Gem::Specification.new do |spec|
       'testing, and inspecting your modular application.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 4.0.1'
+  spec.required_ruby_version = '>= 4.0.7'
+  spec.required_rubygems_version = '>= 4.0.23'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.metadata['homepage_uri'] = spec.homepage
@@ -55,7 +56,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'bundler', '~> 4.0'
+  spec.add_dependency 'bundler', '~> 4.0', '>= 4.0.23'
   spec.add_dependency 'irb', '~> 1.17'
   spec.add_dependency 'zeitwerk', '~> 2.7'
 end

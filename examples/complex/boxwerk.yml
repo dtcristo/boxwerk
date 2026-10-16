@@ -4,7 +4,7 @@
 package_paths:
   - "packs/*"
 
-# Eagerly require all global constants into the root box before package boxes
+# Eagerly require all global constants into the master box before package boxes
 # are created. Ensures child boxes inherit fully resolved constants.
 # Default: true.
 eager_load_global: true

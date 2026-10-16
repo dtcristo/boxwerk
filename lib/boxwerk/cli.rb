@@ -81,7 +81,7 @@ module Boxwerk
         puts '  bundle binstubs boxwerk              Create bin/boxwerk binstub'
         puts '  RUBY_BOX=1 bin/boxwerk run main.rb   Run your app'
         puts ''
-        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
+        puts 'Requires: Ruby 4.0.7+ with RUBY_BOX=1 for exec/run/console commands'
       end
 
       # Parses --package/-p, --all/-a, and --global/-g flags from args, returning
@@ -212,7 +212,7 @@ module Boxwerk
             perform_setup(packages: target_packages, config: parsed[:config])
 
           if parsed[:global]
-            box = Ruby::Box.root
+            box = Ruby::Box.master
             install_global_resolver(result)
           else
             target_pkg =
@@ -224,7 +224,7 @@ module Boxwerk
                 end
               )
             box = resolve_target_box(result, parsed[:package])
-            install_resolver_on_ruby_root(result, target_package: target_pkg)
+            install_resolver_on_master(result, target_package: target_pkg)
 
             if parsed[:package] && parsed[:package] != '.'
               root_path = Setup.send(:find_root, Dir.pwd)
@@ -262,7 +262,7 @@ module Boxwerk
         result =
           perform_setup(packages: target_packages, config: parsed[:config])
         if parsed[:global]
-          box = Ruby::Box.root
+          box = Ruby::Box.master
           install_global_resolver(result)
         else
           target_pkg =
@@ -274,7 +274,7 @@ module Boxwerk
               end
             )
           box = resolve_target_box(result, parsed[:package])
-          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          install_resolver_on_master(result, target_package: target_pkg)
         end
         execute_in_box(box, script_path, parsed[:remaining][1..] || [])
       end
@@ -297,13 +297,12 @@ module Boxwerk
                 nil
               end
             )
-          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          install_resolver_on_master(result, target_package: target_pkg)
           pkg_label = parsed[:package] || '.'
         end
-        # IRB runs in Ruby::Box.root with a composite resolver that provides
-        # the target package's constants. This works around a Ruby 4.0.1 GC
-        # crash when running IRB directly in child boxes.
-        start_console_in_box(Ruby::Box.root, parsed[:remaining], pkg_label)
+        # IRB uses the master box's resolver to access package constants,
+        # including files loaded by global gems.
+        start_console_in_box(Ruby::Box.master, parsed[:remaining], pkg_label)
       end
 
       BOXWERK_CONFIG_DEFAULTS = {
@@ -484,7 +483,7 @@ module Boxwerk
           else
             bin_path = find_bin_path(command)
             if bin_path
-              execute_in_box(box, bin_path, command_args, use_load: true)
+              execute_in_box(box, bin_path, command_args)
             else
               # Fall back to shell command in the package directory
               dir = pkg_dir || Dir.pwd
@@ -495,26 +494,18 @@ module Boxwerk
         end
       end
 
-      def execute_in_box(box, script_path, script_args, use_load: false)
+      def execute_in_box(box, script_path, script_args)
         expanded = File.expand_path(script_path)
         box.eval("ARGV.replace(#{script_args.inspect})")
-        if use_load
-          # Eval file content directly rather than using load, because
-          # load creates a new file scope where inherited DSL methods
-          # (e.g. Rake's task) may not be visible in Ruby::Box.
-          content = File.read(expanded)
-          box.eval(content)
-        else
-          # Use eval with __dir__ set so relative paths resolve
-          # correctly (e.g. project binstubs using File.expand_path).
-          content = File.read(expanded)
-          dir = File.dirname(expanded)
-          wrapped = "__dir__ = #{dir.inspect}\n" + content
-          box.eval(wrapped)
-        end
+        # Eval preserves inherited DSL methods (e.g. Rake's task).
+        # Set __dir__ so scripts can resolve paths relative to their file.
+        content = File.read(expanded)
+        dir = File.dirname(expanded)
+        wrapped = "__dir__ = #{dir.inspect}\n" + content
+        box.eval(wrapped)
       end
 
-      # Installs a resolver on Ruby::Box.root that searches ALL packages.
+      # Installs a resolver on Ruby::Box.master that searches ALL packages.
       # Used for --global mode so the global context can resolve any constant.
       def install_global_resolver(result)
         boxes = result[:box_manager].boxes
@@ -589,12 +580,12 @@ module Boxwerk
             value
           end
 
-        ruby_root = Ruby::Box.root
-        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
-          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        master_box = Ruby::Box.master
+        if master_box.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          master_box.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end
-        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
-        ruby_root.eval(<<~RUBY)
+        master_box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
+        master_box.eval(<<~RUBY)
           class Object
             def self.const_missing(const_name)
               BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
@@ -603,22 +594,22 @@ module Boxwerk
         RUBY
       end
 
-      # Installs a dependency resolver on Ruby::Box.root for the given
-      # package. Gems loaded via Bundler.require run in the root box (where
+      # Installs a dependency resolver on Ruby::Box.master for the given
+      # package. Gems loaded via Bundler.require run in the master box (where
       # their methods were defined). When those gems call load() (e.g. rake
-      # loading a Rakefile), the loaded files execute in the root box too.
+      # loading a Rakefile), the loaded files execute in the master box too.
       # This method ensures const_missing is available there so that package
       # constants can be resolved.
       #
       # When target_package is specified, the resolver also searches the
       # target package's own box for its internal constants. This enables
-      # per-package testing where test files (loaded by rake in Ruby::Box.root)
+      # per-package testing where test files (loaded by rake in Ruby::Box.master)
       # need access to the pack's own constants.
-      def install_resolver_on_ruby_root(result, target_package: nil)
+      def install_resolver_on_master(result, target_package: nil)
         target_pkg = target_package || result[:resolver].root
         target_box = result[:box_manager].boxes[target_pkg.name]
 
-        # Delegate constant resolution from Ruby::Box.root to the target box.
+        # Delegate constant resolution from Ruby::Box.master to the target box.
         # The target box already has its own const_missing (dependency resolver)
         # for cross-package lookup. We check own constants first via
         # const_get (which doesn't trigger const_missing recursion), then
@@ -665,12 +656,12 @@ module Boxwerk
             end
           end
 
-        ruby_root = Ruby::Box.root
-        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
-          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        master_box = Ruby::Box.master
+        if master_box.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          master_box.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end
-        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
-        ruby_root.eval(<<~RUBY)
+        master_box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
+        master_box.eval(<<~RUBY)
           class Object
             def self.const_missing(const_name)
               BOXWERK_DEPENDENCY_RESOLVER.call(const_name)

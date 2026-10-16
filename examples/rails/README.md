@@ -68,8 +68,8 @@ rails/
 
 ```
 1. Global gems loaded (Rails, ActiveRecord, etc.)
-2. global/boot.rb → require and eager-load Rails frameworks in root box
-3. Zeitwerk::Loader.eager_load_all in root box
+2. global/boot.rb → require and eager-load Rails frameworks in master box
+3. Zeitwerk::Loader.eager_load_all in master box
 4. Package boxes created (foundation first, then domain packs, root package last)
 5. Root package boot.rb → require config/environment → Application.initialize!
 6. CLI command runs in target package box

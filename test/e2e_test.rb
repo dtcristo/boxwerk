@@ -36,6 +36,7 @@ class E2ERunner
     test_info_command
     test_help_command
     test_install_command
+    test_standalone_without_box
     test_missing_script_error
     test_nonexistent_script_error
     test_implicit_root
@@ -54,6 +55,7 @@ class E2ERunner
     test_exec_project_binstub
     test_autoloader_setup_in_boot
     test_global_autoloader
+    test_global_require_not_repeated
     test_package_name_normalization
     test_nameerror_hint_child_package
 
@@ -620,6 +622,54 @@ class E2ERunner
         out,
         'global_autoloader: constant available in package',
       )
+    end
+  end
+
+  def test_standalone_without_box
+    with_project do |dir|
+      {
+        'version' => /boxwerk \d+\.\d+\.\d+/,
+        'help' => /Usage:/,
+        'install' => %r{No packages with a gems\.rb/Gemfile found},
+      }.each do |command, expected|
+        stdout, stderr, status =
+          Open3.capture3(
+            { 'RUBY_BOX' => nil },
+            @boxwerk_bin,
+            command,
+            chdir: dir,
+          )
+        assert_equal 0, status.exitstatus, "standalone_#{command}: exit status"
+        assert_match expected, stdout + stderr, "standalone_#{command}: output"
+      end
+    end
+  end
+
+  def test_global_require_not_repeated
+    with_project do |dir|
+      create_root_package(dir, dependencies: ['packs/svc'])
+      create_package(dir, 'svc')
+      write_file(dir, 'global/shared_helper.rb', <<~RUBY)
+        puts 'shared helper loaded'
+        module SharedHelper
+          def self.ping = 'pong'
+        end
+      RUBY
+      helper = File.join(dir, 'global/shared_helper.rb')
+      write_file(dir, 'packs/svc/boot.rb', <<~RUBY)
+        require #{helper.inspect}
+        raise 'global helper unavailable during boot' unless SharedHelper.ping == 'pong'
+      RUBY
+      write_file(dir, 'main.rb', "puts SharedHelper.ping\n")
+
+      out, status = run_boxwerk(dir, 'run', 'main.rb')
+      assert_equal 0, status.exitstatus, 'global_require: exit status'
+      assert_equal 1,
+                   out.scan('shared helper loaded').size,
+                   'global_require: loaded once'
+      assert_match /pong/,
+                   out,
+                   'global_require: constant available in root package'
     end
   end
 

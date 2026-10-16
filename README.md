@@ -31,9 +31,9 @@ As your application grows, Boxwerk helps prevent accidental coupling, enforces m
 
 ## Ruby::Box
 
-[`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) (Ruby 4.0+) provides in-process isolation of classes, modules, and constants. Each box has its own top-level `Object`, isolated `$LOAD_PATH` and `$LOADED_FEATURES`, and independent monkey patches. Boxwerk creates one box per package and wires cross-package constant resolution through `const_missing`.
+[`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) (Ruby 4.0+) provides in-process isolation of classes, modules, and constants. Boxes have separate top-level constant tables and loading state, with box-specific patches to built-in classes. They can still share references to mutable objects. Boxwerk creates one box per package and wires cross-package constant resolution through `const_missing`.
 
-Set `RUBY_BOX=1` before starting Ruby. See the [official documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for details. See [ARCHITECTURE.md](ARCHITECTURE.md) for how Boxwerk uses `Ruby::Box` internally.
+Boxwerk requires Ruby 4.0.7+. Set `RUBY_BOX=1` before starting Ruby. See the [official documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) for details. See [ARCHITECTURE.md](ARCHITECTURE.md) for how Boxwerk uses `Ruby::Box` internally.
 
 ## Quick Start
 

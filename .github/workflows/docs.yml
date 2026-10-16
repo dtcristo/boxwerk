@@ -24,7 +24,9 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.1"
+          ruby-version: "4.0.7"
+          rubygems: "4.0.23"
+          bundler: "4.0.23"
       - name: Install development dependencies
         run: bundle install
       - name: Generate RDoc

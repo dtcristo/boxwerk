@@ -4,9 +4,20 @@
 
 ### Changed
 
+- Verify the root, master, and main box model against Ruby 4.0.7 source and
+  clarify initialization, shared objects, loading state, and global boot order.
+- Require Ruby 4.0.7+, RubyGems 4.0.23+, and Bundler 4.0.23+ within 4.x.
+  Pin RubyGems and Bundler to 4.0.23 in CI.
+- Use standard executable lookup in example binstubs and simplify script
+  execution and standalone CLI boot.
+- Load globals in the master box so package boxes inherit global constants,
+  methods, and gems.
+- Use `Ruby::Box.master` directly and reserve "global context" for Boxwerk's
+  shared application configuration, gems, and constants.
+- Set up Bundler before loading Boxwerk's dependencies to respect project
+  lockfiles when newer dependency versions are also installed.
 - `bin/setup` now installs gems for the example apps too, so the repository
   test suite works after a fresh clone.
-- Bump minimum Ruby version to 4.0.1 (4.0.0 crashes).
 
 ## [v0.3.0] — 2026-03-02
 

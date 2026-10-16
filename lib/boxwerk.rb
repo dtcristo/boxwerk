@@ -21,7 +21,7 @@ require_relative 'boxwerk/zeitwerk_scanner'
 module Boxwerk
   class << self
     # Returns the {PackageContext} for the currently executing package.
-    # Returns +nil+ in the root box.
+    # Returns +nil+ in the master box.
     # @return [PackageContext, nil]
     def package
       nil
@@ -30,7 +30,7 @@ module Boxwerk
     # Returns the {GlobalContext}.
     # @return [GlobalContext]
     def global
-      Ruby::Box.root.const_get(:BOXWERK_GLOBAL)
+      Ruby::Box.master.const_get(:BOXWERK_GLOBAL)
     end
   end
 end

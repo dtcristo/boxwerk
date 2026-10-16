@@ -4,10 +4,13 @@ Complete usage guide for Boxwerk — runtime package isolation for Ruby.
 
 ## Requirements
 
-- Ruby 4.0+ with the `RUBY_BOX=1` environment variable set before process boot
+- Ruby 4.0.7+ with the `RUBY_BOX=1` environment variable set before process boot
+- RubyGems 4.0.23+ and Bundler 4.0.23+ within Bundler 4.x
 - `package.yml` files ([Packwerk](https://github.com/Shopify/packwerk) format)
 
 ## Installation
+
+Update RubyGems and its bundled Bundler with `gem update --system 4.0.23`.
 
 ### With Bundler
 
@@ -126,7 +129,7 @@ With `--all`, each package runs in a separate subprocess for clean isolation (av
 
 #### `boxwerk console [irb-args...]`
 
-Start an IRB console with package constants accessible. IRB runs in `Ruby::Box.root` with a composite resolver that provides the target package's constants.
+Start an IRB console with package constants accessible. IRB runs in `Ruby::Box.master` with a composite resolver that provides the target package's constants.
 
 ```bash
 boxwerk console                          # Root package context
@@ -200,7 +203,7 @@ packs/billing/
 
 ### Gem Isolation Model
 
-- **Global gems** (root `Gemfile`) are loaded in the global context and inherited by all child boxes via `$LOADED_FEATURES` snapshot at box creation time
+- **Global gems** (root `Gemfile`) load in master before package creation. Package boxes start with those definitions and separate copies of the load-path and loaded-feature arrays
 - **Per-package gems** are resolved from lockfiles and added to each box's `$LOAD_PATH` independently
 - **Auto-required:** Gems declared in a package's `gems.rb`/`Gemfile` are automatically required in the package box (like Bundler's default behaviour). No manual `require` needed
 - **`require: false`** — Gems declared with `require: false` are added to `$LOAD_PATH` but not auto-required
@@ -268,25 +271,25 @@ Only constants in the public path are accessible.
 These are different concepts:
 
 - **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants. This is where your application code runs by default.
-- **Global context** (`Ruby::Box.root`) — Where global gems are loaded via `Bundler.require`. Contains global gems and constants. All child boxes are copied from it.
+- **Global context** — Shared application configuration, gems, and constants hosted in `Ruby::Box.master`. `Boxwerk.global` exposes its autoloader configuration.
 
-The global context is an implementation detail of how `Ruby::Box` works. Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. This is because each `Ruby::Box.new` creates a snapshot of `Ruby::Box.root` at that moment.
+Each package, including `.`, gets an optional user box initialized from master. The root package is distinct from both `Ruby::Box.root`, Ruby's runtime box, and `Ruby::Box.main`, where the command-line program and `-r` libraries run. See [Architecture](ARCHITECTURE.md#box-roles) for the verified Ruby 4.0.7 model.
 
 This has important implications:
 
-- Global gems loaded via `Bundler.require` are available everywhere (loaded before boxes)
-- Constants defined in `global/` files are available everywhere (required before boxes)
+- Global gems loaded via `Bundler.require` are available in package boxes created afterward
+- Shared top-level constants must be loaded before package boxes are created
 - Code in `global/boot.rb` runs before any package boxes exist
-- Anything loaded **after** box creation is only visible in the box that loaded it
+- Later changes to master do not reliably update existing boxes. Constant values can still refer to shared mutable objects; box creation is not a deep copy
 
-Use `--global` / `-g` to run commands in the global context directly. A composite resolver is installed on `Ruby::Box.root` so that **all** package constants are accessible — useful for scripts, debugging, or tools that need cross-package access without picking a single package.
+Use `--global` / `-g` to run commands in the global context directly. A composite resolver is installed on `Ruby::Box.master` so that **all** package constants are accessible — useful for scripts, debugging, or tools that need cross-package access without picking a single package.
 
 ## Global Gems
 
-Gems in the root `gems.rb`/`Gemfile` are loaded in `Ruby::Box.root` during boot:
+Gems in the root `gems.rb`/`Gemfile` are loaded in `Ruby::Box.master` during boot:
 
 1. `Bundler.setup` + `Bundler.require` run in the global context
-2. All loaded gems become available in child boxes via `$LOADED_FEATURES` snapshot
+2. Package boxes start with master definitions and separate copies of `$LOAD_PATH` and `$LOADED_FEATURES`. Loaded-feature entries prevent duplicate requires; they do not create the definitions
 3. Use `require: false` to keep a gem on `$LOAD_PATH` without loading it at boot
 
 ```ruby
@@ -299,7 +302,7 @@ gem 'pry', require: false            # on $LOAD_PATH but not loaded
 
 ### Gems with Internal Autoloading
 
-Some gems (like Rails) use Zeitwerk internally to autoload their own constants. When loaded via `Bundler.require` in the global context, these autoloads are registered as pending entries in `Ruby::Box.root`. Because child boxes inherit a snapshot of the root box at creation time, pending autoloads may not resolve correctly in child boxes.
+Some gems (like Rails) use Zeitwerk internally to autoload their own constants. When loaded via `Bundler.require` in the global context, these autoloads are registered as pending entries in `Ruby::Box.master`. Package boxes capture top-level constant entries and loading state at creation, and pending autoloads may not resolve consistently across those boxes.
 
 Boxwerk runs `Zeitwerk::Loader.eager_load_all` after global boot to resolve all pending autoloads. If your gem needs additional setup before eager loading (e.g. requiring sub-components), do this in `global/boot.rb`:
 
@@ -361,7 +364,7 @@ This is useful for gradually adopting Boxwerk — you can start with just sub-pa
 
 ### `global/` Directory
 
-An optional `global/` directory at the project root provides global constants and initialization. Files in `global/` are required in the root box before package boxes are created, so all definitions are inherited by every package box.
+An optional `global/` directory provides shared constants and initialization. Boxwerk sets up namespaces and file autoloads in master, excluding `global/boot.rb`. Namespace setup can load explicit namespace files. With the default `eager_load_global: true`, it requires those files after the global boot script and before creating package boxes.
 
 Files follow Zeitwerk conventions:
 
@@ -382,7 +385,7 @@ end
 
 ### `global/boot.rb`
 
-An optional `global/boot.rb` script runs in the root box after global files are loaded but before package boxes are created. Use it for initialization that all packages should inherit.
+An optional `global/boot.rb` script runs in master after global gems load and global autoloads are registered, before package boxes are created. Referencing a global constant can trigger its autoload during the script. Eager loading follows the script when `eager_load_global: true`.
 
 ```ruby
 # global/boot.rb
@@ -392,7 +395,7 @@ puts "Booting #{Config::SHOP_NAME}..."
 
 #### `Boxwerk.global.autoloader`
 
-Use `Boxwerk.global.autoloader` in `global/boot.rb`, a package `boot.rb`, or anywhere in the application to register additional root-level autoload directories. Constants loaded this way are available in all package boxes.
+Use `Boxwerk.global.autoloader` in `global/boot.rb` to register additional shared autoload directories before package creation. It registers entries in master. Calling it later does not reliably make new top-level constants available in existing package boxes.
 
 ```ruby
 # global/boot.rb
@@ -409,16 +412,16 @@ Boxwerk.global.autoloader.ignore("lib/utils")    # Ignore from autoloading
 Boxwerk.global.autoloader.setup                  # Register any pending dirs
 ```
 
-`push_dir` and `collapse` auto-call `setup` (lazy autoload registration), so constants are accessible immediately in `boot.rb` via the autoload mechanism. Files are NOT eagerly required by `push_dir`. When `eager_load_global: true`, Boxwerk eagerly requires all registered dirs after `global/boot.rb` so child boxes inherit the constants eagerly.
+`push_dir` and `collapse` call `setup` immediately, registering file autoloads and setting up namespaces. Explicit namespace files can load during setup; other files load on access. With `eager_load_global: true`, Boxwerk eagerly requires the registered files after `global/boot.rb`, before package creation.
 
 ### Root-Level `boot.rb`
 
-A `boot.rb` at the project root is a **root package** boot script — it runs in the root package's box (like any other package's `boot.rb`). This is different from `global/boot.rb` which runs in the root box.
+A `boot.rb` at the project root is a **root package** boot script — it runs in the root package's box (like any other package's `boot.rb`). This is different from `global/boot.rb` which runs in the master box.
 
 ### Use Cases
 
 - **`global/boot.rb`** — Load environment variables, define global config, manually eager load constants (e.g. Rails internals)
-- **`boot.rb`** — Root package initialization, e.g. booting Rails (see [Rails example](examples/rails/)). Runs after all packages are booted
+- **`boot.rb`** — Root package initialization, e.g. booting Rails (see [Rails example](examples/rails/)). Runs when the root package boots, after its dependencies
 
 ## Per-Package Boot Scripts
 
