@@ -478,8 +478,8 @@ All methods return `self`, allowing chaining.
 
 ### Monkey Patch Isolation
 
-Because each package runs in its own `Ruby::Box`, monkey patches defined in a
-package are isolated to that box:
+Because each package runs in its own `Ruby::Box`, patches to built-in classes
+such as `String` are isolated to that box:
 
 ```ruby
 # packs/kitchen/boot.rb
@@ -492,6 +492,19 @@ end
 
 Code inside the kitchen package can call `"Latte".to_order_ticket`, but other
 packages and the root context will not see the method.
+
+Other classes are shared. A class from the global context (gems and
+`global/`) or from a dependency is one definition, so reopening it changes it
+for every package:
+
+- Reopening a global class, e.g. `class ActiveRecord::Base`, affects all
+  packages.
+- `Invoice.class_eval`, `include`, or `prepend` on a dependency's class
+  affects its package and every other dependent.
+- `class Invoice ... end` in a dependent does not reopen the dependency's
+  `Invoice`. It defines a separate class in the dependent that shadows it.
+
+To extend a shared class, subclass it or use a refinement.
 
 ## Circular Dependencies
 

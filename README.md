@@ -20,7 +20,7 @@ As your application grows, Boxwerk helps prevent accidental coupling, enforces m
 
 - Boxwerk reads standard Packwerk `package.yml` files, supporting both dependency and privacy enforcement. Packwerk itself is not required.
 - Packages in a Boxwerk application share a set of global gems but may also define package-local ones. Multiple packages can depend on different versions of the same gem.
-- `Ruby::Box` provides monkey patch isolation between packages.
+- `Ruby::Box` keeps monkey patches to built-in classes like `String` local to each package.
 - Boxwerk uses [Zeitwerk](https://github.com/fxn/zeitwerk) to automatically load constants in packages with [conventional file structure](https://github.com/fxn/zeitwerk#file-structure) although manual loading is also supported.
 
 ## Goals

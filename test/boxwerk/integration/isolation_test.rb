@@ -346,5 +346,53 @@ module Boxwerk
       assert_match(/defined in 'packs\/b'/, error.message)
       assert_match(/not a dependency of '\.'/, error.message)
     end
+
+    # Pins the class-sharing rules documented under "Monkey Patch Isolation".
+    def test_builtin_patches_stay_in_their_package
+      boxes = boot_with_dependency
+      boxes['packs/a'].eval("class String\n  def patched_in_a = true\nend\n")
+
+      assert boxes['packs/a'].eval("''.respond_to?(:patched_in_a)")
+      refute boxes['.'].eval("''.respond_to?(:patched_in_a)")
+    end
+
+    def test_class_eval_on_a_dependency_class_changes_it_everywhere
+      boxes = boot_with_dependency
+      boxes['.'].eval('ClassA.class_eval { def self.patched = true }')
+
+      assert boxes['packs/a'].eval('ClassA.patched')
+    end
+
+    def test_class_keyword_shadows_a_dependency_class
+      boxes = boot_with_dependency
+      boxes['.'].eval("class ClassA\n  def self.local = true\nend\n")
+
+      refute_same boxes['packs/a'].eval('ClassA'), boxes['.'].eval('ClassA')
+      refute boxes['packs/a'].eval('ClassA.respond_to?(:local)')
+    end
+
+    def test_reopening_a_global_class_changes_it_for_every_package
+      Ruby::Box.master.eval(
+        "class IsolationTestGlobal\n  def self.value = :global\nend\n",
+      )
+      boxes = boot_with_dependency
+      boxes['packs/a'].eval(
+        "class IsolationTestGlobal\n  def self.value = :a\nend\n",
+      )
+
+      assert_equal :a, boxes['.'].eval('IsolationTestGlobal.value')
+    end
+
+    private
+
+    # Boots packs/a (defining ClassA) and a root package that depends on it.
+    def boot_with_dependency
+      a_dir = create_package_dir('a')
+      create_package(a_dir)
+      File.write(File.join(a_dir, 'lib', 'class_a.rb'), "class ClassA\nend\n")
+      create_package(@tmpdir, dependencies: ['packs/a'])
+
+      boot_system[:box_manager].boxes
+    end
   end
 end

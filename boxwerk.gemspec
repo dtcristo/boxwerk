@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
       'enforcing them at runtime using Ruby::Box constant isolation. ' \
       'It reads standard Packwerk package.yml files (without requiring Packwerk), ' \
       'providing per-package gem isolation, Zeitwerk-based autoloading, ' \
-      'monkey patch isolation between packages, and a CLI for running, ' \
+      'per-package isolation of built-in monkey patches, and a CLI for running, ' \
       'testing, and inspecting your modular application.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
