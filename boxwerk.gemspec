@@ -30,28 +30,9 @@ Gem::Specification.new do |spec|
   ] = 'https://github.com/dtcristo/boxwerk/blob/main/CHANGELOG.md'
   spec.metadata['documentation_uri'] = 'https://dtcristo.github.io/boxwerk/'
 
-  gemspec = File.basename(__FILE__)
   spec.files =
-    IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-      ls
-        .readlines("\x0", chomp: true)
-        .reject do |f|
-          (f == gemspec) ||
-            f.start_with?(
-              *%w[
-                bin/
-                example/
-                examples/
-                test/
-                .github/
-                .gitignore
-                .mise
-                .stree
-                gems.
-              ],
-            )
-        end
-    end
+    Dir.glob(%w[lib/**/*.rb exe/*], base: __dir__) +
+      %w[ARCHITECTURE.md CHANGELOG.md LICENSE.txt README.md USAGE.md]
   spec.bindir = 'exe'
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']

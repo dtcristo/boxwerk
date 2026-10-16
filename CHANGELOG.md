@@ -25,6 +25,8 @@
   Other installed versions of a dependency could come first and win.
 - Docs limit monkey patch isolation to built-in classes and explain that
   global and dependency classes are shared across packages.
+- The gem ships only the library, executable, and user docs, listed
+  explicitly so it builds without git.
 
 ## [v0.3.0] — 2026-03-02
 
