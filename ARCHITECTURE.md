@@ -6,47 +6,49 @@ This document describes how Boxwerk works internally.
 
 Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each package gets its own `Ruby::Box` instance. Constants are resolved lazily on first access and cached. Only direct dependencies are accessible; transitive dependencies are blocked.
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Master Box                       │
-│  (Bundler + global gems loaded here)                │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
-│  │ root pkg │  │ finance  │  │   util   │  ...      │
-│  │  (box)   │  │  (box)   │  │  (box)   │           │
-│  └──────────┘  └──────────┘  └──────────┘           │
-│       │              │              │               │
-│       │  const_missing             autoload         │
-│       │  searches deps             resolves files   │
-└─────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+  bootstrap["Master during Ruby initialization"] --> root["Ruby root box"]
+  bootstrap --> main["Main user box: -r and CLI entry"]
+  bootstrap -->|"Boxwerk loads globals into the same box"| master["Master after global boot"]
+  master -->|"Ruby::Box.new"| app["Root package .: optional user box"]
+  master -->|"Ruby::Box.new"| packages["Other packages: optional user boxes"]
 ```
 
-## Ruby::Box Primer
+Arrows to boxes show initialization from the template, not containment. Both master nodes represent the same box at different times. Root and main already exist when Boxwerk loads application globals.
 
-[`Ruby::Box`](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) provides in-process isolation of classes, modules, and constants. Boxwerk relies on these specific behaviours:
+## Ruby::Box primer
 
-### Box Types
+This description targets Ruby 4.0.7. The [source audit and runtime probes](docs/research/ruby-box-model.md) distinguish verified behavior from claims in the [official documentation](https://docs.ruby-lang.org/en/4.0/Ruby/Box.html) that disagree with this release.
 
-- **Master box** — The template for new boxes. Boxwerk loads global code here so package boxes inherit it.
-- **Root box** — Created during Ruby bootstrap. Boxwerk uses the master box for application globals.
-- **Main box** — A user box automatically created at bootstrap. The user's main program runs here.
-- **User boxes** — Created with `Ruby::Box.new`. All user boxes are flat. Boxwerk creates one for each package.
+### Box roles
 
-### Key Behaviours
+Ruby distinguishes master, root, and user boxes. Main and optional boxes are both user boxes.
 
-- **File scope.** One `.rb` file runs in a single box. Methods and procs defined in that file always execute in that file's box, even when called from another box.
-- **Top-level constants.** Constants defined at the top level are constants of `Object` within that box. From outside, `box::Foo` accesses them.
-- **Monkey patch isolation.** Reopened built-in classes are visible only within the box that defined them.
-- **Global variable isolation.** `$LOAD_PATH`, `$LOADED_FEATURES`, and other globals are isolated per box. `$LOAD_PATH` and `$LOADED_FEATURES` use the *loading box* (not current box) for `require` resolution.
-- **Copy-on-write.** New boxes inherit the master box, exposed by `Ruby::Box.master`. Global code loads in this template before package creation.
-- **`box.eval(code)`** — Evaluates Ruby code in the box's context, like loading a file.
-- **`box.require(path)`** — Requires a file in the box's context. Subsequent requires from that file also run in the same box.
+| Box | Role in Ruby 4.0.7 | Role in Boxwerk |
+| --- | --- | --- |
+| `Ruby::Box.master` | Holds bootstrap definitions and supplies initial state for new boxes. Bootstrap uses it before root and main exist. | Boxwerk explicitly evaluates shared application boot here. |
+| `Ruby::Box.root` | A mandatory runtime box created from master during initialization, with its own gem-prelude setup. | Distinct from the project's root package; not the template for package boxes. |
+| `Ruby::Box.main` | A mandatory user box created before command-line `-r` libraries and the program run. Those execute here. | The executable starts here before switching to master. |
+| `Ruby::Box.new` | Creates an optional user box from master, regardless of the caller's box. | One per package, including the root package `.`. |
 
-### Important Implications
+Boxwerk's use of master for application boot is an explicit design choice, not Ruby's default destination for application code. Ruby 4.0.7 exposes `master.eval`, and upstream tests use it, despite the public documentation saying no code runs in master. Likewise, do not assume every built-in method executes in root: bootstrap-defined methods can retain master as their defining box.
 
-1. **Order matters.** Global gems load in the master box before packages boot, so new boxes inherit constants, methods, and gem loading state.
-2. **No cross-box method inheritance.** A `const_missing` hook defined on `Module` in one box does not fire in another box. Boxwerk must install resolvers per-box.
-3. **`$LOAD_PATH` per box.** Each box has its own `$LOAD_PATH`, which enables per-package gem version isolation.
+### Definitions, objects, and loading state
+
+- **Definition scope.** Methods and procs retain the box in which their code was defined. Calling a package's method from another package does not move its body into the caller's box.
+- **Top-level constants.** Each new box captures master's top-level constant table. `Object` itself can have the same identity across boxes while its constant tables differ. `box::Foo` accesses a constant in that box.
+- **Class state.** Ruby uses copy-on-write class and module state. A box is not a deep copy or a frozen snapshot of every object and class. Copied constant values can refer to the same mutable objects, and some later changes to shared classes remain visible across boxes.
+- **Built-in patches.** Built-in classes such as `String` can have box-specific methods and constants. Package-local patches are separate from definitions placed in master before package creation.
+- **Loading state.** New boxes get separate `$LOAD_PATH` and `$LOADED_FEATURES` arrays initialized from master. The arrays track how to find files and which files were already loaded; they do not themselves copy class definitions.
+- **Execution versus loading.** `box.eval(code)` executes code in the receiver. `box.require(path)` selects that box for loading. Ruby tracks a loading box separately from the executing method's defining box and uses it to resolve load paths and loaded features.
+
+### Implications for Boxwerk
+
+1. Load shared top-level constants and gems in master before creating package boxes. Loading them into root or main does not seed new optional boxes.
+2. Configure global autoload directories during `global/boot.rb`. Do not rely on later master changes to update existing package boxes.
+3. Install a dependency resolver in each package box. A hook defined only in one optional box is not automatically installed in its peers.
+4. Shared constant values can remain the same mutable objects across boxes. Definition isolation does not duplicate application data.
 
 ## Boot Sequence
 
@@ -56,8 +58,8 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 1. exe/boxwerk starts in the main box
 2. If Bundler is loaded (bundle exec or binstub), re-exec into a clean
    Ruby process using Bundler.with_unbundled_env (prevents double gem loading)
-3. For install/info/help/version: load boxwerk directly (no Ruby::Box needed)
-4. For exec/run/console: check Ruby::Box availability and enabled status
+3. For install/help/version: load Boxwerk directly in main (no Ruby::Box needed)
+4. For exec/run/console/info: check Ruby::Box availability and enabled status
 5. Switch to master box via Ruby::Box.master.eval(...)
 6. Discover project Gemfile (gems.rb preferred, then Gemfile)
 7. Run Bundler.setup before loading Boxwerk's dependencies
@@ -74,16 +76,18 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 
 ```
 1. Find root package.yml or boxwerk.yml (walk up from current directory)
-2. Run global boot (if global/ exists):
-   a. Require global/ files in master box (eager, not autoload)
-   b. Require global/boot.rb in master box
-3. Eager-load all Zeitwerk-managed constants in master box
-4. Create PackageResolver — discovers all package.yml files
-   → Respects package_paths from boxwerk.yml
-   → Creates implicit root package if no root package.yml exists
-5. Create BoxManager — manages Ruby::Box instances
-6. Boot all packages in topological order (dependencies first)
-   → Root package boot.rb runs in root package box (not master box)
+2. Create PackageResolver and read configuration
+   → Discover packages; create an implicit root package when needed
+3. Create GlobalContext, exposed through Boxwerk.global
+4. Scan global/, set up namespaces and register file autoloads, excluding boot.rb
+5. Run global/boot.rb in master
+   → Global constants can autoload during boot
+   → Register additional shared autoload directories
+6. When eager_load_global is true (the default), require global files and
+   eagerly load registered directories and Zeitwerk-managed constants
+7. Create BoxManager and boot the requested packages in dependency order
+   → Each package gets an optional box initialized from master
+   → Root-level boot.rb runs in the root package's box, not Ruby's root box
 ```
 
 ### BoxManager.boot (per package)
@@ -91,7 +95,7 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 For each package, in dependency order:
 
 ```
-1. Create Ruby::Box.new (inherits global constants, methods, and gem loading state)
+1. Create Ruby::Box.new (starts with master definitions and loading state)
 2. Setup per-package gem load paths (if Gemfile exists)
    → Prepend gem load paths to the box's $LOAD_PATH
 3. Auto-require gems from Gemfile (non-root packages only)
