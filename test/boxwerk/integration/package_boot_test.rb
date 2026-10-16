@@ -110,7 +110,7 @@ module Boxwerk
       assert_equal 'from_a', a_box.eval('ClassA.value')
     end
 
-    def test_root_boot_script_runs_in_package_box_not_root_box
+    def test_root_boot_script_runs_in_package_box_not_master_box
       a_dir = create_package_dir('a')
       create_package(a_dir)
 
@@ -122,8 +122,8 @@ module Boxwerk
 
       # Ran in the root package box
       assert root_box.eval('ROOT_BOOT_RAN')
-      # NOT in the Ruby root box
-      refute Boxwerk.global_box.eval('defined?(ROOT_BOOT_RAN)')
+      # NOT in the Ruby master box
+      refute Ruby::Box.master.eval('defined?(ROOT_BOOT_RAN)')
     end
 
     def test_root_boot_dependencies_accessible_after_boot

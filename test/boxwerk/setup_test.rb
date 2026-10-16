@@ -15,8 +15,8 @@ module Boxwerk
       FileUtils.rm_rf(@tmpdir)
       Setup.reset
       %i[GlobalHelper Alpha Beta Gamma EagerTest].each do |name|
-        global_box = Boxwerk.global_box
-        global_box.__send__(:remove_const, name) if global_box.const_defined?(name, false)
+        master_box = Ruby::Box.master
+        master_box.__send__(:remove_const, name) if master_box.const_defined?(name, false)
       end
     end
 
@@ -72,7 +72,7 @@ module Boxwerk
 
       Setup.run(start_dir: @tmpdir)
 
-      assert Boxwerk.global_box.eval('$BOXWERK_BOOT_TEST')
+      assert Ruby::Box.master.eval('$BOXWERK_BOOT_TEST')
     end
 
     def test_run_autoloads_global_directory
@@ -86,7 +86,7 @@ module Boxwerk
 
       Setup.run(start_dir: @tmpdir)
 
-      assert_equal 42, Boxwerk.global_box.eval('GlobalHelper::VALUE')
+      assert_equal 42, Ruby::Box.master.eval('GlobalHelper::VALUE')
     end
 
     def test_global_files_all_eagerly_required
@@ -108,9 +108,9 @@ module Boxwerk
 
       Setup.run(start_dir: @tmpdir)
 
-      assert_equal 1, Boxwerk.global_box.eval('Alpha::VALUE')
-      assert_equal 2, Boxwerk.global_box.eval('Beta::VALUE')
-      assert_equal 3, Boxwerk.global_box.eval('Gamma::VALUE')
+      assert_equal 1, Ruby::Box.master.eval('Alpha::VALUE')
+      assert_equal 2, Ruby::Box.master.eval('Beta::VALUE')
+      assert_equal 3, Ruby::Box.master.eval('Gamma::VALUE')
     end
 
     def test_global_constants_available_in_child_packages
@@ -161,12 +161,12 @@ module Boxwerk
       # The constant is autoload-registered so defined? returns "constant",
       # but the file itself has NOT been required yet.
       assert_equal 'constant',
-                   Boxwerk.global_box.eval('defined?(EagerTest)'),
+                   Ruby::Box.master.eval('defined?(EagerTest)'),
                    'EagerTest should be autoload-registered'
       refute $LOADED_FEATURES.include?(eager_test_file),
              'eager_test.rb should NOT be eagerly required'
       # Accessing the constant triggers the lazy autoload
-      assert_equal 99, Boxwerk.global_box.eval('EagerTest::VALUE')
+      assert_equal 99, Ruby::Box.master.eval('EagerTest::VALUE')
     end
 
     def test_eager_load_global_false_still_runs_boot
@@ -185,7 +185,7 @@ module Boxwerk
       Setup.run(start_dir: @tmpdir)
 
       # global/boot.rb should STILL run
-      assert Boxwerk.global_box.eval('$EAGER_BOOT_TEST')
+      assert Ruby::Box.master.eval('$EAGER_BOOT_TEST')
     end
 
     def test_eager_load_packages_true_loads_constants

@@ -4,7 +4,7 @@
 # If Bundler has already been set up (via `bundle exec` or a Bundler binstub),
 # re-exec in a clean Ruby process so Boxwerk controls gem loading from scratch.
 # This prevents gems being loaded twice (once by Bundler in the main box, once
-# by Boxwerk in the global box).
+# by Boxwerk in the master box).
 if defined?(Bundler)
   Bundler.with_unbundled_env { exec(RbConfig.ruby, __FILE__, *ARGV) }
 end

@@ -129,7 +129,7 @@ With `--all`, each package runs in a separate subprocess for clean isolation (av
 
 #### `boxwerk console [irb-args...]`
 
-Start an IRB console with package constants accessible. IRB runs in `Boxwerk.global_box` with a composite resolver that provides the target package's constants.
+Start an IRB console with package constants accessible. IRB runs in `Ruby::Box.master` with a composite resolver that provides the target package's constants.
 
 ```bash
 boxwerk console                          # Root package context
@@ -271,9 +271,9 @@ Only constants in the public path are accessible.
 These are different concepts:
 
 - **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants. This is where your application code runs by default.
-- **Global context** (`Boxwerk.global_box`) — Where global gems are loaded via `Bundler.require`. Contains global gems and constants. All child boxes are copied from it.
+- **Global context** (`Boxwerk.global`) — Shared application configuration, gems, and constants. It runs in Ruby's master box, `Ruby::Box.master`, which package boxes inherit.
 
-Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. Each `Ruby::Box.new` inherits the master box, exposed by `Boxwerk.global_box`.
+Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. Each `Ruby::Box.new` inherits `Ruby::Box.master`.
 
 This has important implications:
 
@@ -282,11 +282,11 @@ This has important implications:
 - Code in `global/boot.rb` runs before any package boxes exist
 - Anything loaded **after** box creation is only visible in the box that loaded it
 
-Use `--global` / `-g` to run commands in the global context directly. A composite resolver is installed on `Boxwerk.global_box` so that **all** package constants are accessible — useful for scripts, debugging, or tools that need cross-package access without picking a single package.
+Use `--global` / `-g` to run commands in the global context directly. A composite resolver is installed on `Ruby::Box.master` so that **all** package constants are accessible — useful for scripts, debugging, or tools that need cross-package access without picking a single package.
 
 ## Global Gems
 
-Gems in the root `gems.rb`/`Gemfile` are loaded in `Boxwerk.global_box` during boot:
+Gems in the root `gems.rb`/`Gemfile` are loaded in `Ruby::Box.master` during boot:
 
 1. `Bundler.setup` + `Bundler.require` run in the global context
 2. All loaded gems become available in child boxes via `$LOADED_FEATURES` snapshot
@@ -302,7 +302,7 @@ gem 'pry', require: false            # on $LOAD_PATH but not loaded
 
 ### Gems with Internal Autoloading
 
-Some gems (like Rails) use Zeitwerk internally to autoload their own constants. When loaded via `Bundler.require` in the global context, these autoloads are registered as pending entries in `Boxwerk.global_box`. Because child boxes inherit a snapshot of the global box at creation time, pending autoloads may not resolve correctly in child boxes.
+Some gems (like Rails) use Zeitwerk internally to autoload their own constants. When loaded via `Bundler.require` in the global context, these autoloads are registered as pending entries in `Ruby::Box.master`. Because child boxes inherit a snapshot of the master box at creation time, pending autoloads may not resolve correctly in child boxes.
 
 Boxwerk runs `Zeitwerk::Loader.eager_load_all` after global boot to resolve all pending autoloads. If your gem needs additional setup before eager loading (e.g. requiring sub-components), do this in `global/boot.rb`:
 
@@ -364,7 +364,7 @@ This is useful for gradually adopting Boxwerk — you can start with just sub-pa
 
 ### `global/` Directory
 
-An optional `global/` directory at the project root provides global constants and initialization. Files in `global/` are required in the global box before package boxes are created, so all definitions are inherited by every package box.
+An optional `global/` directory at the project root provides global constants and initialization. Files in `global/` are required in the master box before package boxes are created, so all definitions are inherited by every package box.
 
 Files follow Zeitwerk conventions:
 
@@ -385,7 +385,7 @@ end
 
 ### `global/boot.rb`
 
-An optional `global/boot.rb` script runs in the global box after global files are loaded but before package boxes are created. Use it for initialization that all packages should inherit.
+An optional `global/boot.rb` script runs in the master box after global files are loaded but before package boxes are created. Use it for initialization that all packages should inherit.
 
 ```ruby
 # global/boot.rb
@@ -416,7 +416,7 @@ Boxwerk.global.autoloader.setup                  # Register any pending dirs
 
 ### Root-Level `boot.rb`
 
-A `boot.rb` at the project root is a **root package** boot script — it runs in the root package's box (like any other package's `boot.rb`). This is different from `global/boot.rb` which runs in the global box.
+A `boot.rb` at the project root is a **root package** boot script — it runs in the root package's box (like any other package's `boot.rb`). This is different from `global/boot.rb` which runs in the master box.
 
 ### Use Cases
 

@@ -8,7 +8,7 @@ Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each p
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Global Box                       │
+│                    Master Box                       │
 │  (Bundler + global gems loaded here)                │
 │                                                     │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
@@ -38,13 +38,13 @@ Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each p
 - **Top-level constants.** Constants defined at the top level are constants of `Object` within that box. From outside, `box::Foo` accesses them.
 - **Monkey patch isolation.** Reopened built-in classes are visible only within the box that defined them.
 - **Global variable isolation.** `$LOAD_PATH`, `$LOADED_FEATURES`, and other globals are isolated per box. `$LOAD_PATH` and `$LOADED_FEATURES` use the *loading box* (not current box) for `require` resolution.
-- **Copy-on-write.** New boxes inherit the master box, exposed by `Boxwerk.global_box`. Global code loads in this template before package creation.
+- **Copy-on-write.** New boxes inherit the master box, exposed by `Ruby::Box.master`. Global code loads in this template before package creation.
 - **`box.eval(code)`** — Evaluates Ruby code in the box's context, like loading a file.
 - **`box.require(path)`** — Requires a file in the box's context. Subsequent requires from that file also run in the same box.
 
 ### Important Implications
 
-1. **Order matters.** Global gems load in the global box before packages boot, so new boxes inherit constants, methods, and gem loading state.
+1. **Order matters.** Global gems load in the master box before packages boot, so new boxes inherit constants, methods, and gem loading state.
 2. **No cross-box method inheritance.** A `const_missing` hook defined on `Module` in one box does not fire in another box. Boxwerk must install resolvers per-box.
 3. **`$LOAD_PATH` per box.** Each box has its own `$LOAD_PATH`, which enables per-package gem version isolation.
 
@@ -58,11 +58,11 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
    Ruby process using Bundler.with_unbundled_env (prevents double gem loading)
 3. For install/info/help/version: load boxwerk directly (no Ruby::Box needed)
 4. For exec/run/console: check Ruby::Box availability and enabled status
-5. Switch to global box via Boxwerk.global_box.eval(...)
+5. Switch to master box via Ruby::Box.master.eval(...)
 6. Discover project Gemfile (gems.rb preferred, then Gemfile)
 7. Run Bundler.setup before loading Boxwerk's dependencies
-8. Load Boxwerk and run Bundler.require in the global box
-   → All global gems now available in global box
+8. Load Boxwerk and run Bundler.require in the master box
+   → All global gems now available in master box
 9. Call Boxwerk::CLI.run(ARGV)
    → CLI delegates to Setup.run for package boot
    → Discovers boxwerk.yml for configuration (package_paths)
@@ -75,15 +75,15 @@ The `boxwerk` executable (`exe/boxwerk`) orchestrates the boot:
 ```
 1. Find root package.yml or boxwerk.yml (walk up from current directory)
 2. Run global boot (if global/ exists):
-   a. Require global/ files in global box (eager, not autoload)
-   b. Require global/boot.rb in global box
-3. Eager-load all Zeitwerk-managed constants in global box
+   a. Require global/ files in master box (eager, not autoload)
+   b. Require global/boot.rb in master box
+3. Eager-load all Zeitwerk-managed constants in master box
 4. Create PackageResolver — discovers all package.yml files
    → Respects package_paths from boxwerk.yml
    → Creates implicit root package if no root package.yml exists
 5. Create BoxManager — manages Ruby::Box instances
 6. Boot all packages in topological order (dependencies first)
-   → Root package boot.rb runs in root package box (not global box)
+   → Root package boot.rb runs in root package box (not master box)
 ```
 
 ### BoxManager.boot (per package)
@@ -146,13 +146,13 @@ end
 
 Constants are **not** wrapped in namespaces. `Invoice` is accessible as `Invoice`, not `Finance::Invoice`. This matches how constants work within a single Ruby application.
 
-### Global Box Resolver (for exec/run)
+### Master Box Resolver (for exec/run)
 
-When running commands via `boxwerk exec` or `boxwerk run`, some tools (like Rake) load files via the global box rather than the package box. Boxwerk installs a composite resolver on `Boxwerk.global_box` that:
+When running commands via `boxwerk exec` or `boxwerk run`, some tools (like Rake) load files via the master box rather than the package box. Boxwerk installs a composite resolver on `Ruby::Box.master` that:
 
 1. Tries the target package's own box first (for internal constants)
 2. Falls through to the target box's dependency resolver
-3. This ensures package constants are accessible even when code is loaded by tools running in the global box
+3. This ensures package constants are accessible even when code is loaded by tools running in the master box
 
 ## Package Resolution
 
@@ -218,7 +218,7 @@ public/invoice.rb      → Invoice
 lib/api/v2/client.rb   → Api::V2::Client
 ```
 
-Zeitwerk cannot register autoloads directly inside `Ruby::Box` because autoload calls execute in the box where the code was defined (global box for Zeitwerk). Boxwerk works around this by using Zeitwerk only for file scanning and inflection, then registering autoloads via `box.eval`. For nested constants, implicit namespaces are created as `Module.new` instances, and explicit namespaces (with a matching `.rb` file) are eagerly loaded before child autoloads are registered.
+Zeitwerk cannot register autoloads directly inside `Ruby::Box` because autoload calls execute in the box where the code was defined (master box for Zeitwerk). Boxwerk works around this by using Zeitwerk only for file scanning and inflection, then registering autoloads via `box.eval`. For nested constants, implicit namespaces are created as `Module.new` instances, and explicit namespaces (with a matching `.rb` file) are eagerly loaded before child autoloads are registered.
 
 ## CLI Commands
 
@@ -234,7 +234,7 @@ The CLI (`Boxwerk::CLI`) provides:
 
 ### console Implementation
 
-Console runs IRB in `Boxwerk.global_box`. Its composite resolver provides access to the target package's constants, including files loaded by global gems.
+Console runs IRB in `Ruby::Box.master`. Its composite resolver provides access to the target package's constants, including files loaded by global gems.
 
 ### exec Implementation
 
@@ -246,7 +246,7 @@ The `--all` / `-a` flag runs `exec` for each package in a separate subprocess. T
 
 ### --global Flag
 
-The `--global` / `-g` flag runs commands directly in `Boxwerk.global_box`, bypassing package resolution entirely. No package constants are accessible — only global gems. Useful for debugging.
+The `--global` / `-g` flag runs commands in `Ruby::Box.master`. A composite resolver provides access to all package constants.
 
 ## Module Structure
 

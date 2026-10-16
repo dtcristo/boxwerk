@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Global boot — runs in root box before package boxes are created.
+# Global boot — runs in master box before package boxes are created.
 # Require and eager load Rails frameworks so they are available in all boxes.
 
 require 'rails'

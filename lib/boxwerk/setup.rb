@@ -13,14 +13,14 @@ module Boxwerk
 
         # Create GlobalContext and expose it as Boxwerk.global before boot.rb runs
         global_context = GlobalContext.new(root_path)
-        root_box = Boxwerk.global_box
-        root_box.__send__(:remove_const, :BOXWERK_GLOBAL) if root_box.const_defined?(:BOXWERK_GLOBAL, false)
-        root_box.const_set(:BOXWERK_GLOBAL, global_context)
+        master_box = Ruby::Box.master
+        master_box.__send__(:remove_const, :BOXWERK_GLOBAL) if master_box.const_defined?(:BOXWERK_GLOBAL, false)
+        master_box.const_set(:BOXWERK_GLOBAL, global_context)
 
-        # Run global boot in global box (after gems, before package boxes).
+        # Run global boot in master box (after gems, before package boxes).
         run_global_boot(root_path, eager_load: eager_load_global, global_context: global_context)
 
-        # Eager-load all Zeitwerk-managed constants in global box so child
+        # Eager-load all Zeitwerk-managed constants in master box so child
         # boxes inherit fully resolved constants (not pending autoloads).
         eager_load_zeitwerk if eager_load_global
 
@@ -71,8 +71,8 @@ module Boxwerk
         @box_manager = nil
         @booted = false
         if defined?(Ruby::Box)
-          root_box = Boxwerk.global_box
-          root_box.__send__(:remove_const, :BOXWERK_GLOBAL) if root_box.const_defined?(:BOXWERK_GLOBAL, false)
+          master_box = Ruby::Box.master
+          master_box.__send__(:remove_const, :BOXWERK_GLOBAL) if master_box.const_defined?(:BOXWERK_GLOBAL, false)
         end
       end
 
@@ -97,32 +97,32 @@ module Boxwerk
         File.expand_path(start_dir)
       end
 
-      # Runs the optional global boot in the global box. The global/
-      # directory is autoloaded and global/boot.rb is required in the global
+      # Runs the optional global boot in the master box. The global/
+      # directory is autoloaded and global/boot.rb is required in the master
       # box. These run after global gems are loaded but before package
       # boxes are created, so definitions here are inherited by all boxes.
       #
       # Root-level boot.rb is NOT handled here — it runs in the root
       # package box via BoxManager (like any other package boot.rb).
       def run_global_boot(root_path, eager_load: true, global_context: nil)
-        root_box = Boxwerk.global_box
+        master_box = Ruby::Box.master
         global_dir = File.join(root_path, 'global')
         global_boot = File.join(global_dir, 'boot.rb')
         global_entries = nil
 
         # Always register lazy autoloads for global/ dir so constants are
-        # accessible in boot.rb (autoload fires on access in global box context).
+        # accessible in boot.rb (autoload fires on access in master box context).
         # This works regardless of eager_load_global so global constants can
         # be used in boot.rb even when eager loading is disabled.
         if File.directory?(global_dir)
           global_context&.__send__(:record_scanned_dir, 'global/')
           entries = ZeitwerkScanner.scan(global_dir)
           global_entries = entries.reject { |e| e.file == global_boot }
-          ZeitwerkScanner.register_autoloads(root_box, global_entries) if global_entries.any?
+          ZeitwerkScanner.register_autoloads(master_box, global_entries) if global_entries.any?
         end
 
-        # Run global/boot.rb in global box (always, regardless of eager_load)
-        root_box.require(global_boot) if File.exist?(global_boot)
+        # Run global/boot.rb in master box (always, regardless of eager_load)
+        master_box.require(global_boot) if File.exist?(global_boot)
 
         # After boot.rb, register lazy autoloads for any dirs added via
         # Boxwerk.global.autoloader.push_dir during boot.
@@ -130,7 +130,7 @@ module Boxwerk
 
         # Eager-load AFTER boot.rb so boot scripts run first.
         if eager_load
-          global_entries&.each { |e| root_box.require(e.file) if e.file }
+          global_entries&.each { |e| master_box.require(e.file) if e.file }
           global_context&.autoloader&.__send__(:eager_load!)
         end
       end
@@ -143,13 +143,13 @@ module Boxwerk
         end
       end
 
-      # Eager-load all Zeitwerk-managed constants (gem autoloads) in the global
+      # Eager-load all Zeitwerk-managed constants (gem autoloads) in the master
       # box. Child boxes created via Ruby::Box.new inherit a snapshot of the
-      # global box's constants. Zeitwerk autoloads are lazy — without eager
+      # master box's constants. Zeitwerk autoloads are lazy — without eager
       # loading, child boxes inherit pending autoload entries that may not
       # resolve correctly across box boundaries.
       def eager_load_zeitwerk
-        Boxwerk.global_box.eval(<<~RUBY)
+        Ruby::Box.master.eval(<<~RUBY)
           Zeitwerk::Loader.eager_load_all if defined?(Zeitwerk)
         RUBY
       end

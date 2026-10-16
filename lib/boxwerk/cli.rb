@@ -212,7 +212,7 @@ module Boxwerk
             perform_setup(packages: target_packages, config: parsed[:config])
 
           if parsed[:global]
-            box = Boxwerk.global_box
+            box = Ruby::Box.master
             install_global_resolver(result)
           else
             target_pkg =
@@ -224,7 +224,7 @@ module Boxwerk
                 end
               )
             box = resolve_target_box(result, parsed[:package])
-            install_resolver_on_ruby_root(result, target_package: target_pkg)
+            install_resolver_on_master(result, target_package: target_pkg)
 
             if parsed[:package] && parsed[:package] != '.'
               root_path = Setup.send(:find_root, Dir.pwd)
@@ -262,7 +262,7 @@ module Boxwerk
         result =
           perform_setup(packages: target_packages, config: parsed[:config])
         if parsed[:global]
-          box = Boxwerk.global_box
+          box = Ruby::Box.master
           install_global_resolver(result)
         else
           target_pkg =
@@ -274,7 +274,7 @@ module Boxwerk
               end
             )
           box = resolve_target_box(result, parsed[:package])
-          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          install_resolver_on_master(result, target_package: target_pkg)
         end
         execute_in_box(box, script_path, parsed[:remaining][1..] || [])
       end
@@ -297,12 +297,12 @@ module Boxwerk
                 nil
               end
             )
-          install_resolver_on_ruby_root(result, target_package: target_pkg)
+          install_resolver_on_master(result, target_package: target_pkg)
           pkg_label = parsed[:package] || '.'
         end
-        # IRB uses the global box's resolver to access package constants,
+        # IRB uses the master box's resolver to access package constants,
         # including files loaded by global gems.
-        start_console_in_box(Boxwerk.global_box, parsed[:remaining], pkg_label)
+        start_console_in_box(Ruby::Box.master, parsed[:remaining], pkg_label)
       end
 
       BOXWERK_CONFIG_DEFAULTS = {
@@ -505,7 +505,7 @@ module Boxwerk
         box.eval(wrapped)
       end
 
-      # Installs a resolver on Boxwerk.global_box that searches ALL packages.
+      # Installs a resolver on Ruby::Box.master that searches ALL packages.
       # Used for --global mode so the global context can resolve any constant.
       def install_global_resolver(result)
         boxes = result[:box_manager].boxes
@@ -580,12 +580,12 @@ module Boxwerk
             value
           end
 
-        ruby_root = Boxwerk.global_box
-        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
-          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        master_box = Ruby::Box.master
+        if master_box.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          master_box.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end
-        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
-        ruby_root.eval(<<~RUBY)
+        master_box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
+        master_box.eval(<<~RUBY)
           class Object
             def self.const_missing(const_name)
               BOXWERK_DEPENDENCY_RESOLVER.call(const_name)
@@ -594,22 +594,22 @@ module Boxwerk
         RUBY
       end
 
-      # Installs a dependency resolver on Boxwerk.global_box for the given
-      # package. Gems loaded via Bundler.require run in the global box (where
+      # Installs a dependency resolver on Ruby::Box.master for the given
+      # package. Gems loaded via Bundler.require run in the master box (where
       # their methods were defined). When those gems call load() (e.g. rake
-      # loading a Rakefile), the loaded files execute in the global box too.
+      # loading a Rakefile), the loaded files execute in the master box too.
       # This method ensures const_missing is available there so that package
       # constants can be resolved.
       #
       # When target_package is specified, the resolver also searches the
       # target package's own box for its internal constants. This enables
-      # per-package testing where test files (loaded by rake in Boxwerk.global_box)
+      # per-package testing where test files (loaded by rake in Ruby::Box.master)
       # need access to the pack's own constants.
-      def install_resolver_on_ruby_root(result, target_package: nil)
+      def install_resolver_on_master(result, target_package: nil)
         target_pkg = target_package || result[:resolver].root
         target_box = result[:box_manager].boxes[target_pkg.name]
 
-        # Delegate constant resolution from Boxwerk.global_box to the target box.
+        # Delegate constant resolution from Ruby::Box.master to the target box.
         # The target box already has its own const_missing (dependency resolver)
         # for cross-package lookup. We check own constants first via
         # const_get (which doesn't trigger const_missing recursion), then
@@ -656,12 +656,12 @@ module Boxwerk
             end
           end
 
-        ruby_root = Boxwerk.global_box
-        if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
-          ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
+        master_box = Ruby::Box.master
+        if master_box.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
+          master_box.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end
-        ruby_root.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
-        ruby_root.eval(<<~RUBY)
+        master_box.const_set(:BOXWERK_DEPENDENCY_RESOLVER, composite)
+        master_box.eval(<<~RUBY)
           class Object
             def self.const_missing(const_name)
               BOXWERK_DEPENDENCY_RESOLVER.call(const_name)

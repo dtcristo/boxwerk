@@ -10,6 +10,8 @@
   execution and standalone CLI boot.
 - Load globals in the master box so package boxes inherit global constants,
   methods, and gems.
+- Use `Ruby::Box.master` directly and reserve "global context" for Boxwerk's
+  shared application configuration, gems, and constants.
 - Set up Bundler before loading Boxwerk's dependencies to respect project
   lockfiles when newer dependency versions are also installed.
 - `bin/setup` now installs gems for the example apps too, so the repository
