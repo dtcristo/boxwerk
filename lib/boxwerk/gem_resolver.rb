@@ -185,7 +185,8 @@ module Boxwerk
       gems
     end
 
-    # Resolves load paths for a specific gem version.
+    # Resolves load paths for the exact locked version. The lockfile lists the
+    # whole dependency closure, so each gem contributes only its own paths.
     def resolve_gem_paths(name, version)
       spec = find_gem_spec(name, version)
       unless spec
@@ -194,13 +195,12 @@ module Boxwerk
         end
         return nil
       end
-      collect_paths(spec)
+      spec.full_require_paths
     end
 
-    # Finds a gem specification by searching all gem directories.
+    # Finds the installed specification for an exact gem version.
     def find_gem_spec(name, version)
-      all_gem_specs.find { |s| s.name == name && s.version.to_s == version } ||
-        all_gem_specs.find { |s| s.name == name }
+      all_gem_specs.find { |s| s.name == name && s.version.to_s == version }
     end
 
     # Loads all gem specifications from all gem directories.
@@ -210,26 +210,10 @@ module Boxwerk
         begin
           dirs =
             Gem.path.flat_map do |p|
-              Dir.glob(File.join(p, 'specifications', '*.gemspec'))
+              Dir.glob(File.join(p, 'specifications', '{,default/}*.gemspec'))
             end
           dirs.map { |path| Gem::Specification.load(path) }.compact
         end
-    end
-
-    # Recursively collects load paths for a gem and its runtime dependencies.
-    def collect_paths(spec, resolved = Set.new)
-      return [] if resolved.include?(spec.name)
-
-      resolved.add(spec.name)
-      paths = spec.full_require_paths.dup
-
-      spec.runtime_dependencies.each do |dep|
-        dep_spec = find_gem_spec(dep.name, dep.requirement.to_s.delete('= '))
-        dep_spec ||= all_gem_specs.find { |s| s.name == dep.name }
-        paths.concat(collect_paths(dep_spec, resolved)) if dep_spec
-      end
-
-      paths
     end
   end
 end
