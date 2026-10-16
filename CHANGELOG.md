@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Verify the root, master, and main box model against Ruby 4.0.7 source and
+  clarify initialization, shared objects, loading state, and global boot order.
 - Require Ruby 4.0.7+, RubyGems 4.0.23+, and Bundler 4.0.23+ within 4.x.
   Pin RubyGems and Bundler to 4.0.23 in CI.
 - Use standard executable lookup in example binstubs and simplify script
