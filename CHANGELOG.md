@@ -4,7 +4,10 @@
 
 ### Changed
 
-- Require Ruby 4.0.7+ and use Bundler 4.0.23 for development and CI.
+- Require Ruby 4.0.7+, RubyGems 4.0.23+, and Bundler 4.0.23+ within 4.x.
+  Pin RubyGems and Bundler to 4.0.23 in CI.
+- Use standard executable lookup in example binstubs and simplify script
+  execution and standalone CLI boot.
 - Load globals in the master box so package boxes inherit global constants,
   methods, and gems.
 - Set up Bundler before loading Boxwerk's dependencies to respect project

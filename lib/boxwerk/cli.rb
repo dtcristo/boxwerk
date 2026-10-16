@@ -483,7 +483,7 @@ module Boxwerk
           else
             bin_path = find_bin_path(command)
             if bin_path
-              execute_in_box(box, bin_path, command_args, use_load: true)
+              execute_in_box(box, bin_path, command_args)
             else
               # Fall back to shell command in the package directory
               dir = pkg_dir || Dir.pwd
@@ -494,23 +494,15 @@ module Boxwerk
         end
       end
 
-      def execute_in_box(box, script_path, script_args, use_load: false)
+      def execute_in_box(box, script_path, script_args)
         expanded = File.expand_path(script_path)
         box.eval("ARGV.replace(#{script_args.inspect})")
-        if use_load
-          # Eval file content directly rather than using load, because
-          # load creates a new file scope where inherited DSL methods
-          # (e.g. Rake's task) may not be visible in Ruby::Box.
-          content = File.read(expanded)
-          box.eval(content)
-        else
-          # Use eval with __dir__ set so relative paths resolve
-          # correctly (e.g. project binstubs using File.expand_path).
-          content = File.read(expanded)
-          dir = File.dirname(expanded)
-          wrapped = "__dir__ = #{dir.inspect}\n" + content
-          box.eval(wrapped)
-        end
+        # Eval preserves inherited DSL methods (e.g. Rake's task).
+        # Set __dir__ so scripts can resolve paths relative to their file.
+        content = File.read(expanded)
+        dir = File.dirname(expanded)
+        wrapped = "__dir__ = #{dir.inspect}\n" + content
+        box.eval(wrapped)
       end
 
       # Installs a resolver on Boxwerk.global_box that searches ALL packages.

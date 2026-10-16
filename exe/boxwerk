@@ -16,17 +16,9 @@ boxwerk_exe = File.expand_path(__FILE__)
 NO_BOX_COMMANDS = %w[install help --help -h version --version -v].freeze
 
 if NO_BOX_COMMANDS.include?(ARGV[0])
-  code = <<~RUBY
-    $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
-    require 'boxwerk'
-
-    Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
-  RUBY
-  if defined?(Ruby::Box) && Ruby::Box.enabled?
-    Ruby::Box.master.eval(code)
-  else
-    eval(code, TOPLEVEL_BINDING)
-  end
+  $LOAD_PATH.unshift(boxwerk_lib)
+  require 'boxwerk'
+  Boxwerk::CLI.run(ARGV, exe_path: boxwerk_exe)
 else
   unless defined?(Ruby::Box)
     $stderr.puts 'Error: Ruby::Box is not available.'

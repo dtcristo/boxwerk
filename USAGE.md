@@ -5,10 +5,12 @@ Complete usage guide for Boxwerk — runtime package isolation for Ruby.
 ## Requirements
 
 - Ruby 4.0.7+ with the `RUBY_BOX=1` environment variable set before process boot
-- Bundler 4.0; development uses Ruby 4.0.7 and Bundler 4.0.23
+- RubyGems 4.0.23+ and Bundler 4.0.23+ within Bundler 4.x
 - `package.yml` files ([Packwerk](https://github.com/Shopify/packwerk) format)
 
 ## Installation
+
+Update RubyGems and its bundled Bundler with `gem update --system 4.0.23`.
 
 ### With Bundler
 
