@@ -21,7 +21,7 @@ require_relative 'boxwerk/zeitwerk_scanner'
 module Boxwerk
   class << self
     # Returns the {PackageContext} for the currently executing package.
-    # Returns +nil+ in the root box.
+    # Returns +nil+ in the global box.
     # @return [PackageContext, nil]
     def package
       nil
@@ -30,7 +30,14 @@ module Boxwerk
     # Returns the {GlobalContext}.
     # @return [GlobalContext]
     def global
-      Ruby::Box.root.const_get(:BOXWERK_GLOBAL)
+      global_box.const_get(:BOXWERK_GLOBAL)
+    end
+
+    # Returns the box inherited by newly created package boxes.
+    # Ruby 4.0.6+ separates the master template from the root box.
+    # @return [Ruby::Box]
+    def global_box
+      Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
     end
   end
 end

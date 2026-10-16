@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Use Ruby 4.0.7 and Bundler 4.0.23 for development and CI, retaining
+  CI coverage for the minimum supported Ruby 4.0.1.
+- Load globals in the master box on Ruby 4.0.6+ so package boxes inherit
+  global constants, methods, and gems. Earlier Rubies keep using the root box.
+- Set up Bundler before loading Boxwerk's dependencies to respect project
+  lockfiles when newer dependency versions are also installed.
 - `bin/setup` now installs gems for the example apps too, so the repository
   test suite works after a fresh clone.
 - Bump minimum Ruby version to 4.0.1 (4.0.0 crashes).

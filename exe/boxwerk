@@ -4,7 +4,7 @@
 # If Bundler has already been set up (via `bundle exec` or a Bundler binstub),
 # re-exec in a clean Ruby process so Boxwerk controls gem loading from scratch.
 # This prevents gems being loaded twice (once by Bundler in the main box, once
-# by Boxwerk in the root box).
+# by Boxwerk in the global box).
 if defined?(Bundler)
   Bundler.with_unbundled_env { exec(RbConfig.ruby, __FILE__, *ARGV) }
 end
@@ -14,22 +14,20 @@ boxwerk_exe = File.expand_path(__FILE__)
 
 # Commands that don't need Ruby::Box (no package boot required).
 NO_BOX_COMMANDS = %w[install help --help -h version --version -v].freeze
-# Subset that don't need Bundler at all — safe to run without any gems installed.
-STANDALONE_COMMANDS = %w[install help --help -h version --version -v].freeze
 
 if NO_BOX_COMMANDS.include?(ARGV[0])
-  $LOAD_PATH.unshift(boxwerk_lib)
-  require 'boxwerk'
+  code = <<~RUBY
+    $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
+    require 'boxwerk'
 
-  unless STANDALONE_COMMANDS.include?(ARGV[0])
-    gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
-    if gemfile
-      require 'bundler/setup'
-      Bundler.require
-    end
+    Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
+  RUBY
+  if defined?(Ruby::Box) && Ruby::Box.enabled?
+    global_box = Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
+    global_box.eval(code)
+  else
+    eval(code, TOPLEVEL_BINDING)
   end
-
-  Boxwerk::CLI.run(ARGV, exe_path: boxwerk_exe)
 else
   unless defined?(Ruby::Box)
     $stderr.puts 'Error: Ruby::Box is not available.'
@@ -43,18 +41,16 @@ else
     exit 1
   end
 
-  # Load and run in the root box. Boxwerk is loaded first (before Bundler
-  # restricts $LOAD_PATH), then project gems are loaded via Bundler. All
-  # definitions end up in the root box, inherited by child boxes.
-  Ruby::Box.root.eval(<<~RUBY)
+  # Load in the template inherited by package boxes. Set up Bundler before
+  # Boxwerk can activate dependencies that conflict with the project lockfile.
+  global_box = Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
+  global_box.eval(<<~RUBY)
+    gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
+    require 'bundler/setup' if gemfile
+
     $LOAD_PATH.unshift(#{boxwerk_lib.inspect})
     require 'boxwerk'
-
-    gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
-    if gemfile
-      require 'bundler/setup'
-      Bundler.require
-    end
+    Bundler.require if gemfile
 
     Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
   RUBY

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module Boxwerk
-  # Runtime context for the root box, accessible via +Boxwerk.global+ from
+  # Runtime context for the global box, accessible via +Boxwerk.global+ from
   # any box context (global boot, package boot, or application code).
   class GlobalContext
-    # @return [GlobalContext::Autoloader] Autoloader configuration for the root box.
+    # @return [GlobalContext::Autoloader] Autoloader configuration for the global box.
     attr_reader :autoloader
 
     def initialize(root_path)
@@ -13,7 +13,7 @@ module Boxwerk
       @default_dirs = []
     end
 
-    # Autoload configuration for the root box. Provides {AutoloaderMixin}'s
+    # Autoload configuration for the global box. Provides {AutoloaderMixin}'s
     # +push_dir+, +collapse+, +ignore+, and +setup+ in +global/boot.rb+.
     #
     # Registrations are lazy (autoload entries only) until the framework
@@ -46,7 +46,7 @@ module Boxwerk
 
         return if all_entries.empty?
 
-        ZeitwerkScanner.register_autoloads(Ruby::Box.root, all_entries)
+        ZeitwerkScanner.register_autoloads(Boxwerk.global_box, all_entries)
         @accumulated_entries.concat(all_entries)
       end
 
@@ -55,7 +55,7 @@ module Boxwerk
       def eager_load!
         return if @accumulated_entries.empty?
 
-        root_box = Ruby::Box.root
+        root_box = Boxwerk.global_box
         @accumulated_entries.each { |e| root_box.require(e.file) if e.file }
       end
 

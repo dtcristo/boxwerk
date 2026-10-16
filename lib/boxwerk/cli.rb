@@ -212,7 +212,7 @@ module Boxwerk
             perform_setup(packages: target_packages, config: parsed[:config])
 
           if parsed[:global]
-            box = Ruby::Box.root
+            box = Boxwerk.global_box
             install_global_resolver(result)
           else
             target_pkg =
@@ -262,7 +262,7 @@ module Boxwerk
         result =
           perform_setup(packages: target_packages, config: parsed[:config])
         if parsed[:global]
-          box = Ruby::Box.root
+          box = Boxwerk.global_box
           install_global_resolver(result)
         else
           target_pkg =
@@ -300,10 +300,10 @@ module Boxwerk
           install_resolver_on_ruby_root(result, target_package: target_pkg)
           pkg_label = parsed[:package] || '.'
         end
-        # IRB runs in Ruby::Box.root with a composite resolver that provides
+        # IRB runs in Boxwerk.global_box with a composite resolver that provides
         # the target package's constants. This works around a Ruby 4.0.1 GC
         # crash when running IRB directly in child boxes.
-        start_console_in_box(Ruby::Box.root, parsed[:remaining], pkg_label)
+        start_console_in_box(Boxwerk.global_box, parsed[:remaining], pkg_label)
       end
 
       BOXWERK_CONFIG_DEFAULTS = {
@@ -514,7 +514,7 @@ module Boxwerk
         end
       end
 
-      # Installs a resolver on Ruby::Box.root that searches ALL packages.
+      # Installs a resolver on Boxwerk.global_box that searches ALL packages.
       # Used for --global mode so the global context can resolve any constant.
       def install_global_resolver(result)
         boxes = result[:box_manager].boxes
@@ -589,7 +589,7 @@ module Boxwerk
             value
           end
 
-        ruby_root = Ruby::Box.root
+        ruby_root = Boxwerk.global_box
         if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
           ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end
@@ -603,22 +603,22 @@ module Boxwerk
         RUBY
       end
 
-      # Installs a dependency resolver on Ruby::Box.root for the given
-      # package. Gems loaded via Bundler.require run in the root box (where
+      # Installs a dependency resolver on Boxwerk.global_box for the given
+      # package. Gems loaded via Bundler.require run in the global box (where
       # their methods were defined). When those gems call load() (e.g. rake
-      # loading a Rakefile), the loaded files execute in the root box too.
+      # loading a Rakefile), the loaded files execute in the global box too.
       # This method ensures const_missing is available there so that package
       # constants can be resolved.
       #
       # When target_package is specified, the resolver also searches the
       # target package's own box for its internal constants. This enables
-      # per-package testing where test files (loaded by rake in Ruby::Box.root)
+      # per-package testing where test files (loaded by rake in Boxwerk.global_box)
       # need access to the pack's own constants.
       def install_resolver_on_ruby_root(result, target_package: nil)
         target_pkg = target_package || result[:resolver].root
         target_box = result[:box_manager].boxes[target_pkg.name]
 
-        # Delegate constant resolution from Ruby::Box.root to the target box.
+        # Delegate constant resolution from Boxwerk.global_box to the target box.
         # The target box already has its own const_missing (dependency resolver)
         # for cross-package lookup. We check own constants first via
         # const_get (which doesn't trigger const_missing recursion), then
@@ -665,7 +665,7 @@ module Boxwerk
             end
           end
 
-        ruby_root = Ruby::Box.root
+        ruby_root = Boxwerk.global_box
         if ruby_root.const_defined?(:BOXWERK_DEPENDENCY_RESOLVER)
           ruby_root.send(:remove_const, :BOXWERK_DEPENDENCY_RESOLVER)
         end

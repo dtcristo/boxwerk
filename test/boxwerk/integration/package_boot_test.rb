@@ -123,7 +123,7 @@ module Boxwerk
       # Ran in the root package box
       assert root_box.eval('ROOT_BOOT_RAN')
       # NOT in the Ruby root box
-      refute Ruby::Box.root.eval('defined?(ROOT_BOOT_RAN)')
+      refute Boxwerk.global_box.eval('defined?(ROOT_BOOT_RAN)')
     end
 
     def test_root_boot_dependencies_accessible_after_boot
