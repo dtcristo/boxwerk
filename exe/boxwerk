@@ -23,15 +23,14 @@ if NO_BOX_COMMANDS.include?(ARGV[0])
     Boxwerk::CLI.run(ARGV, exe_path: #{boxwerk_exe.inspect})
   RUBY
   if defined?(Ruby::Box) && Ruby::Box.enabled?
-    global_box = Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
-    global_box.eval(code)
+    Ruby::Box.master.eval(code)
   else
     eval(code, TOPLEVEL_BINDING)
   end
 else
   unless defined?(Ruby::Box)
     $stderr.puts 'Error: Ruby::Box is not available.'
-    $stderr.puts 'Boxwerk requires Ruby 4.0 or later with Ruby::Box support.'
+    $stderr.puts 'Boxwerk requires Ruby 4.0.7 or later with Ruby::Box support.'
     exit 1
   end
 
@@ -43,8 +42,7 @@ else
 
   # Load in the template inherited by package boxes. Set up Bundler before
   # Boxwerk can activate dependencies that conflict with the project lockfile.
-  global_box = Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
-  global_box.eval(<<~RUBY)
+  Ruby::Box.master.eval(<<~RUBY)
     gemfile = %w[gems.rb Gemfile].find { |f| File.exist?(f) }
     require 'bundler/setup' if gemfile
 

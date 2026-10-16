@@ -34,10 +34,9 @@ module Boxwerk
     end
 
     # Returns the box inherited by newly created package boxes.
-    # Ruby 4.0.6+ separates the master template from the root box.
     # @return [Ruby::Box]
     def global_box
-      Ruby::Box.respond_to?(:master) ? Ruby::Box.master : Ruby::Box.root
+      Ruby::Box.master
     end
   end
 end

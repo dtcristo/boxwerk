@@ -27,8 +27,8 @@ Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each p
 
 ### Box Types
 
-- **Master box** — The template for new boxes in Ruby 4.0.6+. Boxwerk loads global code here so package boxes inherit it.
-- **Root box** — Created during bootstrap. Before Ruby 4.0.6, this is also the template for new boxes and hosts Boxwerk globals.
+- **Master box** — The template for new boxes. Boxwerk loads global code here so package boxes inherit it.
+- **Root box** — Created during Ruby bootstrap. Boxwerk uses the master box for application globals.
 - **Main box** — A user box automatically created at bootstrap. The user's main program runs here.
 - **User boxes** — Created with `Ruby::Box.new`. All user boxes are flat. Boxwerk creates one for each package.
 
@@ -38,7 +38,7 @@ Boxwerk enforces package boundaries at runtime using Ruby::Box isolation. Each p
 - **Top-level constants.** Constants defined at the top level are constants of `Object` within that box. From outside, `box::Foo` accesses them.
 - **Monkey patch isolation.** Reopened built-in classes are visible only within the box that defined them.
 - **Global variable isolation.** `$LOAD_PATH`, `$LOADED_FEATURES`, and other globals are isolated per box. `$LOAD_PATH` and `$LOADED_FEATURES` use the *loading box* (not current box) for `require` resolution.
-- **Copy-on-write.** Before Ruby 4.0.6, new boxes inherited root definitions. Ruby 4.0.6+ copies the master box instead. `Boxwerk.global_box` selects the master box when available, otherwise the root box. Global code loads in this template before package creation.
+- **Copy-on-write.** New boxes inherit the master box, exposed by `Boxwerk.global_box`. Global code loads in this template before package creation.
 - **`box.eval(code)`** — Evaluates Ruby code in the box's context, like loading a file.
 - **`box.require(path)`** — Requires a file in the box's context. Subsequent requires from that file also run in the same box.
 
@@ -234,7 +234,7 @@ The CLI (`Boxwerk::CLI`) provides:
 
 ### console Implementation
 
-Console always runs IRB in `Boxwerk.global_box` rather than the target package box. The composite resolver installed on root provides the same constant access. This avoids a Ruby 4.0.1 GC bug where running IRB in child boxes with `const_missing` overrides triggers a double-free crash during process exit.
+Console runs IRB in `Boxwerk.global_box`. Its composite resolver provides access to the target package's constants, including files loaded by global gems.
 
 ### exec Implementation
 

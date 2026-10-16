@@ -81,7 +81,7 @@ module Boxwerk
         puts '  bundle binstubs boxwerk              Create bin/boxwerk binstub'
         puts '  RUBY_BOX=1 bin/boxwerk run main.rb   Run your app'
         puts ''
-        puts 'Requires: Ruby 4.0+ with RUBY_BOX=1 for exec/run/console commands'
+        puts 'Requires: Ruby 4.0.7+ with RUBY_BOX=1 for exec/run/console commands'
       end
 
       # Parses --package/-p, --all/-a, and --global/-g flags from args, returning
@@ -300,9 +300,8 @@ module Boxwerk
           install_resolver_on_ruby_root(result, target_package: target_pkg)
           pkg_label = parsed[:package] || '.'
         end
-        # IRB runs in Boxwerk.global_box with a composite resolver that provides
-        # the target package's constants. This works around a Ruby 4.0.1 GC
-        # crash when running IRB directly in child boxes.
+        # IRB uses the global box's resolver to access package constants,
+        # including files loaded by global gems.
         start_console_in_box(Boxwerk.global_box, parsed[:remaining], pkg_label)
       end
 

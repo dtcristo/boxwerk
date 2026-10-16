@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
       'testing, and inspecting your modular application.'
   spec.homepage = 'https://github.com/dtcristo/boxwerk'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 4.0.1'
+  spec.required_ruby_version = '>= 4.0.7'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.metadata['homepage_uri'] = spec.homepage

@@ -4,7 +4,7 @@ Complete usage guide for Boxwerk — runtime package isolation for Ruby.
 
 ## Requirements
 
-- Ruby 4.0.1+ with the `RUBY_BOX=1` environment variable set before process boot
+- Ruby 4.0.7+ with the `RUBY_BOX=1` environment variable set before process boot
 - Bundler 4.0; development uses Ruby 4.0.7 and Bundler 4.0.23
 - `package.yml` files ([Packwerk](https://github.com/Shopify/packwerk) format)
 
@@ -271,7 +271,7 @@ These are different concepts:
 - **Root package** (`.`) — Your top-level `package.yml`. Gets its own `Ruby::Box` like any other package. Has dependencies and constants. This is where your application code runs by default.
 - **Global context** (`Boxwerk.global_box`) — Where global gems are loaded via `Bundler.require`. Contains global gems and constants. All child boxes are copied from it.
 
-The global context is an implementation detail of how `Ruby::Box` works. Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. This is because each `Ruby::Box.new` inherits the box selected by `Boxwerk.global_box`: the master box on Ruby 4.0.6+, or the root box on earlier versions.
+Constants and files loaded in the global context before package boxes are created are inherited by **all** package boxes. Each `Ruby::Box.new` inherits the master box, exposed by `Boxwerk.global_box`.
 
 This has important implications:
 
